@@ -124,14 +124,14 @@ Entries are numbered by area (for example `ID-1`) so the owner questions and lat
 
 ### BP-1. Deposit: 50% vs 30%
 
-- **App:** "You'll pay 50% now to secure the space" (`src/pages/Review.jsx:90`; CS 8.2). The 50% is taken on the whole total, including delivery and the fee.
+- **App:** "You'll pay 50% now to secure the space" (`src/pages/Review.jsx:92`; CS 8.2). The 50% is taken on the whole total, including delivery and the fee.
 - **PRD:** `deposit_percent` placeholder 0.30 of the storage subtotal only; service fee and delivery are paid in full online (PRD 5.15, 6.1, 14 #3). The PRD notes "earlier discussion said half now".
 - **Resolution:** Owner question ([OQ-1](#11-owner-questions)). The value lives in `app_config` (#16) and the formula in #18, so either answer needs no code change beyond the seed.
 - **Note:** the PRD's structure is better regardless of the percentage. Splitting the fee and delivery 50/50 would make the provider collect ColdLink's fee and the delivery partner's fee at the facility.
 
 ### BP-2. Balance: "provider's arrangement" vs paid at the facility
 
-- **App:** the remaining 50% is paid "according to the storage provider's arrangement" (`src/pages/Review.jsx:90`); Confirmation says "To be paid on arrival" (`src/pages/Confirmation.jsx:121`). The two screens already disagree.
+- **App:** the remaining 50% is paid "according to the storage provider's arrangement" (`src/pages/Review.jsx:92`); Confirmation says "To be paid on arrival" (`src/pages/Confirmation.jsx:121`). The two screens already disagree.
 - **PRD:** `balance_due` is paid to the provider at the facility; the provider confirms collection; ColdLink does not process it (PRD 6.1, 6.4 step 5).
 - **Resolution:** #33 (review copy), #34 (confirmation copy). Use one plain line on both: "Pay the balance of ₦X to [facility] when you drop off your produce."
 
@@ -289,7 +289,7 @@ Entries are numbered by area (for example `ID-1`) so the owner questions and lat
 
 ### DS-4. Text size
 
-- **App:** `text-sm` (14 px) appears 42 times, `text-xs` 5 times and `text-[11px]` 3 times across pages and components, including body copy such as the payment-plan explanation (`src/pages/Review.jsx:90`).
+- **App:** `text-sm` (14 px) appears 42 times, `text-xs` 5 times and `text-[11px]` 3 times across pages and components, including body copy such as the payment-plan explanation (`src/pages/Review.jsx:92`).
 - **PRD:** 16 px minimum for body text (PRD 9.4).
 - **Resolution:** #7 (type scale). Small text is fine for labels; body copy moves to 16 px.
 
@@ -410,7 +410,7 @@ From CS 9.3, plus three more found on screens. None of these should ship once re
 | "Secured by Paystack. 256-bit encryption." | `Payment.jsx:146` | No Paystack integration | #34 (Paystack checkout shows its own trust mark); #8 removes fake trust marks |
 | "A confirmation has been sent to your phone." | `Confirmation.jsx:40` | Nothing is sent | #29, #34 |
 | "Booking confirmed!" | `Confirmation.jsx:32-42` | The provider has not accepted yet | #34 (see BP-9) |
-| "the remaining 50% according to the storage provider's arrangement" | `Review.jsx:90` | Disagrees with Confirmation's "on arrival" and with PRD 6.4 | #33 (see BP-2) |
+| "the remaining 50% according to the storage provider's arrangement" | `Review.jsx:92` | Disagrees with Confirmation's "on arrival" and with PRD 6.4 | #33 (see BP-2) |
 | "Insured" | `Details.jsx:72` | No facility is known to be insured; the PRD has no such field | [OQ-7](#11-owner-questions) |
 
 ## 10. The old MVP specification
