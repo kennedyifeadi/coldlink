@@ -1,16 +1,47 @@
-# React + Vite
+# ColdLink
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+ColdLink connects farmers in Oyo State with nearby cold storage, so they can find space, book it and pay from a phone.
 
-Currently, two official plugins are available:
+## Repository layout
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+```
+apps/
+  web/        React + Vite frontend
+  api/        Backend (TypeScript)
+packages/
+  shared/     Types and constants shared by web and api
+docs/         Product requirements, decisions and audits
+```
 
-## React Compiler
+## Prerequisites
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+- Node.js 24 (LTS), as pinned in `.nvmrc`
+- pnpm 10, as pinned in `package.json` (`corepack enable` installs the right version)
 
-## Expanding the Oxlint configuration
+## Getting started
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and Oxlint's TypeScript related rules in your project.
+```bash
+pnpm install
+pnpm --filter web dev
+```
+
+The web app runs at http://localhost:5173.
+
+Scripts at the root run across every workspace:
+
+| Command | What it does |
+|---|---|
+| `pnpm dev` | Start every workspace's dev server |
+| `pnpm build` | Build every workspace |
+| `pnpm lint` | Lint every workspace |
+| `pnpm typecheck` | Type-check the TypeScript workspaces |
+| `pnpm test` | Run every workspace's tests |
+
+## Docs
+
+- [Product requirements](docs/prd.md)
+- [Decisions](docs/decisions.md)
+- [UX writing](docs/ux-writing.md)
+- [Current state of the app](docs/current-state.md)
+- [Discrepancies between the app and the PRD](docs/discrepancies.md)
+- [Original MVP specification (archived)](docs/archive/mvp-specification-v1.md)
