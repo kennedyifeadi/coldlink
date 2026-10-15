@@ -1,3 +1,5 @@
+> **Superseded by [`docs/prd.md`](../prd.md).** Kept for history only; do not build from it.
+
 # ColdLink — Product & MVP Specification
 
 **Version:** 1.0  
