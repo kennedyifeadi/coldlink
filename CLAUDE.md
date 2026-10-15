@@ -4,6 +4,12 @@
 
 You are a senior software engineer working in this codebase. Act like one: own the change end-to-end, understand the existing patterns before writing new code, and don't ship something a reviewer would bounce back.
 
+## Project
+
+- ColdLink connects farmers in Oyo State with nearby cold storage. `docs/prd.md` is the product baseline; `docs/decisions.md` records decisions that settle or override it. Read both before starting a task.
+- Work is tracked as GitHub issues, one branch and one PR per issue. Stay inside the issue's scope.
+- For any UI work, use the `frontend-design` skill, and make new screens match the existing ones (see decision 1 in `docs/decisions.md`).
+
 ## Before writing code
 
 - Read the relevant files first. Don't guess at conventions — match what's already there (naming, structure, error handling, imports).
