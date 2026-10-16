@@ -6,7 +6,7 @@ import TopNavBar from '../components/TopNavBar';
 const Duration = () => {
   const navigate = useNavigate();
   const [days, setDays] = useState(3);
-  
+
   const storageCost = days * 1500;
   const deliveryCost = 800;
   const bookingFee = 100;
@@ -22,12 +22,10 @@ const Duration = () => {
 
   return (
     <div className="flex flex-col h-full min-h-screen bg-white relative pb-28">
-      
       {/* Top App Bar */}
       <TopNavBar title="Duration" showBack={true} />
 
       <div className="flex flex-col px-5 pt-8 flex-grow overflow-y-auto">
-        
         {/* Header Content */}
         <div className="mb-6">
           <h1 className="text-[1.35rem] font-medium text-[#1a3622] mb-3">
@@ -40,20 +38,22 @@ const Duration = () => {
 
         {/* Counter Control */}
         <div className="flex items-center justify-between bg-[#f8f9f7] rounded-2xl p-4 mb-8">
-          <button 
+          <button
             onClick={handleDecrease}
             disabled={days <= 1}
             className={`w-12 h-12 rounded-full flex items-center justify-center transition-colors shadow-sm ${days <= 1 ? 'bg-white text-gray-300' : 'bg-white text-[#82b467] hover:bg-gray-50'}`}
           >
             <Minus size={24} strokeWidth={2.5} />
           </button>
-          
+
           <div className="flex flex-col items-center">
             <span className="text-2xl font-bold text-[#1a3622] leading-none mb-1">{days}</span>
-            <span className="text-gray-600 text-[0.8rem] font-medium uppercase tracking-widest">Days</span>
+            <span className="text-gray-600 text-[0.8rem] font-medium uppercase tracking-widest">
+              Days
+            </span>
           </div>
 
-          <button 
+          <button
             onClick={handleIncrease}
             className="w-12 h-12 rounded-full flex items-center justify-center bg-white text-[#82b467] hover:bg-gray-50 transition-colors shadow-sm"
           >
@@ -64,7 +64,7 @@ const Duration = () => {
         {/* Cost Breakdown Card */}
         <div className="bg-[#f8f9f7] rounded-2xl p-6 border border-gray-100">
           <h3 className="text-[#1a3622] text-[1.1rem] mb-5">Cost Breakdown</h3>
-          
+
           <div className="flex flex-col gap-4 mb-6">
             <div className="flex justify-between items-center">
               <span className="text-gray-700 text-[1.05rem]">Storage</span>
@@ -72,7 +72,9 @@ const Duration = () => {
             </div>
             <div className="flex justify-between items-center">
               <span className="text-gray-700 text-[1.05rem]">Delivery</span>
-              <span className="text-[#1a3622] text-[1.05rem]">₦{deliveryCost.toLocaleString()}</span>
+              <span className="text-[#1a3622] text-[1.05rem]">
+                ₦{deliveryCost.toLocaleString()}
+              </span>
             </div>
             <div className="flex justify-between items-center">
               <span className="text-gray-700 text-[1.05rem]">Booking fee</span>
@@ -95,19 +97,17 @@ const Duration = () => {
             </p>
           </div>
         </div>
-
       </div>
 
       {/* Sticky Bottom Action */}
       <div className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[430px] p-6 bg-gradient-to-t from-white via-white to-transparent z-20 pb-safe">
-        <button 
-          onClick={() => navigate('/review')}
+        <button
+          onClick={() => void navigate('/review')}
           className="w-full py-4 rounded-xl bg-[#82b467] hover:bg-[#7ba962] text-white font-medium text-[1.1rem] transition-colors shadow-sm"
         >
           Continue to payment
         </button>
       </div>
-
     </div>
   );
 };

@@ -2,30 +2,33 @@ import React, { useState } from 'react';
 import { ArrowRight, CheckCircle2 } from 'lucide-react';
 import * as Icons from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { produceOptions } from '../data/mockData';
+import { produceOptions, type ProduceId, type ProduceOption } from '../data/mockData';
 import TopNavBar from '../components/TopNavBar';
 
+type ProduceChoice = ProduceId | 'other';
+
 // Append 'Other' for the UI
-const optionsToRender = [...produceOptions, { id: 'other', name: 'Other', icon: 'Shapes' }];
+const optionsToRender: ProduceOption<ProduceChoice>[] = [
+  ...produceOptions,
+  { id: 'other', name: 'Other', icon: 'Shapes' },
+];
 
 const Produce = () => {
   const navigate = useNavigate();
-  const [selectedProduce, setSelectedProduce] = useState(null);
+  const [selectedProduce, setSelectedProduce] = useState<ProduceChoice | null>(null);
 
   const handleContinue = () => {
     if (selectedProduce) {
-      navigate('/discovery');
+      void navigate('/discovery');
     }
   };
 
   return (
     <div className="flex flex-col h-full min-h-screen bg-white relative">
-      
       {/* Top App Bar */}
       <TopNavBar title="Produce" showBack={true} />
 
       <div className="flex flex-col px-6 pt-8 pb-28 flex-grow overflow-y-auto">
-        
         {/* Text Content */}
         <div className="mb-8">
           <h1 className="text-[1.65rem] font-bold text-[#1a3622] mb-3 leading-tight tracking-tight">
@@ -47,8 +50,8 @@ const Produce = () => {
                 key={produce.id}
                 onClick={() => setSelectedProduce(produce.id)}
                 className={`relative flex flex-col items-center justify-center p-6 rounded-2xl border transition-all ${
-                  isSelected 
-                    ? 'bg-[#e7eee1] border-[#a8c697] shadow-sm' 
+                  isSelected
+                    ? 'bg-[#e7eee1] border-[#a8c697] shadow-sm'
                     : 'bg-[#f8f9f7] border-transparent hover:bg-gray-100'
                 }`}
               >
@@ -60,9 +63,11 @@ const Produce = () => {
                 )}
 
                 {/* Icon Circle */}
-                <div className={`w-14 h-14 rounded-full flex items-center justify-center mb-4 bg-white shadow-sm transition-colors ${
-                  isSelected ? 'text-[#68a042]' : 'text-[#1a3622]'
-                }`}>
+                <div
+                  className={`w-14 h-14 rounded-full flex items-center justify-center mb-4 bg-white shadow-sm transition-colors ${
+                    isSelected ? 'text-[#68a042]' : 'text-[#1a3622]'
+                  }`}
+                >
                   <IconComponent size={24} strokeWidth={2} />
                 </div>
 
@@ -86,13 +91,12 @@ const Produce = () => {
           `}
         >
           <span>Find cold storage</span>
-          <ArrowRight 
-            size={20} 
-            className="ml-2 transition-transform duration-300 group-hover:translate-x-1.5" 
+          <ArrowRight
+            size={20}
+            className="ml-2 transition-transform duration-300 group-hover:translate-x-1.5"
           />
         </button>
       </div>
-
     </div>
   );
 };

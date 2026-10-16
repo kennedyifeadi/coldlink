@@ -9,12 +9,10 @@ const Review = () => {
 
   return (
     <div className="flex flex-col h-full min-h-screen bg-white relative pb-20">
-      
       {/* Top App Bar */}
       <TopNavBar title="Review" showProfile={true} />
 
       <div className="flex flex-col px-5 pt-6 pb-6 flex-grow overflow-y-auto">
-        
         {/* Header */}
         <div className="mb-6">
           <h1 className="text-[1.65rem] font-bold text-[#1a3622] mb-2 tracking-tight">
@@ -32,7 +30,9 @@ const Review = () => {
               <Snowflake size={20} />
             </div>
             <div>
-              <h2 className="font-semibold text-[#1a3622] text-[1.05rem]">Mile 12 Mega Cold Store</h2>
+              <h2 className="font-semibold text-[#1a3622] text-[1.05rem]">
+                Mile 12 Mega Cold Store
+              </h2>
               <div className="flex items-center text-gray-500 text-sm mt-0.5">
                 <MapPin size={12} className="mr-1" /> Ketu, Lagos (2.4km)
               </div>
@@ -58,7 +58,7 @@ const Review = () => {
         {/* Cost Summary Card */}
         <div className="bg-[#f8f9f7] rounded-2xl p-5 mb-4 border border-gray-100">
           <h3 className="font-semibold text-[#1a3622] mb-4">Cost Summary</h3>
-          
+
           <div className="flex flex-col gap-3 mb-4">
             <div className="flex justify-between items-center text-sm">
               <span className="text-gray-600">Storage (3 days)</span>
@@ -89,7 +89,8 @@ const Review = () => {
             <div>
               <h4 className="font-semibold text-[#8c6b22] mb-1">Split Payment Plan</h4>
               <p className="text-[#a47a1f] text-sm leading-relaxed">
-                You'll pay 50% now to secure the space, and the remaining 50% according to the storage provider's arrangement.
+                You'll pay 50% now to secure the space, and the remaining 50% according to the
+                storage provider's arrangement.
               </p>
             </div>
           </div>
@@ -109,18 +110,18 @@ const Review = () => {
 
         {/* Action Buttons */}
         <div className="flex flex-col gap-4">
-          <button 
-            onClick={() => navigate('/payment')}
+          <button
+            onClick={() => void navigate('/payment')}
             className="group flex items-center justify-center w-full py-4 rounded-lg bg-[#82b467] hover:bg-[#7ba962] text-white font-medium text-lg transition-colors shadow-md"
           >
             <span>Pay ₦2,700</span>
-            <ArrowRight 
-              size={20} 
-              className="ml-2 transition-transform duration-300 group-hover:translate-x-1.5" 
+            <ArrowRight
+              size={20}
+              className="ml-2 transition-transform duration-300 group-hover:translate-x-1.5"
             />
           </button>
-          <button 
-            onClick={() => navigate(-1)}
+          <button
+            onClick={() => void navigate(-1)}
             className="w-full py-3 text-[#82b467] font-medium text-[1.05rem] hover:bg-gray-50 rounded-lg transition-colors"
           >
             Edit booking
@@ -130,7 +131,6 @@ const Review = () => {
 
       {/* Bottom Navigation */}
       <BottomNav activeTab="bookings" />
-
     </div>
   );
 };
