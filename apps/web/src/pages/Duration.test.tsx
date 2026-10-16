@@ -9,7 +9,7 @@ const renderDuration = () => {
   render(
     <MemoryRouter>
       <Duration />
-    </MemoryRouter>
+    </MemoryRouter>,
   );
   // The counter buttons have no accessible names yet (#9), so find them next to the "Days" label.
   const counter = screen.getByText('Days').parentElement?.parentElement;

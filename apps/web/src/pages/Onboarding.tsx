@@ -15,7 +15,6 @@ const Onboarding = () => {
 
   return (
     <div className="flex flex-col h-full min-h-screen bg-white p-6 relative">
-      
       {/* Header / Logo Area */}
       <div className="flex items-center gap-2 mt-8 mb-16">
         <div className="bg-[#68a042] p-1.5 rounded-lg text-white">
@@ -44,14 +43,10 @@ const Onboarding = () => {
 
       {/* Form and Action Area */}
       <form onSubmit={handleContinue} className="w-full mt-12 pb-8">
-        
         {/* Phone Number Input */}
         <div className="mb-8">
-          <label className="block text-sm font-medium text-gray-800 mb-2">
-            Phone number
-          </label>
+          <label className="block text-sm font-medium text-gray-800 mb-2">Phone number</label>
           <div className="flex items-center border border-gray-300 rounded-lg overflow-hidden focus-within:border-[#80b368] focus-within:ring-1 focus-within:ring-[#80b368] transition-all">
-            
             {/* Country Code & Flag */}
             <div className="flex items-center gap-2 px-4 py-3.5 bg-gray-50 border-r border-gray-300 shrink-0">
               {/* CSS Nigerian Flag (No emojis!) */}
@@ -62,7 +57,7 @@ const Onboarding = () => {
               </div>
               <span className="text-gray-800 font-medium">+234</span>
             </div>
-            
+
             {/* Input Field */}
             <input
               type="tel"
@@ -83,9 +78,9 @@ const Onboarding = () => {
           `}
         >
           <span>Continue</span>
-          <ArrowRight 
-            size={20} 
-            className="ml-2 transition-transform duration-300 group-hover:translate-x-1.5" 
+          <ArrowRight
+            size={20}
+            className="ml-2 transition-transform duration-300 group-hover:translate-x-1.5"
           />
         </button>
 
@@ -93,7 +88,6 @@ const Onboarding = () => {
         <p className="text-center text-gray-600 text-sm mt-8 px-4 leading-relaxed">
           Your phone number creates your ColdLink User ID. No password required.
         </p>
-
       </form>
     </div>
   );

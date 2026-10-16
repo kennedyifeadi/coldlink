@@ -7,9 +7,9 @@ import BottomNav from '../components/BottomNav';
 const UserId = () => {
   const navigate = useNavigate();
   const [copied, setCopied] = useState(false);
-  
+
   // Hardcoded for now since no DB is used, but we could generate it randomly
-  const userId = "CL-482731";
+  const userId = 'CL-482731';
 
   const handleCopy = () => {
     void navigator.clipboard.writeText(userId);
@@ -23,12 +23,10 @@ const UserId = () => {
 
   return (
     <div className="flex flex-col h-full min-h-screen bg-white relative pb-20">
-      
       {/* Top App Bar */}
       <TopNavBar title="User Id" showProfile={true} />
 
       <div className="flex flex-col px-6 pt-12 items-center text-center flex-grow">
-        
         {/* Success Icon */}
         <div className="relative mb-6">
           <div className="w-20 h-20 bg-[#82b467] rounded-full flex items-center justify-center text-white shadow-sm z-10 relative">
@@ -40,9 +38,7 @@ const UserId = () => {
         </div>
 
         {/* Title */}
-        <h1 className="text-2xl font-bold text-[#1a3622] mb-8">
-          You're all set!
-        </h1>
+        <h1 className="text-2xl font-bold text-[#1a3622] mb-8">You're all set!</h1>
 
         {/* ID Card */}
         <div className="w-full bg-gradient-to-br from-[#e1f5d5] to-[#d4eed4] rounded-2xl p-6 mb-8 shadow-sm border border-[#d0eac5]">
@@ -53,12 +49,12 @@ const UserId = () => {
             {userId}
           </div>
           <div>
-            <button 
+            <button
               onClick={handleCopy}
               className="inline-flex items-center gap-2 bg-[#f4dca8] hover:bg-[#ebd095] text-[#8c6b22] px-5 py-2 rounded-full font-medium text-sm transition-colors"
             >
               <Copy size={16} />
-              {copied ? "Copied!" : "Copy ID"}
+              {copied ? 'Copied!' : 'Copy ID'}
             </button>
           </div>
         </div>
@@ -81,7 +77,6 @@ const UserId = () => {
 
       {/* Bottom Navigation */}
       <BottomNav activeTab="profile" />
-
     </div>
   );
 };

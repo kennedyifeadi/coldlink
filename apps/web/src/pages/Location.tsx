@@ -46,12 +46,10 @@ const Location = () => {
 
   return (
     <div className="flex flex-col h-full min-h-screen bg-white relative">
-      
       {/* Top App Bar */}
       <TopNavBar title="Location" showBack={true} />
 
       <div className="flex flex-col px-6 pt-10 pb-24 flex-grow overflow-y-auto">
-        
         {/* Hero Icon */}
         <div className="flex justify-center mb-8">
           <div className="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center">
@@ -61,9 +59,7 @@ const Location = () => {
 
         {/* Text Content */}
         <div className="text-center mb-10">
-          <h1 className="text-2xl font-bold text-[#1a3622] mb-3">
-            Where are you storing from?
-          </h1>
+          <h1 className="text-2xl font-bold text-[#1a3622] mb-3">Where are you storing from?</h1>
           <p className="text-gray-600 text-[1.05rem] leading-relaxed max-w-sm mx-auto">
             We'll use your location to find the closest available cold rooms and calculate delivery.
           </p>
@@ -71,23 +67,26 @@ const Location = () => {
 
         {/* Options */}
         <div className="flex flex-col gap-6">
-          
           {/* Current Location Option */}
-          <button 
+          <button
             onClick={handleSelectCurrent}
             className={`flex items-center p-4 rounded-xl transition-all text-left ${
-              selectedOption === 'current' 
-                ? 'bg-[#f4f9f1] border border-[#80b368] shadow-sm' 
+              selectedOption === 'current'
+                ? 'bg-[#f4f9f1] border border-[#80b368] shadow-sm'
                 : 'bg-gray-100 border border-transparent hover:bg-gray-200'
             }`}
           >
-            <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 mr-4 ${
-              selectedOption === 'current' ? 'bg-[#e5f0df]' : 'bg-[#e9eee7]'
-            }`}>
+            <div
+              className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 mr-4 ${
+                selectedOption === 'current' ? 'bg-[#e5f0df]' : 'bg-[#e9eee7]'
+              }`}
+            >
               <Crosshair size={20} className="text-[#68a042]" />
             </div>
             <div className="flex-grow">
-              <div className="font-semibold text-gray-900 text-[1.05rem]">Use my current location</div>
+              <div className="font-semibold text-gray-900 text-[1.05rem]">
+                Use my current location
+              </div>
               <div className="text-gray-600 text-sm mt-0.5">Recommended for accuracy</div>
             </div>
             {selectedOption === 'current' && (
@@ -111,11 +110,11 @@ const Location = () => {
           </div>
 
           {/* Manual Location Option */}
-          <button 
+          <button
             onClick={handleSelectManual}
             className={`flex items-center justify-center p-4 rounded-xl transition-all ${
-              selectedOption === 'manual' 
-                ? 'bg-[#f4f9f1] border border-[#80b368] shadow-sm text-[#1a3622]' 
+              selectedOption === 'manual'
+                ? 'bg-[#f4f9f1] border border-[#80b368] shadow-sm text-[#1a3622]'
                 : 'bg-[#fafafa] border border-gray-100 hover:bg-gray-100 text-gray-800'
             }`}
           >
@@ -131,7 +130,7 @@ const Location = () => {
                 <div className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400">
                   <Search size={18} />
                 </div>
-                <input 
+                <input
                   type="text"
                   placeholder="Search for a location..."
                   value={manualSearch}
@@ -170,7 +169,6 @@ const Location = () => {
               )}
             </div>
           )}
-
         </div>
       </div>
 
@@ -184,13 +182,12 @@ const Location = () => {
           `}
         >
           <span>Continue</span>
-          <ArrowRight 
-            size={20} 
-            className="ml-2 transition-transform duration-300 group-hover:translate-x-1.5" 
+          <ArrowRight
+            size={20}
+            className="ml-2 transition-transform duration-300 group-hover:translate-x-1.5"
           />
         </button>
       </div>
-
     </div>
   );
 };
