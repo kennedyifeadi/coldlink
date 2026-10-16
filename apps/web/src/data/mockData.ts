@@ -1,3 +1,16 @@
+import type * as Icons from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
+
+export type LucideIconName = {
+  [Name in keyof typeof Icons]: (typeof Icons)[Name] extends LucideIcon ? Name : never;
+}[keyof typeof Icons];
+
+export interface ProduceOption<Id extends string = string> {
+  id: Id;
+  name: string;
+  icon: LucideIconName;
+}
+
 export const produceOptions = [
   { id: 'tomato', name: 'Tomatoes', icon: 'Apple' }, // Placeholder icons
   { id: 'pepper', name: 'Peppers', icon: 'Flame' },
@@ -8,9 +21,24 @@ export const produceOptions = [
   { id: 'meat', name: 'Meat & Poultry', icon: 'Drumstick' },
   { id: 'fish', name: 'Fish & Seafood', icon: 'Fish' },
   { id: 'dairy', name: 'Dairy Products', icon: 'Milk' },
-];
+] as const satisfies readonly ProduceOption[];
 
-export const coldRooms = [
+export type ProduceId = (typeof produceOptions)[number]['id'];
+
+export interface ColdRoom {
+  id: string;
+  name: string;
+  location: string;
+  distance: number;
+  pricePerDay: number;
+  totalCapacity: number;
+  availableCapacity: number;
+  supportedProduce: ProduceId[];
+  rating: number;
+  image: string;
+}
+
+export const coldRooms: ColdRoom[] = [
   {
     id: 'cr-001',
     name: 'Oyo Fresh Store',

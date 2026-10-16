@@ -2,11 +2,17 @@ import React from 'react';
 import { ArrowLeft, Snowflake, User } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
-const TopNavBar = ({ title, showBack = false, showProfile = false }) => {
+interface TopNavBarProps {
+  title: string;
+  showBack?: boolean;
+  showProfile?: boolean;
+}
+
+const TopNavBar = ({ title, showBack = false, showProfile = false }: TopNavBarProps) => {
   const navigate = useNavigate();
 
   const handleBack = () => {
-    navigate(-1);
+    void navigate(-1);
   };
 
   return (

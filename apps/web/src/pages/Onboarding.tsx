@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, type FormEvent } from 'react';
 import { ArrowRight, Snowflake } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
@@ -6,10 +6,10 @@ const Onboarding = () => {
   const [phoneNumber, setPhoneNumber] = useState('');
   const navigate = useNavigate();
 
-  const handleContinue = (e) => {
+  const handleContinue = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (phoneNumber.length > 5) {
-      navigate('/userid');
+      void navigate('/userid');
     }
   };
 

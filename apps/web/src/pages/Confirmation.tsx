@@ -125,7 +125,7 @@ const Confirmation = () => {
         {/* Action Buttons */}
         <div className="flex flex-col gap-4 mt-auto">
           <button 
-            onClick={() => navigate('/discovery')}
+            onClick={() => void navigate('/discovery')}
             className="group flex items-center justify-center w-full py-4 rounded-lg bg-[#82b467] hover:bg-[#7ba962] text-white font-medium text-lg transition-colors shadow-md"
           >
             <span>View booking</span>
@@ -135,7 +135,7 @@ const Confirmation = () => {
             />
           </button>
           <button 
-            onClick={() => navigate('/discovery')}
+            onClick={() => void navigate('/discovery')}
             className="w-full py-4 bg-white border border-gray-200 text-[#1a3622] font-medium text-[1.05rem] hover:bg-gray-50 rounded-lg transition-colors"
           >
             Back to home

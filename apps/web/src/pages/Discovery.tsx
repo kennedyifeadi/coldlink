@@ -1,14 +1,14 @@
 import React from 'react';
 import { MapPin, SlidersHorizontal, Star, Leaf } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { coldRooms } from '../data/mockData';
+import { coldRooms, type ColdRoom } from '../data/mockData';
 import TopNavBar from '../components/TopNavBar';
 import BottomNav from '../components/BottomNav';
 
 const Discovery = () => {
   const navigate = useNavigate();
 
-  const renderAvailabilityBar = (room) => {
+  const renderAvailabilityBar = (room: ColdRoom) => {
     const percentage = (room.availableCapacity / room.totalCapacity) * 100;
     const isLow = percentage <= 10;
     
@@ -98,7 +98,7 @@ const Discovery = () => {
 
                   {/* Action */}
                   <button 
-                    onClick={() => navigate('/details')}
+                    onClick={() => void navigate('/details')}
                     className="w-full bg-[#82b467] hover:bg-[#7ba962] text-white font-medium py-3.5 rounded-lg transition-colors"
                   >
                     View storage

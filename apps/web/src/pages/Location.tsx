@@ -3,9 +3,11 @@ import { MapPin, Search, Crosshair, ArrowRight, CheckCircle2 } from 'lucide-reac
 import { useNavigate } from 'react-router-dom';
 import TopNavBar from '../components/TopNavBar';
 
+type LocationOption = 'current' | 'manual';
+
 const Location = () => {
   const navigate = useNavigate();
-  const [selectedOption, setSelectedOption] = useState(null); // 'current' or 'manual'
+  const [selectedOption, setSelectedOption] = useState<LocationOption | null>(null);
   const [manualSearch, setManualSearch] = useState('');
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [confirmedLocation, setConfirmedLocation] = useState('');
@@ -23,7 +25,7 @@ const Location = () => {
     setShowSuggestions(true);
   };
 
-  const handlePickSuggestion = (address) => {
+  const handlePickSuggestion = (address: string) => {
     setConfirmedLocation(address);
     setManualSearch(address);
     setShowSuggestions(false);
@@ -31,7 +33,7 @@ const Location = () => {
 
   const handleContinue = () => {
     if (confirmedLocation) {
-      navigate('/produce');
+      void navigate('/produce');
     }
   };
 

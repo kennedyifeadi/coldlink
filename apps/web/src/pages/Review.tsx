@@ -110,7 +110,7 @@ const Review = () => {
         {/* Action Buttons */}
         <div className="flex flex-col gap-4">
           <button 
-            onClick={() => navigate('/payment')}
+            onClick={() => void navigate('/payment')}
             className="group flex items-center justify-center w-full py-4 rounded-lg bg-[#82b467] hover:bg-[#7ba962] text-white font-medium text-lg transition-colors shadow-md"
           >
             <span>Pay ₦2,700</span>
@@ -120,7 +120,7 @@ const Review = () => {
             />
           </button>
           <button 
-            onClick={() => navigate(-1)}
+            onClick={() => void navigate(-1)}
             className="w-full py-3 text-[#82b467] font-medium text-[1.05rem] hover:bg-gray-50 rounded-lg transition-colors"
           >
             Edit booking

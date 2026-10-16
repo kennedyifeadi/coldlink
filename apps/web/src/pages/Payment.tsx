@@ -3,9 +3,11 @@ import { ReceiptText, CreditCard, Landmark, Grip, HelpCircle, Lock, ArrowRight }
 import { useNavigate } from 'react-router-dom';
 import TopNavBar from '../components/TopNavBar';
 
+type PaymentMethod = 'card' | 'transfer' | 'ussd';
+
 const Payment = () => {
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState('card');
+  const [activeTab, setActiveTab] = useState<PaymentMethod>('card');
   const [saveCard, setSaveCard] = useState(false);
 
   return (
@@ -147,7 +149,7 @@ const Payment = () => {
         </div>
 
         <button 
-          onClick={() => navigate('/confirmation')}
+          onClick={() => void navigate('/confirmation')}
           className="group flex items-center justify-center w-full py-4 rounded-lg bg-[#82b467] hover:bg-[#7ba962] text-white font-medium text-lg transition-colors shadow-md"
         >
           <span>Pay ₦2,700</span>

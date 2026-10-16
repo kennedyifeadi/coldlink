@@ -112,7 +112,7 @@ const Details = () => {
       {/* Sticky Bottom Action */}
       <div className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[430px] p-6 bg-gradient-to-t from-white via-white to-transparent z-20 pb-safe">
         <button 
-          onClick={() => navigate('/duration')}
+          onClick={() => void navigate('/duration')}
           className="group flex items-center justify-center w-full py-4 rounded-lg bg-[#82b467] hover:bg-[#7ba962] text-white font-medium text-lg transition-colors shadow-md"
         >
           <span>Continue</span>

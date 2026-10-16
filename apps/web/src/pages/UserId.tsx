@@ -12,13 +12,13 @@ const UserId = () => {
   const userId = "CL-482731";
 
   const handleCopy = () => {
-    navigator.clipboard.writeText(userId);
+    void navigator.clipboard.writeText(userId);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
 
   const handleFindStorage = () => {
-    navigate('/location');
+    void navigate('/location');
   };
 
   return (

@@ -101,7 +101,7 @@ const Duration = () => {
       {/* Sticky Bottom Action */}
       <div className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[430px] p-6 bg-gradient-to-t from-white via-white to-transparent z-20 pb-safe">
         <button 
-          onClick={() => navigate('/review')}
+          onClick={() => void navigate('/review')}
           className="w-full py-4 rounded-xl bg-[#82b467] hover:bg-[#7ba962] text-white font-medium text-[1.1rem] transition-colors shadow-sm"
         >
           Continue to payment
