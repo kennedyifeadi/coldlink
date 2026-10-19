@@ -45,6 +45,7 @@
 }
 
 @theme {
+  --color-*: initial;
   --color-white: #ffffff;
   --color-black: #000000;
 
@@ -81,6 +82,7 @@
   --font-sans: 'Nunito Variable', 'Nunito Fallback', ui-sans-serif, system-ui, sans-serif;
   --font-heading: 'Fraunces Variable', 'Fraunces Fallback', Georgia, serif;
 
+  --text-*: initial;
   --text-caption: 0.75rem;
   --text-caption--line-height: 1rem;
   --text-label: 0.875rem;

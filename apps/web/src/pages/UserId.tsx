@@ -22,36 +22,36 @@ const UserId = () => {
   };
 
   return (
-    <div className="flex flex-col h-full min-h-screen bg-white relative pb-20">
+    <div className="flex flex-col h-full min-h-screen bg-background relative pb-20">
       {/* Top App Bar */}
       <TopNavBar title="User Id" showProfile={true} />
 
       <div className="flex flex-col px-6 pt-12 items-center text-center flex-grow">
         {/* Success Icon */}
         <div className="relative mb-6">
-          <div className="w-20 h-20 bg-[#82b467] rounded-full flex items-center justify-center text-white shadow-sm z-10 relative">
+          <div className="w-20 h-20 bg-primary rounded-full flex items-center justify-center text-ink shadow-sm z-10 relative">
             <CheckCircle2 size={32} strokeWidth={2.5} />
           </div>
           {/* Orange Sparks */}
-          <div className="absolute top-0 right-[-10px] w-4 h-0.5 bg-[#f59e0b] rotate-45 rounded-full"></div>
-          <div className="absolute top-4 right-[-16px] w-4 h-0.5 bg-[#f59e0b] -rotate-[15deg] rounded-full"></div>
+          <div className="absolute top-0 right-[-10px] w-4 h-0.5 bg-accent rotate-45 rounded-full"></div>
+          <div className="absolute top-4 right-[-16px] w-4 h-0.5 bg-accent -rotate-[15deg] rounded-full"></div>
         </div>
 
         {/* Title */}
-        <h1 className="text-2xl font-bold text-[#1a3622] mb-8">You're all set!</h1>
+        <h1 className="font-heading text-headline font-bold text-ink mb-8">You're all set!</h1>
 
         {/* ID Card */}
-        <div className="w-full bg-gradient-to-br from-[#e1f5d5] to-[#d4eed4] rounded-2xl p-6 mb-8 shadow-sm border border-[#d0eac5]">
-          <p className="text-gray-700 text-xs font-medium tracking-widest uppercase mb-4">
+        <div className="w-full bg-gradient-to-br from-primary-faint to-primary-soft rounded-2xl p-6 mb-8 shadow-sm border border-primary-muted">
+          <p className="text-copy-muted text-caption font-medium tracking-widest uppercase mb-4">
             Your ColdLink ID
           </p>
-          <div className="bg-[#c2e2af] text-[#1a3622] font-bold text-3xl tracking-widest py-3 px-6 rounded-lg mb-6 inline-block">
+          <div className="bg-primary-muted text-ink font-bold text-display tracking-widest py-3 px-6 rounded-lg mb-6 inline-block">
             {userId}
           </div>
           <div>
             <button
               onClick={handleCopy}
-              className="inline-flex items-center gap-2 bg-[#f4dca8] hover:bg-[#ebd095] text-[#8c6b22] px-5 py-2 rounded-full font-medium text-sm transition-colors"
+              className="inline-flex items-center gap-2 bg-accent-faint hover:bg-accent-soft text-accent-ink px-5 py-2 rounded-full font-medium text-label transition-colors"
             >
               <Copy size={16} />
               {copied ? 'Copied!' : 'Copy ID'}
@@ -60,7 +60,7 @@ const UserId = () => {
         </div>
 
         {/* Info Text */}
-        <p className="text-gray-600 text-base leading-relaxed px-4">
+        <p className="text-copy-muted text-body leading-relaxed px-4">
           This ID works across ColdLink Web, WhatsApp and USSD.
         </p>
       </div>
@@ -69,7 +69,7 @@ const UserId = () => {
       <div className="px-6 mb-6">
         <button
           onClick={handleFindStorage}
-          className="w-full bg-[#7ba962] hover:bg-[#689451] text-white py-4 rounded-lg font-medium text-lg transition-colors shadow-md"
+          className="w-full bg-primary hover:bg-primary-hover text-ink py-4 rounded-lg font-medium text-subtitle transition-colors shadow-md"
         >
           Find storage
         </button>

@@ -24,17 +24,17 @@ const Produce = () => {
   };
 
   return (
-    <div className="flex flex-col h-full min-h-screen bg-white relative">
+    <div className="flex flex-col h-full min-h-screen bg-background relative">
       {/* Top App Bar */}
       <TopNavBar title="Produce" showBack={true} />
 
       <div className="flex flex-col px-6 pt-8 pb-28 flex-grow overflow-y-auto">
         {/* Text Content */}
         <div className="mb-8">
-          <h1 className="text-[1.65rem] font-bold text-[#1a3622] mb-3 leading-tight tracking-tight">
+          <h1 className="font-heading text-headline-lg font-bold text-ink mb-3 leading-tight tracking-tight">
             What do you want to store?
           </h1>
-          <p className="text-gray-600 text-[1.05rem] leading-relaxed">
+          <p className="text-copy-muted text-lead leading-relaxed">
             Select the produce you're looking to preserve.
           </p>
         </div>
@@ -51,28 +51,28 @@ const Produce = () => {
                 onClick={() => setSelectedProduce(produce.id)}
                 className={`relative flex flex-col items-center justify-center p-6 rounded-2xl border transition-all ${
                   isSelected
-                    ? 'bg-[#e7eee1] border-[#a8c697] shadow-sm'
-                    : 'bg-[#f8f9f7] border-transparent hover:bg-gray-100'
+                    ? 'bg-primary-soft border-primary shadow-sm'
+                    : 'bg-surface-muted border-transparent hover:bg-surface-sunken'
                 }`}
               >
                 {/* Selected Checkmark */}
                 {isSelected && (
-                  <div className="absolute top-3 right-3 text-[#68a042]">
+                  <div className="absolute top-3 right-3 text-primary-strong">
                     <CheckCircle2 size={18} />
                   </div>
                 )}
 
                 {/* Icon Circle */}
                 <div
-                  className={`w-14 h-14 rounded-full flex items-center justify-center mb-4 bg-white shadow-sm transition-colors ${
-                    isSelected ? 'text-[#68a042]' : 'text-[#1a3622]'
+                  className={`w-14 h-14 rounded-full flex items-center justify-center mb-4 bg-surface shadow-sm transition-colors ${
+                    isSelected ? 'text-primary-strong' : 'text-ink'
                   }`}
                 >
                   <IconComponent size={24} strokeWidth={2} />
                 </div>
 
                 {/* Name */}
-                <span className={`font-medium ${isSelected ? 'text-[#1a3622]' : 'text-gray-800'}`}>
+                <span className={`font-medium ${isSelected ? 'text-ink' : 'text-copy'}`}>
                   {produce.name}
                 </span>
               </button>
@@ -82,12 +82,12 @@ const Produce = () => {
       </div>
 
       {/* Bottom Action Area (Sticky) */}
-      <div className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[430px] p-6 bg-gradient-to-t from-white via-white to-transparent z-20 pb-safe">
+      <div className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[430px] p-6 bg-gradient-to-t from-background via-background to-transparent z-20 pb-safe">
         <button
           onClick={handleContinue}
           disabled={!selectedProduce}
-          className={`group flex items-center justify-center w-full py-4 rounded-lg text-white font-medium text-lg transition-all
-            ${!selectedProduce ? 'bg-[#a3c993] cursor-not-allowed opacity-80' : 'bg-[#7ba962] hover:bg-[#689451] shadow-md'}
+          className={`group flex items-center justify-center w-full py-4 rounded-lg font-medium text-subtitle transition-all
+            ${!selectedProduce ? 'bg-primary-muted text-ink/50 cursor-not-allowed opacity-80' : 'bg-primary hover:bg-primary-hover text-ink shadow-md'}
           `}
         >
           <span>Find cold storage</span>
