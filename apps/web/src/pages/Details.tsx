@@ -1,14 +1,5 @@
 import React, { useState } from 'react';
-import {
-  MapPin,
-  Star,
-  Snowflake,
-  ShieldCheck,
-  Minus,
-  Plus,
-  ArrowRight,
-  Warehouse,
-} from 'lucide-react';
+import { MapPin, Star, Minus, Plus, ArrowRight, Warehouse } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import TopNavBar from '../components/TopNavBar';
 
@@ -64,18 +55,8 @@ const Details = () => {
           </div>
 
           {/* Progress Bar */}
-          <div className="w-full h-2 bg-line-strong rounded-full mb-5 overflow-hidden">
+          <div className="w-full h-2 bg-line-strong rounded-full overflow-hidden">
             <div className="h-full bg-primary rounded-full" style={{ width: '50%' }}></div>
-          </div>
-
-          {/* Features Pills */}
-          <div className="flex flex-wrap gap-3">
-            <div className="flex items-center gap-1.5 bg-primary-faint text-ink px-3 py-1.5 rounded-full text-label font-medium">
-              <Snowflake size={14} className="text-primary" /> Frozen (-18°C)
-            </div>
-            <div className="flex items-center gap-1.5 bg-primary-faint text-ink px-3 py-1.5 rounded-full text-label font-medium">
-              <ShieldCheck size={14} className="text-primary" /> Insured
-            </div>
           </div>
         </div>
 
