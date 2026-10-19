@@ -12,7 +12,7 @@ const BottomNav = ({ activeTab = 'find' }: BottomNavProps) => {
   const navigate = useNavigate();
 
   return (
-    <div className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[430px] bg-surface border-t border-line flex justify-between px-8 py-3 pb-safe z-20 shadow-bar">
+    <div className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[430px] bg-surface border-t border-line flex justify-between px-8 pt-3 pb-safe-3 z-20 shadow-bar">
       <button
         onClick={() => void navigate('/discovery')}
         className={`flex flex-col items-center gap-1 transition-colors ${activeTab === 'find' ? 'text-primary-strong' : 'text-copy-subtle hover:text-copy'}`}
