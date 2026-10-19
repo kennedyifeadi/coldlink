@@ -1,1 +1,112 @@
 @import 'tailwindcss';
+
+/* Latin subset only: farmers are on limited data. One variable file per family covers every weight. */
+@font-face {
+  font-family: 'Nunito Variable';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 200 1000;
+  src: url('@fontsource-variable/nunito/files/nunito-latin-wght-normal.woff2')
+    format('woff2-variations');
+  unicode-range:
+    U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329,
+    U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: 'Fraunces Variable';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 100 900;
+  src: url('@fontsource-variable/fraunces/files/fraunces-latin-wght-normal.woff2')
+    format('woff2-variations');
+  unicode-range:
+    U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329,
+    U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+/* Local fallbacks resized to the brand fonts' metrics, so text doesn't reflow when they swap in. */
+@font-face {
+  font-family: 'Nunito Fallback';
+  src: local('Arial');
+  size-adjust: 101.91%;
+  ascent-override: 99.2%;
+  descent-override: 34.64%;
+  line-gap-override: 0%;
+}
+
+@font-face {
+  font-family: 'Fraunces Fallback';
+  src: local('Georgia Bold'), local('Georgia-Bold');
+  size-adjust: 96.71%;
+  ascent-override: 101.13%;
+  descent-override: 26.37%;
+  line-gap-override: 0%;
+}
+
+@theme {
+  --color-white: #ffffff;
+  --color-black: #000000;
+
+  --color-primary: #7fb069;
+  --color-primary-hover: #8cb878;
+  --color-primary-strong: #517646;
+  --color-primary-muted: #ccdfc3;
+  --color-primary-soft: #dfebda;
+  --color-primary-faint: #f0f6ed;
+
+  --color-accent: #f0a93e;
+  --color-accent-soft: #f4c378;
+  --color-accent-faint: #f9ddb2;
+  --color-accent-ink: #543b16;
+
+  --color-alert: #e2654a;
+  --color-alert-strong: #aa4c38;
+
+  --color-ink: #233d22;
+  --color-copy: #262b25;
+  --color-copy-muted: #4e554b;
+  --color-copy-subtle: #5f665c;
+  --color-disabled: #bfc3b6;
+
+  --color-background: #f6f7ee;
+  --color-surface: #fffdf7;
+  --color-surface-muted: #eef0e4;
+  --color-surface-sunken: #e4e7d9;
+  --color-line: #e8eadf;
+  --color-line-strong: #d6d9cc;
+
+  --color-flag-green: #008751;
+
+  --font-sans: 'Nunito Variable', 'Nunito Fallback', ui-sans-serif, system-ui, sans-serif;
+  --font-heading: 'Fraunces Variable', 'Fraunces Fallback', Georgia, serif;
+
+  --text-caption: 0.75rem;
+  --text-caption--line-height: 1rem;
+  --text-label: 0.875rem;
+  --text-label--line-height: 1.25rem;
+  --text-body: 1rem;
+  --text-body--line-height: 1.5rem;
+  --text-lead: 1.0625rem;
+  --text-lead--line-height: 1.625rem;
+  --text-subtitle: 1.125rem;
+  --text-subtitle--line-height: 1.75rem;
+  --text-title: 1.25rem;
+  --text-title--line-height: 1.75rem;
+  --text-headline: 1.5rem;
+  --text-headline--line-height: 2rem;
+  --text-headline-lg: 1.625rem;
+  --text-headline-lg--line-height: 2.125rem;
+  --text-display: 1.875rem;
+  --text-display--line-height: 2.25rem;
+
+  --shadow-card: 0 2px 10px rgb(35 61 34 / 0.04);
+  --shadow-bar: 0 -2px 10px rgb(35 61 34 / 0.04);
+}
+
+@layer base {
+  body {
+    background-color: var(--color-background);
+    color: var(--color-copy);
+  }
+}
