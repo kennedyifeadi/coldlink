@@ -37,18 +37,23 @@ export interface ColdRoom {
   rating: number;
 }
 
+const oyoFreshStore: ColdRoom = {
+  id: 'cr-001',
+  name: 'Oyo Fresh Store',
+  location: 'Bodija Market, Ibadan',
+  distance: 2.4, // km
+  pricePerDay: 1500, // Naira
+  totalCapacity: 20, // units
+  availableCapacity: 10,
+  supportedProduce: ['tomato', 'pepper', 'vegetables'],
+  rating: 4.7,
+};
+
+// Details, Review and Confirmation show this room until the chosen one is passed through the flow (#32–#34).
+export const sampleColdRoom = oyoFreshStore;
+
 export const coldRooms: ColdRoom[] = [
-  {
-    id: 'cr-001',
-    name: 'Oyo Fresh Store',
-    location: 'Bodija Market, Ibadan',
-    distance: 2.4, // km
-    pricePerDay: 1500, // Naira
-    totalCapacity: 20, // units
-    availableCapacity: 10,
-    supportedProduce: ['tomato', 'pepper', 'vegetables'],
-    rating: 4.7,
-  },
+  oyoFreshStore,
   {
     id: 'cr-002',
     name: 'Ibadan North Cold Storage',

@@ -14,7 +14,7 @@ const Location = () => {
 
   const handleSelectCurrent = () => {
     setSelectedOption('current');
-    setConfirmedLocation('Supreme School, Magodo, Lagos');
+    setConfirmedLocation('Bodija, Ibadan');
     setShowSuggestions(false);
     setManualSearch('');
   };
@@ -38,11 +38,7 @@ const Location = () => {
   };
 
   // Mock suggestions — only shown when manual is selected
-  const suggestions = [
-    'Supreme School, Magodo, Lagos',
-    'Magodo Phase 2, Lagos',
-    'Magodo Brooks Estate, Lagos',
-  ];
+  const suggestions = ['Bodija, Ibadan', 'Apata, Ibadan', 'Iwo Road, Ibadan'];
 
   return (
     <div className="flex flex-col h-full min-h-screen bg-background relative">

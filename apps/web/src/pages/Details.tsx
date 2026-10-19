@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { MapPin, Star, Minus, Plus, ArrowRight, Warehouse } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { sampleColdRoom as room } from '../data/mockData';
 import TopNavBar from '../components/TopNavBar';
 
 const Details = () => {
@@ -8,6 +9,7 @@ const Details = () => {
   const [units, setUnits] = useState(2);
   const maxUnits = 10;
   const pricePerUnit = 1500;
+  const availablePercentage = (room.availableCapacity / room.totalCapacity) * 100;
 
   const handleDecrease = () => {
     if (units > 1) setUnits(units - 1);
@@ -33,14 +35,14 @@ const Details = () => {
           <div className="absolute bottom-4 left-4 right-4 flex justify-between items-end">
             <div>
               <h1 className="font-heading text-headline font-bold mb-1 leading-tight text-ink">
-                Abuja Central Cold Hub
+                {room.name}
               </h1>
               <div className="flex items-center text-copy-muted text-label">
-                <MapPin size={14} className="mr-1" /> Garki Area 1, Abuja
+                <MapPin size={14} className="mr-1" /> {room.location}
               </div>
             </div>
             <div className="flex items-center gap-1 bg-surface text-ink px-2.5 py-1 rounded-md text-label font-bold shadow-md shrink-0">
-              <Star size={14} className="fill-accent text-accent" /> 4.8
+              <Star size={14} className="fill-accent text-accent" /> {room.rating}
             </div>
           </div>
         </div>
@@ -51,12 +53,17 @@ const Details = () => {
             <span className="font-heading font-semibold text-ink text-subtitle">
               Storage Capacity
             </span>
-            <span className="text-copy-muted text-body">10 of 20 units available</span>
+            <span className="text-copy-muted text-body">
+              {room.availableCapacity} of {room.totalCapacity} units available
+            </span>
           </div>
 
           {/* Progress Bar */}
           <div className="w-full h-2 bg-line-strong rounded-full overflow-hidden">
-            <div className="h-full bg-primary rounded-full" style={{ width: '50%' }}></div>
+            <div
+              className="h-full bg-primary rounded-full"
+              style={{ width: `${availablePercentage}%` }}
+            ></div>
           </div>
         </div>
 

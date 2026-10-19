@@ -2,6 +2,7 @@ import React from 'react';
 import { CheckCircle2, Home, MapPin, Leaf, CalendarDays, ArrowRight } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import logoMain from '../assets/logo_main.png';
+import { sampleColdRoom as room } from '../data/mockData';
 
 const Confirmation = () => {
   const navigate = useNavigate();
@@ -43,7 +44,7 @@ const Confirmation = () => {
               <Home size={18} className="text-primary mt-0.5" />
               <div>
                 <p className="text-ink text-label mb-0.5">Cold Room</p>
-                <p className="text-copy-muted text-body">Standard Chilled Unit #4</p>
+                <p className="text-copy-muted text-body">{room.name}</p>
               </div>
             </div>
 
@@ -51,7 +52,7 @@ const Confirmation = () => {
               <MapPin size={18} className="text-primary mt-0.5" />
               <div>
                 <p className="text-ink text-label mb-0.5">Location</p>
-                <p className="text-copy-muted text-body">Kano Central Hub</p>
+                <p className="text-copy-muted text-body">{room.location}</p>
               </div>
             </div>
 
