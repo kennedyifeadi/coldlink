@@ -12,28 +12,28 @@ const BottomNav = ({ activeTab = 'find' }: BottomNavProps) => {
   const navigate = useNavigate();
 
   return (
-    <div className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[430px] bg-white border-t border-gray-100 flex justify-between px-8 py-3 pb-safe z-20 shadow-[0_-2px_10px_rgba(0,0,0,0.03)]">
+    <div className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[430px] bg-surface border-t border-line flex justify-between px-8 py-3 pb-safe z-20 shadow-bar">
       <button
         onClick={() => void navigate('/discovery')}
-        className={`flex flex-col items-center gap-1 transition-colors ${activeTab === 'find' ? 'text-[#68a042]' : 'text-gray-500 hover:text-gray-800'}`}
+        className={`flex flex-col items-center gap-1 transition-colors ${activeTab === 'find' ? 'text-primary-strong' : 'text-copy-subtle hover:text-copy'}`}
       >
         <Snowflake size={24} />
-        <span className="text-[11px] font-medium">Find Cold</span>
+        <span className="text-caption font-medium">Find Cold</span>
       </button>
 
       <button
-        className={`flex flex-col items-center gap-1 transition-colors ${activeTab === 'bookings' ? 'text-[#68a042]' : 'text-gray-500 hover:text-gray-800'}`}
+        className={`flex flex-col items-center gap-1 transition-colors ${activeTab === 'bookings' ? 'text-primary-strong' : 'text-copy-subtle hover:text-copy'}`}
       >
         <ShoppingBag size={24} />
-        <span className="text-[11px] font-medium">Bookings</span>
+        <span className="text-caption font-medium">Bookings</span>
       </button>
 
       <button
         onClick={() => void navigate('/userid')}
-        className={`flex flex-col items-center gap-1 transition-colors ${activeTab === 'profile' ? 'text-[#68a042]' : 'text-gray-500 hover:text-gray-800'}`}
+        className={`flex flex-col items-center gap-1 transition-colors ${activeTab === 'profile' ? 'text-primary-strong' : 'text-copy-subtle hover:text-copy'}`}
       >
         <User size={24} />
-        <span className="text-[11px] font-medium">Profile</span>
+        <span className="text-caption font-medium">Profile</span>
       </button>
     </div>
   );

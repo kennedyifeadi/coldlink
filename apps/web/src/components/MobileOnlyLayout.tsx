@@ -15,9 +15,9 @@ const MobileOnlyLayout = () => {
 
   if (!isMobile) {
     return (
-      <div className="min-h-screen bg-gray-900 flex items-center justify-center p-4">
-        <div className="max-w-md w-full bg-gray-800 rounded-2xl shadow-2xl p-8 text-center border border-gray-700">
-          <div className="w-16 h-16 bg-blue-500/20 text-blue-400 rounded-full flex items-center justify-center mx-auto mb-6">
+      <div className="min-h-screen bg-background flex items-center justify-center p-4">
+        <div className="max-w-md w-full bg-surface rounded-2xl shadow-2xl p-8 text-center border border-line">
+          <div className="w-16 h-16 bg-primary-soft text-primary-strong rounded-full flex items-center justify-center mx-auto mb-6">
             <svg
               xmlns="http://www.w3.org/2000/svg"
               className="h-8 w-8"
@@ -33,8 +33,10 @@ const MobileOnlyLayout = () => {
               />
             </svg>
           </div>
-          <h1 className="text-2xl font-bold text-white mb-4">Mobile Experience Only</h1>
-          <p className="text-gray-400 mb-6">
+          <h1 className="font-heading text-headline font-bold text-ink mb-4">
+            Mobile Experience Only
+          </h1>
+          <p className="text-body text-copy-muted mb-6">
             ColdLink is designed as a mobile-first platform. Please revert to mobile view or resize
             your browser window to continue. Desktop screen isn't available.
           </p>
@@ -44,7 +46,7 @@ const MobileOnlyLayout = () => {
   }
 
   return (
-    <div className="min-h-screen bg-white relative max-w-107.5 mx-auto shadow-xl overflow-hidden">
+    <div className="min-h-screen bg-background relative max-w-107.5 mx-auto shadow-xl overflow-hidden">
       <Outlet />
     </div>
   );

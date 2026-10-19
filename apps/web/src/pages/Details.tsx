@@ -18,7 +18,7 @@ const Details = () => {
   };
 
   return (
-    <div className="flex flex-col h-full min-h-screen bg-white relative pb-28">
+    <div className="flex flex-col h-full min-h-screen bg-background relative pb-28">
       {/* Top App Bar */}
       <TopNavBar title="Details" showBack={true} />
 
@@ -36,65 +36,67 @@ const Details = () => {
           {/* Hero Content */}
           <div className="absolute bottom-4 left-4 right-4 flex justify-between items-end">
             <div className="text-white">
-              <h1 className="text-2xl font-bold mb-1 leading-tight text-white drop-shadow-md">
+              <h1 className="font-heading text-headline font-bold mb-1 leading-tight text-white drop-shadow-md">
                 Abuja Central Cold Hub
               </h1>
-              <div className="flex items-center text-gray-200 text-sm">
+              <div className="flex items-center text-white/85 text-label">
                 <MapPin size={14} className="mr-1" /> Garki Area 1, Abuja
               </div>
             </div>
-            <div className="flex items-center gap-1 bg-white text-[#1a3622] px-2.5 py-1 rounded-md text-sm font-bold shadow-md shrink-0">
-              <Star size={14} className="fill-[#ff9800] text-[#ff9800]" /> 4.8
+            <div className="flex items-center gap-1 bg-surface text-ink px-2.5 py-1 rounded-md text-label font-bold shadow-md shrink-0">
+              <Star size={14} className="fill-accent text-accent" /> 4.8
             </div>
           </div>
         </div>
 
         {/* Storage Capacity Section */}
-        <div className="bg-white border border-gray-100 rounded-2xl p-5 shadow-[0_2px_10px_rgba(0,0,0,0.02)] mb-8">
+        <div className="bg-surface border border-line rounded-2xl p-5 shadow-card mb-8">
           <div className="flex justify-between items-end mb-2">
-            <span className="font-semibold text-[#1a3622] text-lg">Storage Capacity</span>
-            <span className="text-gray-600 text-[0.95rem]">10 of 20 units available</span>
+            <span className="font-heading font-semibold text-ink text-subtitle">
+              Storage Capacity
+            </span>
+            <span className="text-copy-muted text-body">10 of 20 units available</span>
           </div>
 
           {/* Progress Bar */}
-          <div className="w-full h-2 bg-gray-200 rounded-full mb-5 overflow-hidden">
-            <div className="h-full bg-[#82b467] rounded-full" style={{ width: '50%' }}></div>
+          <div className="w-full h-2 bg-line-strong rounded-full mb-5 overflow-hidden">
+            <div className="h-full bg-primary rounded-full" style={{ width: '50%' }}></div>
           </div>
 
           {/* Features Pills */}
           <div className="flex flex-wrap gap-3">
-            <div className="flex items-center gap-1.5 bg-[#f4f9f1] text-[#1a3622] px-3 py-1.5 rounded-full text-sm font-medium">
-              <Snowflake size={14} className="text-[#82b467]" /> Frozen (-18°C)
+            <div className="flex items-center gap-1.5 bg-primary-faint text-ink px-3 py-1.5 rounded-full text-label font-medium">
+              <Snowflake size={14} className="text-primary" /> Frozen (-18°C)
             </div>
-            <div className="flex items-center gap-1.5 bg-[#f4f9f1] text-[#1a3622] px-3 py-1.5 rounded-full text-sm font-medium">
-              <ShieldCheck size={14} className="text-[#82b467]" /> Insured
+            <div className="flex items-center gap-1.5 bg-primary-faint text-ink px-3 py-1.5 rounded-full text-label font-medium">
+              <ShieldCheck size={14} className="text-primary" /> Insured
             </div>
           </div>
         </div>
 
         {/* How much storage Section */}
         <div className="mb-6">
-          <h2 className="text-xl font-bold text-[#1a3622] mb-1">How much storage?</h2>
+          <h2 className="font-heading text-title font-bold text-ink mb-1">How much storage?</h2>
           <div className="flex justify-between items-center mb-4">
-            <span className="text-gray-600 text-[1.05rem]">
+            <span className="text-copy-muted text-lead">
               ₦{pricePerUnit.toLocaleString()} / unit / day
             </span>
-            <span className="text-gray-800 text-sm font-medium">Max {maxUnits} units</span>
+            <span className="text-copy text-label font-medium">Max {maxUnits} units</span>
           </div>
 
           {/* Counter Control */}
-          <div className="flex items-center justify-between bg-white border border-gray-100 rounded-2xl p-3 shadow-[0_2px_10px_rgba(0,0,0,0.02)]">
+          <div className="flex items-center justify-between bg-surface border border-line rounded-2xl p-3 shadow-card">
             <button
               onClick={handleDecrease}
               disabled={units <= 1}
-              className={`w-14 h-14 rounded-full flex items-center justify-center transition-colors ${units <= 1 ? 'bg-gray-50 text-gray-300' : 'bg-[#f8f9f7] text-[#82b467] hover:bg-[#eaf1e5]'}`}
+              className={`w-14 h-14 rounded-full flex items-center justify-center transition-colors ${units <= 1 ? 'bg-surface-muted text-disabled' : 'bg-surface-muted text-primary-strong hover:bg-primary-faint'}`}
             >
               <Minus size={24} />
             </button>
 
             <div className="flex flex-col items-center">
-              <span className="text-3xl font-bold text-[#1a3622] leading-none mb-1">{units}</span>
-              <span className="text-gray-600 text-sm font-medium uppercase tracking-wider">
+              <span className="text-display font-bold text-ink leading-none mb-1">{units}</span>
+              <span className="text-copy-muted text-label font-medium uppercase tracking-wider">
                 Units
               </span>
             </div>
@@ -102,7 +104,7 @@ const Details = () => {
             <button
               onClick={handleIncrease}
               disabled={units >= maxUnits}
-              className={`w-14 h-14 rounded-full flex items-center justify-center transition-colors ${units >= maxUnits ? 'bg-gray-50 text-gray-300' : 'bg-[#f8f9f7] text-[#82b467] hover:bg-[#eaf1e5]'}`}
+              className={`w-14 h-14 rounded-full flex items-center justify-center transition-colors ${units >= maxUnits ? 'bg-surface-muted text-disabled' : 'bg-surface-muted text-primary-strong hover:bg-primary-faint'}`}
             >
               <Plus size={24} />
             </button>
@@ -111,10 +113,10 @@ const Details = () => {
       </div>
 
       {/* Sticky Bottom Action */}
-      <div className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[430px] p-6 bg-gradient-to-t from-white via-white to-transparent z-20 pb-safe">
+      <div className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[430px] p-6 bg-gradient-to-t from-background via-background to-transparent z-20 pb-safe">
         <button
           onClick={() => void navigate('/duration')}
-          className="group flex items-center justify-center w-full py-4 rounded-lg bg-[#82b467] hover:bg-[#7ba962] text-white font-medium text-lg transition-colors shadow-md"
+          className="group flex items-center justify-center w-full py-4 rounded-lg bg-primary hover:bg-primary-hover text-ink font-medium text-subtitle transition-colors shadow-md"
         >
           <span>Continue</span>
           <ArrowRight
