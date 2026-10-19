@@ -1,7 +1,7 @@
 import React from 'react';
 import { ArrowLeft, User } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import logoShort from '../assets/logo-short.png';
+import logoShort from '../assets/logo-short.webp';
 
 interface TopNavBarProps {
   title: string;
