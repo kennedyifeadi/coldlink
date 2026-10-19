@@ -1,5 +1,5 @@
 import React from 'react';
-import { MapPin, SlidersHorizontal, Star, Leaf } from 'lucide-react';
+import { MapPin, SlidersHorizontal, Star, Leaf, Warehouse } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { coldRooms, type ColdRoom } from '../data/mockData';
 import TopNavBar from '../components/TopNavBar';
@@ -56,9 +56,8 @@ const Discovery = () => {
                 key={room.id}
                 className="bg-surface rounded-2xl overflow-hidden border border-line-strong shadow-card"
               >
-                {/* Image */}
-                <div className="w-full h-36 bg-surface-sunken overflow-hidden relative">
-                  <img src={room.image} alt={room.name} className="w-full h-full object-cover" />
+                <div className="w-full h-36 bg-primary-soft flex items-center justify-center text-primary-strong">
+                  <Warehouse size={40} strokeWidth={1.75} />
                 </div>
 
                 {/* Content */}

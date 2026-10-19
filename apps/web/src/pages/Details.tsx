@@ -1,5 +1,14 @@
 import React, { useState } from 'react';
-import { MapPin, Star, Snowflake, ShieldCheck, Minus, Plus, ArrowRight } from 'lucide-react';
+import {
+  MapPin,
+  Star,
+  Snowflake,
+  ShieldCheck,
+  Minus,
+  Plus,
+  ArrowRight,
+  Warehouse,
+} from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import TopNavBar from '../components/TopNavBar';
 
@@ -23,23 +32,19 @@ const Details = () => {
       <TopNavBar title="Details" showBack={true} />
 
       <div className="flex flex-col px-4 pt-4 flex-grow overflow-y-auto">
-        {/* Hero Image Card */}
-        <div className="relative w-full h-64 rounded-2xl overflow-hidden mb-6 shadow-sm">
-          <img
-            src="https://images.unsplash.com/photo-1586528116311-ad8ed7c83a7f?q=80&w=800&auto=format&fit=crop"
-            alt="Cold Storage Facility"
-            className="w-full h-full object-cover"
-          />
-          {/* Gradient Overlay */}
-          <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent"></div>
+        {/* Hero Card */}
+        <div className="relative w-full h-64 rounded-2xl overflow-hidden mb-6 shadow-sm bg-primary-soft">
+          <div className="absolute inset-0 flex items-center justify-center pb-16 text-primary-strong">
+            <Warehouse size={56} strokeWidth={1.5} />
+          </div>
 
           {/* Hero Content */}
           <div className="absolute bottom-4 left-4 right-4 flex justify-between items-end">
-            <div className="text-white">
-              <h1 className="font-heading text-headline font-bold mb-1 leading-tight text-white drop-shadow-md">
+            <div>
+              <h1 className="font-heading text-headline font-bold mb-1 leading-tight text-ink">
                 Abuja Central Cold Hub
               </h1>
-              <div className="flex items-center text-white/85 text-label">
+              <div className="flex items-center text-copy-muted text-label">
                 <MapPin size={14} className="mr-1" /> Garki Area 1, Abuja
               </div>
             </div>
