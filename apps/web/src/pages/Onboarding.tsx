@@ -1,6 +1,7 @@
 import React, { useState, type FormEvent } from 'react';
-import { ArrowRight, Snowflake } from 'lucide-react';
+import { ArrowRight } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import logoMain from '../assets/logo_main.png';
 
 const Onboarding = () => {
   const [phoneNumber, setPhoneNumber] = useState('');
@@ -16,19 +17,8 @@ const Onboarding = () => {
   return (
     <div className="flex flex-col h-full min-h-screen bg-background p-6 relative">
       {/* Header / Logo Area */}
-      <div className="flex items-center gap-2 mt-8 mb-16">
-        <div className="bg-primary p-1.5 rounded-lg text-ink">
-          <Snowflake size={24} />
-        </div>
-        <div className="flex flex-col">
-          <div className="flex font-heading font-extrabold text-headline tracking-tight leading-none">
-            <span className="text-ink">Cold</span>
-            <span className="text-accent">Link</span>
-          </div>
-          <span className="text-ink text-[0.6rem] font-bold tracking-[0.2em] mt-0.5">
-            STORAGE, NEARBY
-          </span>
-        </div>
+      <div className="flex items-center mt-8 mb-16">
+        <img src={logoMain} alt="ColdLink, storage nearby" width={190} height={44} />
       </div>
 
       {/* Hero Text */}

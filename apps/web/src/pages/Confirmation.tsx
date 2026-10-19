@@ -1,14 +1,7 @@
 import React from 'react';
-import {
-  CheckCircle2,
-  Home,
-  MapPin,
-  Leaf,
-  CalendarDays,
-  ArrowRight,
-  Snowflake,
-} from 'lucide-react';
+import { CheckCircle2, Home, MapPin, Leaf, CalendarDays, ArrowRight } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import logoMain from '../assets/logo_main.png';
 
 const Confirmation = () => {
   const navigate = useNavigate();
@@ -17,20 +10,7 @@ const Confirmation = () => {
     <div className="flex flex-col h-full min-h-screen bg-background relative pb-10">
       {/* Top Header - Just Logo Centered */}
       <div className="flex justify-center items-center px-4 py-6">
-        <div className="flex items-center gap-1.5">
-          <div className="bg-primary p-1.5 rounded-lg text-ink flex items-center justify-center">
-            <Snowflake size={18} />
-          </div>
-          <div className="flex flex-col">
-            <div className="flex font-heading font-extrabold text-subtitle tracking-tight leading-none">
-              <span className="text-ink">Cold</span>
-              <span className="text-accent">Link</span>
-            </div>
-            <span className="text-ink text-[0.45rem] font-bold tracking-[0.2em] mt-0.5">
-              STORAGE, NEARBY
-            </span>
-          </div>
-        </div>
+        <img src={logoMain} alt="ColdLink, storage nearby" width={138} height={32} />
       </div>
 
       <div className="flex flex-col px-5 pt-2 flex-grow overflow-y-auto">

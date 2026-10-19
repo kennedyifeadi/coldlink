@@ -1,6 +1,7 @@
 import React from 'react';
-import { ArrowLeft, Snowflake, User } from 'lucide-react';
+import { ArrowLeft, User } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import logoShort from '../assets/logo-short.png';
 
 interface TopNavBarProps {
   title: string;
@@ -30,21 +31,7 @@ const TopNavBar = ({ title, showBack = false, showProfile = false }: TopNavBarPr
 
         {/* Logo and Title Group */}
         <div className={`flex items-center gap-2 ${showBack ? 'ml-0' : ''}`}>
-          {/* Small Logo */}
-          <div className="flex items-center gap-1.5 shrink-0">
-            <div className="bg-primary p-1 rounded text-ink flex items-center justify-center">
-              <Snowflake size={14} />
-            </div>
-            <div className="flex flex-col">
-              <div className="flex font-heading font-extrabold text-label tracking-tight leading-none">
-                <span className="text-ink">Cold</span>
-                <span className="text-accent">Link</span>
-              </div>
-              <span className="text-ink text-[0.4rem] font-bold tracking-[0.2em] mt-0.5">
-                STORAGE, NEARBY
-              </span>
-            </div>
-          </div>
+          <img src={logoShort} alt="ColdLink" width={28} height={28} className="shrink-0" />
 
           {/* Separator / Title */}
           <span className="text-line-strong mx-1 shrink-0">|</span>
