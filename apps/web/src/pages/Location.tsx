@@ -173,7 +173,7 @@ const Location = () => {
       </div>
 
       {/* Bottom Action Area (Sticky) */}
-      <div className="absolute bottom-0 left-0 w-full p-6 bg-gradient-to-t from-background via-background to-transparent">
+      <div className="absolute bottom-0 left-0 w-full p-6 bg-surface border-t border-line">
         <button
           onClick={handleContinue}
           disabled={!confirmedLocation}

@@ -24,17 +24,14 @@ const Confirmation = () => {
         </div>
 
         {/* Booking Code Card */}
-        <div className="relative bg-surface rounded-2xl p-6 mb-4 border border-line shadow-card overflow-hidden text-center flex flex-col items-center">
-          {/* Subtle background decoration */}
-          <div className="absolute -top-8 -right-8 w-32 h-32 bg-primary-faint rounded-full pointer-events-none"></div>
-
-          <h2 className="text-copy-muted text-label font-medium tracking-widest uppercase mb-4 relative z-10">
+        <div className="bg-surface rounded-2xl p-6 mb-4 border border-line shadow-card text-center flex flex-col items-center">
+          <h2 className="text-copy-muted text-label font-medium tracking-widest uppercase mb-4">
             Your Booking Code
           </h2>
-          <div className="border border-primary-soft text-primary-strong font-bold text-headline tracking-widest py-3 px-8 rounded-xl mb-4 inline-block bg-surface relative z-10">
+          <div className="border border-primary-soft text-primary-strong font-bold text-headline tracking-widest py-3 px-8 rounded-xl mb-4 inline-block bg-surface">
             CL-847291
           </div>
-          <p className="text-copy-muted text-body relative z-10">Show this code when you arrive</p>
+          <p className="text-copy-muted text-body">Show this code when you arrive</p>
         </div>
 
         {/* Booking Details Card */}
