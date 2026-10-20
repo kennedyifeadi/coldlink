@@ -28,20 +28,15 @@ const UserId = () => {
 
       <div className="flex flex-col px-6 pt-12 items-center text-center flex-grow">
         {/* Success Icon */}
-        <div className="relative mb-6">
-          <div className="w-20 h-20 bg-primary rounded-full flex items-center justify-center text-ink shadow-sm z-10 relative">
-            <CheckCircle2 size={32} strokeWidth={2.5} />
-          </div>
-          {/* Orange Sparks */}
-          <div className="absolute top-0 right-[-10px] w-4 h-0.5 bg-accent rotate-45 rounded-full"></div>
-          <div className="absolute top-4 right-[-16px] w-4 h-0.5 bg-accent -rotate-[15deg] rounded-full"></div>
+        <div className="w-20 h-20 mb-6 bg-primary rounded-full flex items-center justify-center text-ink shadow-sm">
+          <CheckCircle2 size={32} strokeWidth={2.5} />
         </div>
 
         {/* Title */}
         <h1 className="font-heading text-headline font-bold text-ink mb-8">You're all set!</h1>
 
         {/* ID Card */}
-        <div className="w-full bg-gradient-to-br from-primary-faint to-primary-soft rounded-2xl p-6 mb-8 shadow-sm border border-primary-muted">
+        <div className="w-full bg-primary-faint rounded-2xl p-6 mb-8 shadow-sm border border-primary-muted">
           <p className="text-copy-muted text-caption font-medium tracking-widest uppercase mb-4">
             Your ColdLink ID
           </p>

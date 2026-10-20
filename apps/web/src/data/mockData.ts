@@ -35,23 +35,25 @@ export interface ColdRoom {
   availableCapacity: number;
   supportedProduce: ProduceId[];
   rating: number;
-  image: string;
 }
 
+const oyoFreshStore: ColdRoom = {
+  id: 'cr-001',
+  name: 'Oyo Fresh Store',
+  location: 'Bodija Market, Ibadan',
+  distance: 2.4, // km
+  pricePerDay: 1500, // Naira
+  totalCapacity: 20, // units
+  availableCapacity: 10,
+  supportedProduce: ['tomato', 'pepper', 'vegetables'],
+  rating: 4.7,
+};
+
+// Details, Review and Confirmation show this room until the chosen one is passed through the flow (#32–#34).
+export const sampleColdRoom = oyoFreshStore;
+
 export const coldRooms: ColdRoom[] = [
-  {
-    id: 'cr-001',
-    name: 'Oyo Fresh Store',
-    location: 'Bodija Market, Ibadan',
-    distance: 2.4, // km
-    pricePerDay: 1500, // Naira
-    totalCapacity: 20, // units
-    availableCapacity: 10,
-    supportedProduce: ['tomato', 'pepper', 'vegetables'],
-    rating: 4.7,
-    image:
-      'https://images.unsplash.com/photo-1586528116311-ad8ed7c83a7f?q=80&w=600&auto=format&fit=crop',
-  },
+  oyoFreshStore,
   {
     id: 'cr-002',
     name: 'Ibadan North Cold Storage',
@@ -62,8 +64,6 @@ export const coldRooms: ColdRoom[] = [
     availableCapacity: 2, // low capacity warning
     supportedProduce: ['onion', 'pepper', 'tomato'],
     rating: 4.5,
-    image:
-      'https://images.unsplash.com/photo-1605600659908-0ef719419d41?q=80&w=600&auto=format&fit=crop',
   },
   {
     id: 'cr-003',
@@ -75,7 +75,5 @@ export const coldRooms: ColdRoom[] = [
     availableCapacity: 0, // full
     supportedProduce: ['fruits', 'vegetables', 'tomato'],
     rating: 4.9,
-    image:
-      'https://images.unsplash.com/photo-1565610222536-f1d1796be4b0?q=80&w=600&auto=format&fit=crop',
   },
 ];

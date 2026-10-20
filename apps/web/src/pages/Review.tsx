@@ -1,6 +1,7 @@
 import React from 'react';
 import { MapPin, Info, ArrowRight, Snowflake } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { sampleColdRoom as room } from '../data/mockData';
 import TopNavBar from '../components/TopNavBar';
 import BottomNav from '../components/BottomNav';
 
@@ -30,11 +31,9 @@ const Review = () => {
               <Snowflake size={20} />
             </div>
             <div>
-              <h2 className="font-heading font-semibold text-ink text-lead">
-                Mile 12 Mega Cold Store
-              </h2>
+              <h2 className="font-heading font-semibold text-ink text-lead">{room.name}</h2>
               <div className="flex items-center text-copy-subtle text-label mt-0.5">
-                <MapPin size={12} className="mr-1" /> Ketu, Lagos (2.4km)
+                <MapPin size={12} className="mr-1" /> {room.location} ({room.distance}km)
               </div>
             </div>
           </div>

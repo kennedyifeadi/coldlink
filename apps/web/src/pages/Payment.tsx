@@ -1,13 +1,5 @@
 import React, { useState } from 'react';
-import {
-  ReceiptText,
-  CreditCard,
-  Landmark,
-  Grip,
-  HelpCircle,
-  Lock,
-  ArrowRight,
-} from 'lucide-react';
+import { ReceiptText, CreditCard, Landmark, Grip, HelpCircle, ArrowRight } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import TopNavBar from '../components/TopNavBar';
 
@@ -82,15 +74,8 @@ const Payment = () => {
                 <input
                   type="text"
                   placeholder="0000 0000 0000 0000"
-                  className="w-full pl-12 pr-12 py-3.5 bg-surface border border-line rounded-xl text-body placeholder:text-copy-subtle outline-none focus:border-primary-strong focus:ring-1 focus:ring-primary-strong transition-all"
+                  className="w-full pl-12 pr-4 py-3.5 bg-surface border border-line rounded-xl text-body placeholder:text-copy-subtle outline-none focus:border-primary-strong focus:ring-1 focus:ring-primary-strong transition-all"
                 />
-                <div className="absolute right-4 w-8 h-5 bg-disabled rounded-sm opacity-50">
-                  {/* Fake Mastercard/Visa Icon Placeholder */}
-                  <div className="flex w-full h-full items-center justify-center">
-                    <div className="w-3 h-3 rounded-full bg-alert opacity-80 -mr-1"></div>
-                    <div className="w-3 h-3 rounded-full bg-accent opacity-80"></div>
-                  </div>
-                </div>
               </div>
             </div>
 
@@ -144,12 +129,7 @@ const Payment = () => {
       </div>
 
       {/* Bottom Fixed Action Area */}
-      <div className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[430px] p-6 bg-gradient-to-t from-background via-background to-transparent z-20 pb-safe">
-        <div className="flex justify-center items-center gap-1.5 text-copy-subtle text-caption mb-4">
-          <Lock size={12} />
-          <span>Secured by Paystack. 256-bit encryption.</span>
-        </div>
-
+      <div className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[430px] px-6 pt-6 pb-safe-6 bg-surface border-t border-line z-20">
         <button
           onClick={() => void navigate('/confirmation')}
           className="group flex items-center justify-center w-full py-4 rounded-lg bg-primary hover:bg-primary-hover text-ink font-medium text-subtitle transition-colors shadow-md"

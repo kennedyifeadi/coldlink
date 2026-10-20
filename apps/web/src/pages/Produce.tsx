@@ -82,7 +82,7 @@ const Produce = () => {
       </div>
 
       {/* Bottom Action Area (Sticky) */}
-      <div className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[430px] p-6 bg-gradient-to-t from-background via-background to-transparent z-20 pb-safe">
+      <div className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[430px] px-6 pt-6 pb-safe-6 bg-surface border-t border-line z-20">
         <button
           onClick={handleContinue}
           disabled={!selectedProduce}
