@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { ReceiptText, CreditCard, Landmark, Grip, HelpCircle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import TopNavBar from '../../components/TopNavBar';
+import BottomActionBar from '../../components/ui/BottomActionBar';
 import PrimaryButton from '../../components/ui/PrimaryButton';
 
 type PaymentMethod = 'card' | 'transfer' | 'ussd';
@@ -12,7 +13,7 @@ const Payment = () => {
   const [saveCard, setSaveCard] = useState(false);
 
   return (
-    <div className="flex flex-col h-full min-h-screen bg-background relative pb-10">
+    <div className="flex flex-col h-full min-h-screen bg-background relative pb-28">
       {/* Top App Bar */}
       <TopNavBar title="Payment" showBack={true} />
 
@@ -129,12 +130,11 @@ const Payment = () => {
         )}
       </div>
 
-      {/* Bottom Fixed Action Area */}
-      <div className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[430px] px-6 pt-6 pb-safe-6 bg-surface border-t border-line z-20">
+      <BottomActionBar>
         <PrimaryButton onClick={() => void navigate('/confirmation')} withArrow>
           Pay ₦2,700
         </PrimaryButton>
-      </div>
+      </BottomActionBar>
     </div>
   );
 };

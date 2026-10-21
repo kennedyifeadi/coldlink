@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { MapPin, Search, Crosshair, CheckCircle2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import TopNavBar from '../../components/TopNavBar';
+import BottomActionBar from '../../components/ui/BottomActionBar';
 import PrimaryButton from '../../components/ui/PrimaryButton';
 
 type LocationOption = 'current' | 'manual';
@@ -46,7 +47,7 @@ const Location = () => {
       {/* Top App Bar */}
       <TopNavBar title="Location" showBack={true} />
 
-      <div className="flex flex-col px-6 pt-10 pb-24 flex-grow overflow-y-auto">
+      <div className="flex flex-col px-6 pt-10 pb-28 flex-grow overflow-y-auto">
         {/* Hero Icon */}
         <div className="flex justify-center mb-8">
           <div className="w-20 h-20 bg-surface-muted rounded-full flex items-center justify-center">
@@ -169,12 +170,11 @@ const Location = () => {
         </div>
       </div>
 
-      {/* Bottom Action Area (Sticky) */}
-      <div className="absolute bottom-0 left-0 w-full p-6 bg-surface border-t border-line">
+      <BottomActionBar>
         <PrimaryButton onClick={handleContinue} disabled={!confirmedLocation} withArrow>
           Continue
         </PrimaryButton>
-      </div>
+      </BottomActionBar>
     </div>
   );
 };
