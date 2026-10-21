@@ -18,8 +18,8 @@ describe('Payment screen', () => {
   it('labels every card field', () => {
     renderPayment();
 
-    expect(screen.getByLabelText('Card Number')).toBeInTheDocument();
-    expect(screen.getByLabelText('Expiry Date')).toBeInTheDocument();
+    expect(screen.getByLabelText('Card number')).toBeInTheDocument();
+    expect(screen.getByLabelText('Expiry date')).toBeInTheDocument();
     expect(screen.getByLabelText('CVV')).toBeInTheDocument();
   });
 
@@ -32,5 +32,14 @@ describe('Payment screen', () => {
     expect(saveCard).toBeChecked();
     await user.click(saveCard);
     expect(saveCard).not.toBeChecked();
+  });
+
+  it.each(['Transfer', 'USSD'])('says the %s method is coming soon', async (method) => {
+    const user = renderPayment();
+
+    await user.click(screen.getByRole('button', { name: method }));
+
+    expect(screen.getByText('This payment method is coming soon.')).toBeInTheDocument();
+    expect(screen.queryByLabelText('Card number')).not.toBeInTheDocument();
   });
 });

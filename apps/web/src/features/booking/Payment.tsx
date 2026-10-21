@@ -151,7 +151,7 @@ const Payment = () => {
 
         {activeTab !== 'card' && (
           <div className="flex items-center justify-center py-10 text-copy-subtle">
-            <p>{t('booking.payment.mockFlowHint')}</p>
+            <p>{t('booking.payment.comingSoon')}</p>
           </div>
         )}
       </div>

@@ -51,4 +51,16 @@ describe('Duration screen', () => {
     expect(screen.getByText('₦2,400')).toBeInTheDocument();
     expect(minus).toBeDisabled();
   });
+
+  it('labels the stepper in the singular at 1 day and the plural at 2', async () => {
+    const { minus, user } = renderDuration();
+
+    await user.click(minus);
+    expect(screen.getByText('2')).toBeInTheDocument();
+    expect(screen.getByText('Days')).toBeInTheDocument();
+
+    await user.click(minus);
+    expect(screen.getByText('1')).toBeInTheDocument();
+    expect(screen.getByText('Day')).toBeInTheDocument();
+  });
 });
