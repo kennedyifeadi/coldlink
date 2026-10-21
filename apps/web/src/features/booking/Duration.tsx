@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
-import { Minus, Plus, Info } from 'lucide-react';
+import { Info } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import TopNavBar from '../../components/TopNavBar';
+import QuantityStepper from '../../components/ui/QuantityStepper';
 import BottomActionBar from '../../components/ui/BottomActionBar';
 import PrimaryButton from '../../components/ui/PrimaryButton';
 
@@ -13,14 +14,6 @@ const Duration = () => {
   const deliveryCost = 800;
   const bookingFee = 100;
   const totalCost = storageCost + deliveryCost + bookingFee;
-
-  const handleDecrease = () => {
-    if (days > 1) setDays(days - 1);
-  };
-
-  const handleIncrease = () => {
-    setDays(days + 1);
-  };
 
   return (
     <div className="flex flex-col h-full min-h-screen bg-background relative pb-28">
@@ -38,29 +31,14 @@ const Duration = () => {
           </p>
         </div>
 
-        {/* Counter Control */}
-        <div className="flex items-center justify-between bg-surface-muted rounded-2xl p-4 mb-8">
-          <button
-            onClick={handleDecrease}
-            disabled={days <= 1}
-            className={`w-12 h-12 rounded-full flex items-center justify-center transition-colors shadow-sm ${days <= 1 ? 'bg-surface text-disabled' : 'bg-surface text-primary-strong hover:bg-primary-faint'}`}
-          >
-            <Minus size={24} strokeWidth={2.5} />
-          </button>
-
-          <div className="flex flex-col items-center">
-            <span className="text-headline font-bold text-ink leading-none mb-1">{days}</span>
-            <span className="text-copy-muted text-caption font-medium uppercase tracking-widest">
-              Days
-            </span>
-          </div>
-
-          <button
-            onClick={handleIncrease}
-            className="w-12 h-12 rounded-full flex items-center justify-center bg-surface text-primary-strong hover:bg-primary-faint transition-colors shadow-sm"
-          >
-            <Plus size={24} strokeWidth={2.5} />
-          </button>
+        <div className="mb-8">
+          <QuantityStepper
+            value={days}
+            onChange={setDays}
+            label="Days"
+            decreaseLabel="Remove a day"
+            increaseLabel="Add a day"
+          />
         </div>
 
         {/* Cost Breakdown Card */}

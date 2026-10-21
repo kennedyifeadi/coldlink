@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
-import { MapPin, Star, Minus, Plus, Warehouse } from 'lucide-react';
+import { MapPin, Star, Warehouse } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { sampleColdRoom as room } from '../../data/mockData';
 import TopNavBar from '../../components/TopNavBar';
+import QuantityStepper from '../../components/ui/QuantityStepper';
 import BottomActionBar from '../../components/ui/BottomActionBar';
 import PrimaryButton from '../../components/ui/PrimaryButton';
 
@@ -12,14 +13,6 @@ const Details = () => {
   const maxUnits = 10;
   const pricePerUnit = 1500;
   const availablePercentage = (room.availableCapacity / room.totalCapacity) * 100;
-
-  const handleDecrease = () => {
-    if (units > 1) setUnits(units - 1);
-  };
-
-  const handleIncrease = () => {
-    if (units < maxUnits) setUnits(units + 1);
-  };
 
   return (
     <div className="flex flex-col h-full min-h-screen bg-background relative pb-28">
@@ -78,32 +71,14 @@ const Details = () => {
             </span>
             <span className="text-copy text-label font-medium">Max {maxUnits} units</span>
           </div>
-
-          {/* Counter Control */}
-          <div className="flex items-center justify-between bg-surface border border-line rounded-2xl p-3 shadow-card">
-            <button
-              onClick={handleDecrease}
-              disabled={units <= 1}
-              className={`w-14 h-14 rounded-full flex items-center justify-center transition-colors ${units <= 1 ? 'bg-surface-muted text-disabled' : 'bg-surface-muted text-primary-strong hover:bg-primary-faint'}`}
-            >
-              <Minus size={24} />
-            </button>
-
-            <div className="flex flex-col items-center">
-              <span className="text-display font-bold text-ink leading-none mb-1">{units}</span>
-              <span className="text-copy-muted text-label font-medium uppercase tracking-wider">
-                Units
-              </span>
-            </div>
-
-            <button
-              onClick={handleIncrease}
-              disabled={units >= maxUnits}
-              className={`w-14 h-14 rounded-full flex items-center justify-center transition-colors ${units >= maxUnits ? 'bg-surface-muted text-disabled' : 'bg-surface-muted text-primary-strong hover:bg-primary-faint'}`}
-            >
-              <Plus size={24} />
-            </button>
-          </div>
+          <QuantityStepper
+            value={units}
+            onChange={setUnits}
+            max={maxUnits}
+            label="Units"
+            decreaseLabel="Remove a unit"
+            increaseLabel="Add a unit"
+          />
         </div>
       </div>
 
