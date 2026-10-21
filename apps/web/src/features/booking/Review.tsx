@@ -9,6 +9,7 @@ import CardTitle from '../../components/ui/CardTitle';
 import SummaryRow from '../../components/ui/SummaryRow';
 import BottomNav from '../../components/BottomNav';
 import PrimaryButton from '../../components/ui/PrimaryButton';
+import { formatNaira, formatNumber } from '../../i18n/format';
 
 const Review = () => {
   const navigate = useNavigate();
@@ -41,7 +42,7 @@ const Review = () => {
                 <MapPin size={12} className="mr-1" />{' '}
                 {t('booking.review.roomLocation', {
                   location: t(`mock.coldRooms.${room.id}.location`),
-                  distance: room.distance,
+                  distance: formatNumber(room.distance),
                 })}
               </div>
             </div>
@@ -67,14 +68,17 @@ const Review = () => {
           <CardTitle>{t('booking.review.costTitle')}</CardTitle>
 
           <div className="flex flex-col gap-3 mb-4">
-            <SummaryRow label={t('booking.review.storage', { count: 3 })} value="₦4,500" />
-            <SummaryRow label={t('booking.review.delivery')} value="₦600" />
-            <SummaryRow label={t('booking.review.serviceFee')} value="₦300" />
+            <SummaryRow
+              label={t('booking.review.storage', { count: 3 })}
+              value={formatNaira(4500)}
+            />
+            <SummaryRow label={t('booking.review.delivery')} value={formatNaira(600)} />
+            <SummaryRow label={t('booking.review.serviceFee')} value={formatNaira(300)} />
           </div>
 
           <div className="h-[1px] bg-line-strong mb-4 w-full"></div>
 
-          <SummaryRow label={t('booking.review.total')} value="₦5,400" variant="total" />
+          <SummaryRow label={t('booking.review.total')} value={formatNaira(5400)} variant="total" />
         </Card>
 
         {/* Split Payment Plan Card */}
@@ -96,14 +100,14 @@ const Review = () => {
               <span className="text-accent-ink text-caption font-medium mb-1">
                 {t('booking.review.payNow')}
               </span>
-              <span className="font-bold text-title text-accent-ink">₦2,700</span>
+              <span className="font-bold text-title text-accent-ink">{formatNaira(2700)}</span>
             </div>
             <div className="w-[1px] h-10 bg-accent mx-4"></div>
             <div className="flex flex-col">
               <span className="text-accent-ink text-caption font-medium mb-1">
                 {t('booking.review.balance')}
               </span>
-              <span className="font-bold text-title text-accent-ink">₦2,700</span>
+              <span className="font-bold text-title text-accent-ink">{formatNaira(2700)}</span>
             </div>
           </div>
         </div>
@@ -111,7 +115,7 @@ const Review = () => {
         {/* Action Buttons */}
         <div className="flex flex-col gap-4">
           <PrimaryButton onClick={() => void navigate('/payment')} withArrow>
-            {t('booking.payAmount', { amount: '₦2,700' })}
+            {t('booking.payAmount', { amount: formatNaira(2700) })}
           </PrimaryButton>
           <button
             onClick={() => void navigate(-1)}

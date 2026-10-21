@@ -7,6 +7,7 @@ import TopNavBar from '../../components/TopNavBar';
 import Card from '../../components/ui/Card';
 import BottomNav from '../../components/BottomNav';
 import PrimaryButton from '../../components/ui/PrimaryButton';
+import { formatNaira, formatNumber } from '../../i18n/format';
 
 const Discovery = () => {
   const navigate = useNavigate();
@@ -68,18 +69,18 @@ const Discovery = () => {
                       {t(`mock.coldRooms.${room.id}.name`)}
                     </h2>
                     <div className="flex items-center gap-1 bg-primary-soft text-ink px-2 py-0.5 rounded text-label font-medium shrink-0">
-                      <Star size={12} className="fill-current" /> {room.rating}
+                      <Star size={12} className="fill-current" /> {formatNumber(room.rating)}
                     </div>
                   </div>
 
                   <div className="flex justify-between items-end mb-4">
                     <div className="flex items-center text-copy-muted text-body">
                       <MapPin size={14} className="mr-1 opacity-70" />{' '}
-                      {t('search.discovery.distance', { distance: room.distance })}
+                      {t('search.discovery.distance', { distance: formatNumber(room.distance) })}
                     </div>
                     <div className="text-copy">
                       <span className="font-bold text-subtitle">
-                        ₦{room.pricePerDay.toLocaleString()}
+                        {formatNaira(room.pricePerDay)}
                       </span>{' '}
                       <span className="text-copy-subtle text-label">
                         {t('search.discovery.perDay')}

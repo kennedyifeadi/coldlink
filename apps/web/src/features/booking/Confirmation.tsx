@@ -7,6 +7,7 @@ import { sampleColdRoom as room } from '../../data/mockData';
 import Card from '../../components/ui/Card';
 import SummaryRow from '../../components/ui/SummaryRow';
 import PrimaryButton from '../../components/ui/PrimaryButton';
+import { formatNaira } from '../../i18n/format';
 
 const bookingCode = 'CL-847291';
 
@@ -101,10 +102,10 @@ const Confirmation = () => {
           </h3>
 
           <div className="flex flex-col gap-3.5 mb-4">
-            <SummaryRow label={t('booking.confirmation.totalCost')} value="₦5,400" />
+            <SummaryRow label={t('booking.confirmation.totalCost')} value={formatNaira(5400)} />
             <SummaryRow
               label={t('booking.confirmation.amountPaid')}
-              value={t('booking.confirmation.amountPaidValue', { amount: '₦2,700' })}
+              value={t('booking.confirmation.amountPaidValue', { amount: formatNaira(2700) })}
               variant="highlight"
             />
           </div>
@@ -112,7 +113,7 @@ const Confirmation = () => {
           <div className="h-[1px] bg-line mb-4 w-full"></div>
 
           <div className="mb-1.5">
-            <SummaryRow label={t('booking.confirmation.balanceDue')} value="₦2,700" />
+            <SummaryRow label={t('booking.confirmation.balanceDue')} value={formatNaira(2700)} />
           </div>
           <div className="text-right">
             <span className="text-copy-subtle text-caption">

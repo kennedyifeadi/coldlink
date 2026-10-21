@@ -9,8 +9,7 @@ import SummaryRow from '../../components/ui/SummaryRow';
 import QuantityStepper from '../../components/ui/QuantityStepper';
 import BottomActionBar from '../../components/ui/BottomActionBar';
 import PrimaryButton from '../../components/ui/PrimaryButton';
-
-const formatNaira = (amount: number) => `₦${amount.toLocaleString()}`;
+import { formatNaira } from '../../i18n/format';
 
 const Duration = () => {
   const navigate = useNavigate();

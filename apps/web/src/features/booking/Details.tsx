@@ -9,6 +9,7 @@ import CardTitle from '../../components/ui/CardTitle';
 import QuantityStepper from '../../components/ui/QuantityStepper';
 import BottomActionBar from '../../components/ui/BottomActionBar';
 import PrimaryButton from '../../components/ui/PrimaryButton';
+import { formatNaira, formatNumber } from '../../i18n/format';
 
 const Details = () => {
   const navigate = useNavigate();
@@ -41,7 +42,7 @@ const Details = () => {
               </div>
             </div>
             <div className="flex items-center gap-1 bg-surface text-ink px-2.5 py-1 rounded-md text-label font-bold shadow-md shrink-0">
-              <Star size={14} className="fill-accent text-accent" /> {room.rating}
+              <Star size={14} className="fill-accent text-accent" /> {formatNumber(room.rating)}
             </div>
           </div>
         </div>
@@ -72,7 +73,7 @@ const Details = () => {
           </h2>
           <div className="flex justify-between items-center mb-4">
             <span className="text-copy-muted text-lead">
-              {t('booking.details.pricePerUnit', { price: `₦${pricePerUnit.toLocaleString()}` })}
+              {t('booking.details.pricePerUnit', { price: formatNaira(pricePerUnit) })}
             </span>
             <span className="text-copy text-label font-medium">
               {t('booking.details.maxUnits', { count: maxUnits })}

@@ -6,6 +6,7 @@ import TopNavBar from '../../components/TopNavBar';
 import Card from '../../components/ui/Card';
 import BottomActionBar from '../../components/ui/BottomActionBar';
 import PrimaryButton from '../../components/ui/PrimaryButton';
+import { formatNaira } from '../../i18n/format';
 
 type PaymentMethod = 'card' | 'transfer' | 'ussd';
 
@@ -26,7 +27,9 @@ const Payment = () => {
           className="p-6 mb-6 flex flex-col items-center justify-center text-center"
         >
           <p className="text-copy-muted text-body mb-1">{t('booking.payment.totalToPay')}</p>
-          <p className="text-primary-strong text-headline font-semibold mb-3">₦2,700</p>
+          <p className="text-primary-strong text-headline font-semibold mb-3">
+            {formatNaira(2700)}
+          </p>
           <div className="flex items-center text-copy-subtle text-label">
             <ReceiptText size={14} className="mr-1.5" />{' '}
             {t('booking.payment.orderNumber', { orderNumber: '882-991A' })}
@@ -155,7 +158,7 @@ const Payment = () => {
 
       <BottomActionBar>
         <PrimaryButton onClick={() => void navigate('/confirmation')} withArrow>
-          {t('booking.payAmount', { amount: '₦2,700' })}
+          {t('booking.payAmount', { amount: formatNaira(2700) })}
         </PrimaryButton>
       </BottomActionBar>
     </div>
