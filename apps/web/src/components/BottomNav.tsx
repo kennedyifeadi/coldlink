@@ -24,7 +24,7 @@ const BottomNav = ({ activeTab = 'find' }: BottomNavProps) => {
         className={`flex flex-col items-center gap-1 transition-colors ${activeTab === 'find' ? 'text-primary-strong' : 'text-copy-subtle hover:text-copy'}`}
       >
         <Snowflake size={24} />
-        <span className="text-caption font-medium">{t('nav.findCold')}</span>
+        <span className="text-caption font-medium">{t('nav.findStorage')}</span>
       </button>
 
       <button

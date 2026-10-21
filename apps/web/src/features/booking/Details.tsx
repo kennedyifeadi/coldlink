@@ -83,7 +83,7 @@ const Details = () => {
             value={units}
             onChange={setUnits}
             max={maxUnits}
-            label={t('booking.details.unitsLabel')}
+            label={t('booking.details.unitsLabel', { count: units })}
             decreaseLabel={t('booking.details.removeUnit')}
             increaseLabel={t('booking.details.addUnit')}
           />

@@ -39,7 +39,7 @@ const Duration = () => {
           <QuantityStepper
             value={days}
             onChange={setDays}
-            label={t('booking.duration.daysLabel')}
+            label={t('booking.duration.daysLabel', { count: days })}
             decreaseLabel={t('booking.duration.removeDay')}
             increaseLabel={t('booking.duration.addDay')}
           />
