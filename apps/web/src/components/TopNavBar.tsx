@@ -17,12 +17,13 @@ const TopNavBar = ({ title, showBack = false, showProfile = false }: TopNavBarPr
   };
 
   return (
-    <div className="flex justify-between items-center px-4 py-4 border-b border-line bg-surface sticky top-0 z-10">
+    <header className="flex justify-between items-center px-4 py-4 border-b border-line bg-surface sticky top-0 z-10">
       {/* Left side (Back Button or Logo + Title) */}
       <div className="flex items-center gap-2">
         {showBack && (
           <button
             onClick={handleBack}
+            aria-label="Go back"
             className="p-2 -ml-2 text-copy-muted hover:bg-surface-muted rounded-full transition-colors shrink-0"
           >
             <ArrowLeft size={24} />
@@ -43,11 +44,14 @@ const TopNavBar = ({ title, showBack = false, showProfile = false }: TopNavBarPr
 
       {/* Right side (Profile Avatar) */}
       {showProfile && (
-        <div className="w-8 h-8 shrink-0 rounded-full bg-primary flex items-center justify-center text-ink">
+        <div
+          aria-hidden="true"
+          className="w-8 h-8 shrink-0 rounded-full bg-primary flex items-center justify-center text-ink"
+        >
           <User size={18} />
         </div>
       )}
-    </div>
+    </header>
   );
 };
 

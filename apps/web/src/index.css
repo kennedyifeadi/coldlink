@@ -124,4 +124,10 @@
     background-color: var(--color-background);
     color: var(--color-copy);
   }
+
+  /* Inputs draw their own focus ring with utilities, which override this. */
+  :focus-visible {
+    outline: 2px solid var(--color-primary-strong);
+    outline-offset: 2px;
+  }
 }

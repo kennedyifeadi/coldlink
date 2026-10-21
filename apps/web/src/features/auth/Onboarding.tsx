@@ -35,7 +35,9 @@ const Onboarding = () => {
       <form onSubmit={handleContinue} className="w-full mt-12 pb-8">
         {/* Phone Number Input */}
         <div className="mb-8">
-          <label className="block text-label font-medium text-copy mb-2">Phone number</label>
+          <label htmlFor="phone-number" className="block text-label font-medium text-copy mb-2">
+            Phone number
+          </label>
           <div className="flex items-center border border-line-strong rounded-lg overflow-hidden focus-within:border-primary-strong focus-within:ring-1 focus-within:ring-primary-strong transition-all">
             {/* Country Code & Flag */}
             <div className="flex items-center gap-2 px-4 py-3.5 bg-surface-muted border-r border-line-strong shrink-0">
@@ -50,6 +52,7 @@ const Onboarding = () => {
 
             {/* Input Field */}
             <input
+              id="phone-number"
               type="tel"
               placeholder="800 000 0000"
               className="w-full px-4 py-3.5 text-subtitle text-copy bg-surface placeholder-copy-subtle focus:outline-none"

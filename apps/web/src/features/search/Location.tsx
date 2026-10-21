@@ -70,6 +70,7 @@ const Location = () => {
           {/* Current Location Option */}
           <button
             onClick={handleSelectCurrent}
+            aria-pressed={selectedOption === 'current'}
             className={`flex items-center p-4 rounded-xl transition-all text-left ${
               selectedOption === 'current'
                 ? 'bg-primary-faint border border-primary shadow-sm'
@@ -110,6 +111,7 @@ const Location = () => {
           {/* Manual Location Option */}
           <button
             onClick={handleSelectManual}
+            aria-pressed={selectedOption === 'manual'}
             className={`flex items-center justify-center p-4 rounded-xl transition-all ${
               selectedOption === 'manual'
                 ? 'bg-primary-faint border border-primary shadow-sm text-ink'
@@ -125,10 +127,14 @@ const Location = () => {
             <div className="flex flex-col gap-3 -mt-2">
               {/* Search Input */}
               <div className="relative">
+                <label htmlFor="location-search" className="sr-only">
+                  Search for a location
+                </label>
                 <div className="absolute left-4 top-1/2 -translate-y-1/2 text-copy-subtle">
                   <Search size={18} />
                 </div>
                 <input
+                  id="location-search"
                   type="text"
                   placeholder="Search for a location..."
                   value={manualSearch}

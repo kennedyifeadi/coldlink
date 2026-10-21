@@ -49,6 +49,7 @@ const Produce = () => {
               <button
                 key={produce.id}
                 onClick={() => setSelectedProduce(produce.id)}
+                aria-pressed={isSelected}
                 className={`relative flex flex-col items-center justify-center p-6 rounded-2xl border transition-all ${
                   isSelected
                     ? 'bg-primary-soft border-primary shadow-sm'
