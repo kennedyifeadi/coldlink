@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { MapPin, Search, Crosshair, ArrowRight, CheckCircle2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import TopNavBar from '../components/TopNavBar';
+import TopNavBar from '../../components/TopNavBar';
 
 type LocationOption = 'current' | 'manual';
 

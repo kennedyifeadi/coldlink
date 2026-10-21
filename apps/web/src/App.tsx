@@ -1,16 +1,16 @@
 import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import MobileOnlyLayout from './components/MobileOnlyLayout';
-import Onboarding from './pages/Onboarding';
-import Location from './pages/Location';
-import UserId from './pages/UserId';
-import Produce from './pages/Produce';
-import Discovery from './pages/Discovery';
-import Details from './pages/Details';
-import Duration from './pages/Duration';
-import Review from './pages/Review';
-import Payment from './pages/Payment';
-import Confirmation from './pages/Confirmation';
+import Onboarding from './features/auth/Onboarding';
+import Location from './features/search/Location';
+import UserId from './features/auth/UserId';
+import Produce from './features/search/Produce';
+import Discovery from './features/search/Discovery';
+import Details from './features/booking/Details';
+import Duration from './features/booking/Duration';
+import Review from './features/booking/Review';
+import Payment from './features/booking/Payment';
+import Confirmation from './features/booking/Confirmation';
 
 function App() {
   return (

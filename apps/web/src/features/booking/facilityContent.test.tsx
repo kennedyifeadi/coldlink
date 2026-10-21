@@ -2,7 +2,7 @@ import React, { type ReactElement } from 'react';
 import { describe, expect, it } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
-import { sampleColdRoom } from '../data/mockData';
+import { sampleColdRoom } from '../../data/mockData';
 import Details from './Details';
 import Review from './Review';
 import Confirmation from './Confirmation';

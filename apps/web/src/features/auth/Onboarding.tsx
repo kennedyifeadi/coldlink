@@ -1,7 +1,7 @@
 import React, { useState, type FormEvent } from 'react';
 import { ArrowRight } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import logoMain from '../assets/logo_main.webp';
+import logoMain from '../../assets/logo_main.webp';
 
 const Onboarding = () => {
   const [phoneNumber, setPhoneNumber] = useState('');

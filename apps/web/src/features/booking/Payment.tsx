@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { ReceiptText, CreditCard, Landmark, Grip, HelpCircle, ArrowRight } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import TopNavBar from '../components/TopNavBar';
+import TopNavBar from '../../components/TopNavBar';
 
 type PaymentMethod = 'card' | 'transfer' | 'ussd';
 

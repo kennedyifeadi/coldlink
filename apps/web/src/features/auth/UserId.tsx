@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { CheckCircle2, Copy } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import TopNavBar from '../components/TopNavBar';
-import BottomNav from '../components/BottomNav';
+import TopNavBar from '../../components/TopNavBar';
+import BottomNav from '../../components/BottomNav';
 
 const UserId = () => {
   const navigate = useNavigate();

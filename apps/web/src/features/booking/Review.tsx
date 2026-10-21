@@ -1,9 +1,9 @@
 import React from 'react';
 import { MapPin, Info, ArrowRight, Snowflake } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { sampleColdRoom as room } from '../data/mockData';
-import TopNavBar from '../components/TopNavBar';
-import BottomNav from '../components/BottomNav';
+import { sampleColdRoom as room } from '../../data/mockData';
+import TopNavBar from '../../components/TopNavBar';
+import BottomNav from '../../components/BottomNav';
 
 const Review = () => {
   const navigate = useNavigate();

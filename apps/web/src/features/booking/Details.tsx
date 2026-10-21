@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { MapPin, Star, Minus, Plus, ArrowRight, Warehouse } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { sampleColdRoom as room } from '../data/mockData';
-import TopNavBar from '../components/TopNavBar';
+import { sampleColdRoom as room } from '../../data/mockData';
+import TopNavBar from '../../components/TopNavBar';
 
 const Details = () => {
   const navigate = useNavigate();

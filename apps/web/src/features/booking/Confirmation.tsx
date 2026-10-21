@@ -1,8 +1,8 @@
 import React from 'react';
 import { CheckCircle2, Home, MapPin, Leaf, CalendarDays, ArrowRight } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import logoMain from '../assets/logo_main.webp';
-import { sampleColdRoom as room } from '../data/mockData';
+import logoMain from '../../assets/logo_main.webp';
+import { sampleColdRoom as room } from '../../data/mockData';
 
 const Confirmation = () => {
   const navigate = useNavigate();

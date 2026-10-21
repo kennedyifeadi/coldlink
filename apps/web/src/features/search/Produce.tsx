@@ -2,8 +2,8 @@ import React, { useState } from 'react';
 import { ArrowRight, CheckCircle2 } from 'lucide-react';
 import * as Icons from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { produceOptions, type ProduceId, type ProduceOption } from '../data/mockData';
-import TopNavBar from '../components/TopNavBar';
+import { produceOptions, type ProduceId, type ProduceOption } from '../../data/mockData';
+import TopNavBar from '../../components/TopNavBar';
 
 type ProduceChoice = ProduceId | 'other';
 

@@ -1,9 +1,9 @@
 import React from 'react';
 import { MapPin, SlidersHorizontal, Star, Leaf, Warehouse } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { coldRooms, type ColdRoom } from '../data/mockData';
-import TopNavBar from '../components/TopNavBar';
-import BottomNav from '../components/BottomNav';
+import { coldRooms, type ColdRoom } from '../../data/mockData';
+import TopNavBar from '../../components/TopNavBar';
+import BottomNav from '../../components/BottomNav';
 
 const Discovery = () => {
   const navigate = useNavigate();
