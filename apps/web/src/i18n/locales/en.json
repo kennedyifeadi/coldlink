@@ -1,0 +1,204 @@
+{
+  "common": {
+    "logoAlt": "ColdLink, storage nearby",
+    "logoShortAlt": "ColdLink",
+    "loading": "Loading...",
+    "goBack": "Go back",
+    "continue": "Continue"
+  },
+  "nav": {
+    "label": "Main",
+    "findCold": "Find Cold",
+    "bookings": "Bookings",
+    "profile": "Profile"
+  },
+  "notFound": {
+    "title": "Page not found",
+    "body": "The link may be mistyped or out of date. Go to the start to find cold storage near you.",
+    "goToStart": "Go to start"
+  },
+  "auth": {
+    "onboarding": {
+      "title": "Find cold storage near you.",
+      "intro": "Keep your harvest fresh by finding available cold storage nearby.",
+      "phoneLabel": "Phone number",
+      "phonePlaceholder": "800 000 0000",
+      "footer": "Your phone number creates your ColdLink User ID. No password required."
+    },
+    "userId": {
+      "navTitle": "User Id",
+      "title": "You're all set!",
+      "idLabel": "Your ColdLink ID",
+      "copy": "Copy ID",
+      "copied": "Copied!",
+      "channels": "This ID works across ColdLink Web, WhatsApp and USSD.",
+      "findStorage": "Find storage"
+    }
+  },
+  "search": {
+    "location": {
+      "navTitle": "Location",
+      "title": "Where are you storing from?",
+      "intro": "We'll use your location to find the closest available cold rooms and calculate delivery.",
+      "useCurrent": "Use my current location",
+      "useCurrentHint": "Recommended for accuracy",
+      "or": "OR",
+      "enterManually": "Enter location manually",
+      "searchLabel": "Search for a location",
+      "searchPlaceholder": "Search for a location..."
+    },
+    "produce": {
+      "navTitle": "Produce",
+      "title": "What do you want to store?",
+      "intro": "Select the produce you're looking to preserve.",
+      "other": "Other",
+      "findStorage": "Find cold storage"
+    },
+    "discovery": {
+      "navTitle": "Cold Rooms",
+      "title": "Cold storage near you",
+      "filters": "Filters",
+      "distance": "{{distance}} km away",
+      "perDay": "/ day",
+      "availability": "Availability",
+      "spacesLeft_one": "Only {{count}} space left",
+      "spacesLeft_other": "Only {{count}} spaces left",
+      "spacesOfTotal_one": "{{available}} of {{count}} space",
+      "spacesOfTotal_other": "{{available}} of {{count}} spaces",
+      "viewStorage": "View storage"
+    }
+  },
+  "booking": {
+    "payAmount": "Pay {{amount}}",
+    "details": {
+      "navTitle": "Details",
+      "capacityTitle": "Storage Capacity",
+      "unitsAvailable_one": "{{available}} of {{count}} unit available",
+      "unitsAvailable_other": "{{available}} of {{count}} units available",
+      "quantityTitle": "How much storage?",
+      "pricePerUnit": "{{price}} / unit / day",
+      "maxUnits_one": "Max {{count}} unit",
+      "maxUnits_other": "Max {{count}} units",
+      "unitsLabel": "Units",
+      "removeUnit": "Remove a unit",
+      "addUnit": "Add a unit"
+    },
+    "duration": {
+      "navTitle": "Duration",
+      "title": "How long do you need storage?",
+      "intro": "Select the number of days you need to store your goods.",
+      "daysLabel": "Days",
+      "removeDay": "Remove a day",
+      "addDay": "Add a day",
+      "costTitle": "Cost Breakdown",
+      "storage": "Storage",
+      "delivery": "Delivery",
+      "bookingFee": "Booking fee",
+      "total": "Total",
+      "deliveryInfo": "Delivery is calculated based on the distance between your location and the cold room.",
+      "continueToPayment": "Continue to payment"
+    },
+    "review": {
+      "navTitle": "Review",
+      "title": "Review your booking",
+      "intro": "Please confirm your storage details before payment.",
+      "roomLocation": "{{location}} ({{distance}}km)",
+      "produce": "Produce",
+      "quantity": "Quantity",
+      "quantityValue_one": "{{count}} Crate ({{weight}}kg)",
+      "quantityValue_other": "{{count}} Crates ({{weight}}kg)",
+      "duration": "Duration",
+      "durationValue_one": "{{count}} Day",
+      "durationValue_other": "{{count}} Days",
+      "costTitle": "Cost Summary",
+      "storage_one": "Storage ({{count}} day)",
+      "storage_other": "Storage ({{count}} days)",
+      "delivery": "Delivery",
+      "serviceFee": "Service Fee",
+      "total": "Total",
+      "splitTitle": "Split Payment Plan",
+      "splitBody": "You'll pay 50% now to secure the space, and the remaining 50% according to the storage provider's arrangement.",
+      "payNow": "Pay now (50%)",
+      "balance": "Balance",
+      "edit": "Edit booking"
+    },
+    "payment": {
+      "navTitle": "Payment",
+      "totalToPay": "Total to pay",
+      "orderNumber": "Order #{{orderNumber}}",
+      "methods": {
+        "card": "Card",
+        "transfer": "Transfer",
+        "ussd": "USSD"
+      },
+      "cardNumber": "Card Number",
+      "cardNumberPlaceholder": "0000 0000 0000 0000",
+      "expiry": "Expiry Date",
+      "expiryPlaceholder": "MM/YY",
+      "cvv": "CVV",
+      "cvvPlaceholder": "123",
+      "saveCard": "Save card for future payments",
+      "mockFlowHint": "Select card to view the mock flow."
+    },
+    "confirmation": {
+      "title": "Booking confirmed!",
+      "sent": "A confirmation has been sent to your phone.",
+      "codeTitle": "Your Booking Code",
+      "codeHint": "Show this code when you arrive",
+      "detailsTitle": "Booking Details",
+      "coldRoom": "Cold Room",
+      "location": "Location",
+      "produce": "Produce",
+      "produceValue_one": "{{produce}} ({{count}} Crate)",
+      "produceValue_other": "{{produce}} ({{count}} Crates)",
+      "duration": "Duration",
+      "durationValue_one": "{{dates}} ({{count}} day)",
+      "durationValue_other": "{{dates}} ({{count}} days)",
+      "paymentTitle": "Payment Summary",
+      "totalCost": "Total Cost",
+      "amountPaid": "Amount Paid",
+      "amountPaidValue": "- {{amount}}",
+      "balanceDue": "Balance Due",
+      "balanceHint": "To be paid on arrival",
+      "viewBooking": "View booking",
+      "backHome": "Back to home"
+    }
+  },
+  "mock": {
+    "produce": {
+      "tomato": "Tomatoes",
+      "pepper": "Peppers",
+      "onion": "Onions",
+      "vegetables": "Leafy Vegetables",
+      "fruits": "Fruits",
+      "yam": "Yams / Tubers",
+      "meat": "Meat & Poultry",
+      "fish": "Fish & Seafood",
+      "dairy": "Dairy Products"
+    },
+    "coldRooms": {
+      "cr-001": {
+        "name": "Oyo Fresh Store",
+        "location": "Bodija Market, Ibadan"
+      },
+      "cr-002": {
+        "name": "Ibadan North Cold Storage",
+        "location": "Oje Market, Ibadan"
+      },
+      "cr-003": {
+        "name": "Moniya Hub Coolers",
+        "location": "Moniya, Ibadan"
+      }
+    },
+    "places": {
+      "ibadan": "Ibadan",
+      "bodija": "Bodija, Ibadan",
+      "apata": "Apata, Ibadan",
+      "iwoRoad": "Iwo Road, Ibadan"
+    },
+    "sampleBooking": {
+      "produce": "Tomato",
+      "dates": "Oct 12 - Oct 15"
+    }
+  }
+}

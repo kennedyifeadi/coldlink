@@ -1,12 +1,14 @@
 import React, { useState } from 'react';
 import { CheckCircle2, Copy } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import TopNavBar from '../../components/TopNavBar';
 import BottomNav from '../../components/BottomNav';
 import PrimaryButton from '../../components/ui/PrimaryButton';
 
 const UserId = () => {
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const [copied, setCopied] = useState(false);
 
   // Hardcoded for now since no DB is used, but we could generate it randomly
@@ -25,7 +27,7 @@ const UserId = () => {
   return (
     <div className="flex flex-col h-full min-h-screen bg-background relative pb-20">
       {/* Top App Bar */}
-      <TopNavBar title="User Id" showProfile={true} />
+      <TopNavBar title={t('auth.userId.navTitle')} showProfile={true} />
 
       <div className="flex flex-col px-6 pt-12 items-center text-center flex-grow">
         {/* Success Icon */}
@@ -34,12 +36,14 @@ const UserId = () => {
         </div>
 
         {/* Title */}
-        <h1 className="font-heading text-headline font-bold text-ink mb-8">You're all set!</h1>
+        <h1 className="font-heading text-headline font-bold text-ink mb-8">
+          {t('auth.userId.title')}
+        </h1>
 
         {/* ID Card */}
         <div className="w-full bg-primary-faint rounded-2xl p-6 mb-8 shadow-sm border border-primary-muted">
           <p className="text-copy-muted text-caption font-medium tracking-widest uppercase mb-4">
-            Your ColdLink ID
+            {t('auth.userId.idLabel')}
           </p>
           <div className="bg-primary-muted text-ink font-bold text-display tracking-widest py-3 px-6 rounded-lg mb-6 inline-block">
             {userId}
@@ -50,20 +54,20 @@ const UserId = () => {
               className="inline-flex items-center gap-2 bg-accent-faint hover:bg-accent-soft text-accent-ink px-5 py-2 rounded-full font-medium text-label transition-colors"
             >
               <Copy size={16} />
-              {copied ? 'Copied!' : 'Copy ID'}
+              {copied ? t('auth.userId.copied') : t('auth.userId.copy')}
             </button>
           </div>
         </div>
 
         {/* Info Text */}
         <p className="text-copy-muted text-body leading-relaxed px-4">
-          This ID works across ColdLink Web, WhatsApp and USSD.
+          {t('auth.userId.channels')}
         </p>
       </div>
 
       {/* Action Button */}
       <div className="px-6 mb-6">
-        <PrimaryButton onClick={handleFindStorage}>Find storage</PrimaryButton>
+        <PrimaryButton onClick={handleFindStorage}>{t('auth.userId.findStorage')}</PrimaryButton>
       </div>
 
       {/* Bottom Navigation */}

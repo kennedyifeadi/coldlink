@@ -1,20 +1,19 @@
 import React, { useState } from 'react';
 import { CheckCircle2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { produceOptions, type ProduceOption } from '../../data/mockData';
+import { useTranslation } from 'react-i18next';
+import { produceIds } from '../../data/mockData';
 import TopNavBar from '../../components/TopNavBar';
 import BottomActionBar from '../../components/ui/BottomActionBar';
 import PrimaryButton from '../../components/ui/PrimaryButton';
 import { produceIcons, type ProduceChoice } from './produceIcons';
 
 // Append 'Other' for the UI
-const optionsToRender: ProduceOption<ProduceChoice>[] = [
-  ...produceOptions,
-  { id: 'other', name: 'Other' },
-];
+const choices: ProduceChoice[] = [...produceIds, 'other'];
 
 const Produce = () => {
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const [selectedProduce, setSelectedProduce] = useState<ProduceChoice | null>(null);
 
   const handleContinue = () => {
@@ -26,29 +25,27 @@ const Produce = () => {
   return (
     <div className="flex flex-col h-full min-h-screen bg-background relative">
       {/* Top App Bar */}
-      <TopNavBar title="Produce" showBack={true} />
+      <TopNavBar title={t('search.produce.navTitle')} showBack={true} />
 
       <div className="flex flex-col px-6 pt-8 pb-28 flex-grow overflow-y-auto">
         {/* Text Content */}
         <div className="mb-8">
           <h1 className="font-heading text-headline-lg font-bold text-ink mb-3 leading-tight tracking-tight">
-            What do you want to store?
+            {t('search.produce.title')}
           </h1>
-          <p className="text-copy-muted text-lead leading-relaxed">
-            Select the produce you're looking to preserve.
-          </p>
+          <p className="text-copy-muted text-lead leading-relaxed">{t('search.produce.intro')}</p>
         </div>
 
         {/* Produce Grid */}
         <div className="grid grid-cols-2 gap-4">
-          {optionsToRender.map((produce) => {
-            const isSelected = selectedProduce === produce.id;
-            const IconComponent = produceIcons[produce.id];
+          {choices.map((produce) => {
+            const isSelected = selectedProduce === produce;
+            const IconComponent = produceIcons[produce];
 
             return (
               <button
-                key={produce.id}
-                onClick={() => setSelectedProduce(produce.id)}
+                key={produce}
+                onClick={() => setSelectedProduce(produce)}
                 aria-pressed={isSelected}
                 className={`relative flex flex-col items-center justify-center p-6 rounded-2xl border transition-all ${
                   isSelected
@@ -74,7 +71,7 @@ const Produce = () => {
 
                 {/* Name */}
                 <span className={`font-medium ${isSelected ? 'text-ink' : 'text-copy'}`}>
-                  {produce.name}
+                  {produce === 'other' ? t('search.produce.other') : t(`mock.produce.${produce}`)}
                 </span>
               </button>
             );
@@ -84,7 +81,7 @@ const Produce = () => {
 
       <BottomActionBar>
         <PrimaryButton onClick={handleContinue} disabled={!selectedProduce} withArrow>
-          Find cold storage
+          {t('search.produce.findStorage')}
         </PrimaryButton>
       </BottomActionBar>
     </div>

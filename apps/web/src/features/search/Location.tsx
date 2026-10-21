@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { MapPin, Search, Crosshair, CheckCircle2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import TopNavBar from '../../components/TopNavBar';
 import BottomActionBar from '../../components/ui/BottomActionBar';
 import PrimaryButton from '../../components/ui/PrimaryButton';
@@ -9,6 +10,7 @@ type LocationOption = 'current' | 'manual';
 
 const Location = () => {
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const [selectedOption, setSelectedOption] = useState<LocationOption | null>(null);
   const [manualSearch, setManualSearch] = useState('');
   const [showSuggestions, setShowSuggestions] = useState(false);
@@ -16,7 +18,7 @@ const Location = () => {
 
   const handleSelectCurrent = () => {
     setSelectedOption('current');
-    setConfirmedLocation('Bodija, Ibadan');
+    setConfirmedLocation(t('mock.places.bodija'));
     setShowSuggestions(false);
     setManualSearch('');
   };
@@ -40,12 +42,12 @@ const Location = () => {
   };
 
   // Mock suggestions — only shown when manual is selected
-  const suggestions = ['Bodija, Ibadan', 'Apata, Ibadan', 'Iwo Road, Ibadan'];
+  const suggestions = [t('mock.places.bodija'), t('mock.places.apata'), t('mock.places.iwoRoad')];
 
   return (
     <div className="flex flex-col h-full min-h-screen bg-background relative">
       {/* Top App Bar */}
-      <TopNavBar title="Location" showBack={true} />
+      <TopNavBar title={t('search.location.navTitle')} showBack={true} />
 
       <div className="flex flex-col px-6 pt-10 pb-28 flex-grow overflow-y-auto">
         {/* Hero Icon */}
@@ -58,10 +60,10 @@ const Location = () => {
         {/* Text Content */}
         <div className="text-center mb-10">
           <h1 className="font-heading text-headline font-bold text-ink mb-3">
-            Where are you storing from?
+            {t('search.location.title')}
           </h1>
           <p className="text-copy-muted text-lead leading-relaxed max-w-sm mx-auto">
-            We'll use your location to find the closest available cold rooms and calculate delivery.
+            {t('search.location.intro')}
           </p>
         </div>
 
@@ -85,8 +87,12 @@ const Location = () => {
               <Crosshair size={20} className="text-primary-strong" />
             </div>
             <div className="flex-grow">
-              <div className="font-semibold text-copy text-lead">Use my current location</div>
-              <div className="text-copy-muted text-label mt-0.5">Recommended for accuracy</div>
+              <div className="font-semibold text-copy text-lead">
+                {t('search.location.useCurrent')}
+              </div>
+              <div className="text-copy-muted text-label mt-0.5">
+                {t('search.location.useCurrentHint')}
+              </div>
             </div>
             {selectedOption === 'current' && (
               <CheckCircle2 size={20} className="text-primary-strong shrink-0 ml-2" />
@@ -104,7 +110,9 @@ const Location = () => {
           {/* Divider */}
           <div className="flex items-center justify-center gap-4">
             <div className="h-[1px] bg-line-strong flex-grow"></div>
-            <span className="text-copy-subtle text-label font-medium">OR</span>
+            <span className="text-copy-subtle text-label font-medium">
+              {t('search.location.or')}
+            </span>
             <div className="h-[1px] bg-line-strong flex-grow"></div>
           </div>
 
@@ -119,7 +127,7 @@ const Location = () => {
             }`}
           >
             <Search size={20} className="mr-3" />
-            <span className="font-medium text-lead">Enter location manually</span>
+            <span className="font-medium text-lead">{t('search.location.enterManually')}</span>
           </button>
 
           {/* Manual search input + suggestions */}
@@ -128,7 +136,7 @@ const Location = () => {
               {/* Search Input */}
               <div className="relative">
                 <label htmlFor="location-search" className="sr-only">
-                  Search for a location
+                  {t('search.location.searchLabel')}
                 </label>
                 <div className="absolute left-4 top-1/2 -translate-y-1/2 text-copy-subtle">
                   <Search size={18} />
@@ -136,7 +144,7 @@ const Location = () => {
                 <input
                   id="location-search"
                   type="text"
-                  placeholder="Search for a location..."
+                  placeholder={t('search.location.searchPlaceholder')}
                   value={manualSearch}
                   onChange={(e) => {
                     setManualSearch(e.target.value);
@@ -178,7 +186,7 @@ const Location = () => {
 
       <BottomActionBar>
         <PrimaryButton onClick={handleContinue} disabled={!confirmedLocation} withArrow>
-          Continue
+          {t('common.continue')}
         </PrimaryButton>
       </BottomActionBar>
     </div>

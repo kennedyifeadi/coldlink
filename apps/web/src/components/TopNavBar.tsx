@@ -1,6 +1,7 @@
 import React from 'react';
 import { ArrowLeft, User } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import logoShort from '../assets/logo-short.webp';
 
 interface TopNavBarProps {
@@ -11,6 +12,7 @@ interface TopNavBarProps {
 
 const TopNavBar = ({ title, showBack = false, showProfile = false }: TopNavBarProps) => {
   const navigate = useNavigate();
+  const { t } = useTranslation();
 
   const handleBack = () => {
     void navigate(-1);
@@ -23,7 +25,7 @@ const TopNavBar = ({ title, showBack = false, showProfile = false }: TopNavBarPr
         {showBack && (
           <button
             onClick={handleBack}
-            aria-label="Go back"
+            aria-label={t('common.goBack')}
             className="p-2 -ml-2 text-copy-muted hover:bg-surface-muted rounded-full transition-colors shrink-0"
           >
             <ArrowLeft size={24} />
@@ -32,7 +34,13 @@ const TopNavBar = ({ title, showBack = false, showProfile = false }: TopNavBarPr
 
         {/* Logo and Title Group */}
         <div className={`flex items-center gap-2 ${showBack ? 'ml-0' : ''}`}>
-          <img src={logoShort} alt="ColdLink" width={28} height={28} className="shrink-0" />
+          <img
+            src={logoShort}
+            alt={t('common.logoShortAlt')}
+            width={28}
+            height={28}
+            className="shrink-0"
+          />
 
           {/* Separator / Title */}
           <span className="text-line-strong mx-1 shrink-0">|</span>
