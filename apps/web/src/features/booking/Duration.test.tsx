@@ -1,6 +1,6 @@
 import React from 'react';
 import { describe, expect, it } from 'vitest';
-import { render, screen, within } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import Duration from './Duration';
@@ -11,12 +11,11 @@ const renderDuration = () => {
       <Duration />
     </MemoryRouter>,
   );
-  // The counter buttons have no accessible names yet (#9), so find them next to the "Days" label.
-  const counter = screen.getByText('Days').parentElement?.parentElement;
-  if (!counter) throw new Error('Days counter not found');
-  const [minus, plus] = within(counter).getAllByRole('button');
-  if (!minus || !plus) throw new Error('Days counter buttons not found');
-  return { minus, plus, user: userEvent.setup() };
+  return {
+    minus: screen.getByRole('button', { name: 'Remove a day' }),
+    plus: screen.getByRole('button', { name: 'Add a day' }),
+    user: userEvent.setup(),
+  };
 };
 
 describe('Duration screen', () => {

@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
-import { MapPin, Search, Crosshair, ArrowRight, CheckCircle2 } from 'lucide-react';
+import { MapPin, Search, Crosshair, CheckCircle2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import TopNavBar from '../components/TopNavBar';
+import TopNavBar from '../../components/TopNavBar';
+import BottomActionBar from '../../components/ui/BottomActionBar';
+import PrimaryButton from '../../components/ui/PrimaryButton';
 
 type LocationOption = 'current' | 'manual';
 
@@ -45,7 +47,7 @@ const Location = () => {
       {/* Top App Bar */}
       <TopNavBar title="Location" showBack={true} />
 
-      <div className="flex flex-col px-6 pt-10 pb-24 flex-grow overflow-y-auto">
+      <div className="flex flex-col px-6 pt-10 pb-28 flex-grow overflow-y-auto">
         {/* Hero Icon */}
         <div className="flex justify-center mb-8">
           <div className="w-20 h-20 bg-surface-muted rounded-full flex items-center justify-center">
@@ -68,6 +70,7 @@ const Location = () => {
           {/* Current Location Option */}
           <button
             onClick={handleSelectCurrent}
+            aria-pressed={selectedOption === 'current'}
             className={`flex items-center p-4 rounded-xl transition-all text-left ${
               selectedOption === 'current'
                 ? 'bg-primary-faint border border-primary shadow-sm'
@@ -108,6 +111,7 @@ const Location = () => {
           {/* Manual Location Option */}
           <button
             onClick={handleSelectManual}
+            aria-pressed={selectedOption === 'manual'}
             className={`flex items-center justify-center p-4 rounded-xl transition-all ${
               selectedOption === 'manual'
                 ? 'bg-primary-faint border border-primary shadow-sm text-ink'
@@ -123,10 +127,14 @@ const Location = () => {
             <div className="flex flex-col gap-3 -mt-2">
               {/* Search Input */}
               <div className="relative">
+                <label htmlFor="location-search" className="sr-only">
+                  Search for a location
+                </label>
                 <div className="absolute left-4 top-1/2 -translate-y-1/2 text-copy-subtle">
                   <Search size={18} />
                 </div>
                 <input
+                  id="location-search"
                   type="text"
                   placeholder="Search for a location..."
                   value={manualSearch}
@@ -168,22 +176,11 @@ const Location = () => {
         </div>
       </div>
 
-      {/* Bottom Action Area (Sticky) */}
-      <div className="absolute bottom-0 left-0 w-full p-6 bg-surface border-t border-line">
-        <button
-          onClick={handleContinue}
-          disabled={!confirmedLocation}
-          className={`group flex items-center justify-center w-full py-4 rounded-lg font-medium text-subtitle transition-all
-            ${!confirmedLocation ? 'bg-primary-muted text-ink/50 cursor-not-allowed opacity-80' : 'bg-primary hover:bg-primary-hover text-ink shadow-md'}
-          `}
-        >
-          <span>Continue</span>
-          <ArrowRight
-            size={20}
-            className="ml-2 transition-transform duration-300 group-hover:translate-x-1.5"
-          />
-        </button>
-      </div>
+      <BottomActionBar>
+        <PrimaryButton onClick={handleContinue} disabled={!confirmedLocation} withArrow>
+          Continue
+        </PrimaryButton>
+      </BottomActionBar>
     </div>
   );
 };

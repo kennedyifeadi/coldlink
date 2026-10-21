@@ -1,8 +1,11 @@
 import React from 'react';
-import { CheckCircle2, Home, MapPin, Leaf, CalendarDays, ArrowRight } from 'lucide-react';
+import { CheckCircle2, Home, MapPin, Leaf, CalendarDays } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import logoMain from '../assets/logo_main.webp';
-import { sampleColdRoom as room } from '../data/mockData';
+import logoMain from '../../assets/logo_main.webp';
+import { sampleColdRoom as room } from '../../data/mockData';
+import Card from '../../components/ui/Card';
+import SummaryRow from '../../components/ui/SummaryRow';
+import PrimaryButton from '../../components/ui/PrimaryButton';
 
 const Confirmation = () => {
   const navigate = useNavigate();
@@ -24,8 +27,7 @@ const Confirmation = () => {
           <p className="text-copy-muted text-body">A confirmation has been sent to your phone.</p>
         </div>
 
-        {/* Booking Code Card */}
-        <div className="bg-surface rounded-2xl p-6 mb-4 border border-line shadow-card text-center flex flex-col items-center">
+        <Card className="p-6 mb-4 text-center flex flex-col items-center">
           <h2 className="text-copy-muted text-label font-medium tracking-widest uppercase mb-4">
             Your Booking Code
           </h2>
@@ -33,10 +35,9 @@ const Confirmation = () => {
             CL-847291
           </div>
           <p className="text-copy-muted text-body">Show this code when you arrive</p>
-        </div>
+        </Card>
 
-        {/* Booking Details Card */}
-        <div className="bg-surface rounded-2xl p-6 mb-4 border border-line shadow-card">
+        <Card className="p-6 mb-4">
           <h3 className="text-copy-muted text-label font-medium mb-5">Booking Details</h3>
 
           <div className="flex flex-col gap-5">
@@ -72,46 +73,31 @@ const Confirmation = () => {
               </div>
             </div>
           </div>
-        </div>
+        </Card>
 
-        {/* Payment Summary Card */}
-        <div className="bg-surface rounded-2xl p-6 mb-8 border border-line shadow-card">
+        <Card className="p-6 mb-8">
           <h3 className="text-copy-muted text-label font-medium mb-5">Payment Summary</h3>
 
           <div className="flex flex-col gap-3.5 mb-4">
-            <div className="flex justify-between items-center text-body">
-              <span className="text-copy-muted">Total Cost</span>
-              <span className="text-ink font-medium">₦5,400</span>
-            </div>
-            <div className="flex justify-between items-center text-body">
-              <span className="text-primary-strong">Amount Paid</span>
-              <span className="text-primary-strong font-medium">- ₦2,700</span>
-            </div>
+            <SummaryRow label="Total Cost" value="₦5,400" />
+            <SummaryRow label="Amount Paid" value="- ₦2,700" variant="highlight" />
           </div>
 
           <div className="h-[1px] bg-line mb-4 w-full"></div>
 
-          <div className="flex justify-between items-center mb-1.5">
-            <span className="text-copy-muted text-body">Balance Due</span>
-            <span className="font-medium text-ink text-body">₦2,700</span>
+          <div className="mb-1.5">
+            <SummaryRow label="Balance Due" value="₦2,700" />
           </div>
           <div className="text-right">
             <span className="text-copy-subtle text-caption">To be paid on arrival</span>
           </div>
-        </div>
+        </Card>
 
         {/* Action Buttons */}
         <div className="flex flex-col gap-4 mt-auto">
-          <button
-            onClick={() => void navigate('/discovery')}
-            className="group flex items-center justify-center w-full py-4 rounded-lg bg-primary hover:bg-primary-hover text-ink font-medium text-subtitle transition-colors shadow-md"
-          >
-            <span>View booking</span>
-            <ArrowRight
-              size={20}
-              className="ml-2 transition-transform duration-300 group-hover:translate-x-1.5"
-            />
-          </button>
+          <PrimaryButton onClick={() => void navigate('/discovery')} withArrow>
+            View booking
+          </PrimaryButton>
           <button
             onClick={() => void navigate('/discovery')}
             className="w-full py-4 bg-surface border border-line-strong text-ink font-medium text-lead hover:bg-surface-muted rounded-lg transition-colors"

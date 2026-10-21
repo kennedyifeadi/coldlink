@@ -1,9 +1,11 @@
 import React from 'react';
 import { MapPin, SlidersHorizontal, Star, Leaf, Warehouse } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { coldRooms, type ColdRoom } from '../data/mockData';
-import TopNavBar from '../components/TopNavBar';
-import BottomNav from '../components/BottomNav';
+import { coldRooms, type ColdRoom } from '../../data/mockData';
+import TopNavBar from '../../components/TopNavBar';
+import Card from '../../components/ui/Card';
+import BottomNav from '../../components/BottomNav';
+import PrimaryButton from '../../components/ui/PrimaryButton';
 
 const Discovery = () => {
   const navigate = useNavigate();
@@ -52,10 +54,7 @@ const Discovery = () => {
             const isLow = room.availableCapacity / room.totalCapacity <= 0.1;
 
             return (
-              <div
-                key={room.id}
-                className="bg-surface rounded-2xl overflow-hidden border border-line-strong shadow-card"
-              >
+              <Card key={room.id} className="overflow-hidden">
                 <div className="w-full h-36 bg-primary-soft flex items-center justify-center text-primary-strong">
                   <Warehouse size={40} strokeWidth={1.75} />
                 </div>
@@ -97,14 +96,11 @@ const Discovery = () => {
                   </div>
 
                   {/* Action */}
-                  <button
-                    onClick={() => void navigate('/details')}
-                    className="w-full bg-primary hover:bg-primary-hover text-ink font-medium py-3.5 rounded-lg transition-colors"
-                  >
+                  <PrimaryButton onClick={() => void navigate('/details')} compact>
                     View storage
-                  </button>
+                  </PrimaryButton>
                 </div>
-              </div>
+              </Card>
             );
           })}
         </div>

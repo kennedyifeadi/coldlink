@@ -1,7 +1,7 @@
 import React, { useState, type FormEvent } from 'react';
-import { ArrowRight } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import logoMain from '../assets/logo_main.webp';
+import logoMain from '../../assets/logo_main.webp';
+import PrimaryButton from '../../components/ui/PrimaryButton';
 
 const Onboarding = () => {
   const [phoneNumber, setPhoneNumber] = useState('');
@@ -35,7 +35,9 @@ const Onboarding = () => {
       <form onSubmit={handleContinue} className="w-full mt-12 pb-8">
         {/* Phone Number Input */}
         <div className="mb-8">
-          <label className="block text-label font-medium text-copy mb-2">Phone number</label>
+          <label htmlFor="phone-number" className="block text-label font-medium text-copy mb-2">
+            Phone number
+          </label>
           <div className="flex items-center border border-line-strong rounded-lg overflow-hidden focus-within:border-primary-strong focus-within:ring-1 focus-within:ring-primary-strong transition-all">
             {/* Country Code & Flag */}
             <div className="flex items-center gap-2 px-4 py-3.5 bg-surface-muted border-r border-line-strong shrink-0">
@@ -50,6 +52,7 @@ const Onboarding = () => {
 
             {/* Input Field */}
             <input
+              id="phone-number"
               type="tel"
               placeholder="800 000 0000"
               className="w-full px-4 py-3.5 text-subtitle text-copy bg-surface placeholder-copy-subtle focus:outline-none"
@@ -60,19 +63,9 @@ const Onboarding = () => {
         </div>
 
         {/* Continue Button */}
-        <button
-          type="submit"
-          disabled={phoneNumber.length < 5}
-          className={`group flex items-center justify-center w-full py-4 rounded-lg font-medium text-subtitle transition-all
-            ${phoneNumber.length < 5 ? 'bg-primary-muted text-ink/50 cursor-not-allowed' : 'bg-primary hover:bg-primary-hover text-ink shadow-md'}
-          `}
-        >
-          <span>Continue</span>
-          <ArrowRight
-            size={20}
-            className="ml-2 transition-transform duration-300 group-hover:translate-x-1.5"
-          />
-        </button>
+        <PrimaryButton type="submit" disabled={phoneNumber.length < 5} withArrow>
+          Continue
+        </PrimaryButton>
 
         {/* Footer Text */}
         <p className="text-center text-copy-muted text-body mt-8 px-4 leading-relaxed">

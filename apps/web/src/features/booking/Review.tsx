@@ -1,9 +1,13 @@
 import React from 'react';
-import { MapPin, Info, ArrowRight, Snowflake } from 'lucide-react';
+import { MapPin, Info, Snowflake } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { sampleColdRoom as room } from '../data/mockData';
-import TopNavBar from '../components/TopNavBar';
-import BottomNav from '../components/BottomNav';
+import { sampleColdRoom as room } from '../../data/mockData';
+import TopNavBar from '../../components/TopNavBar';
+import Card from '../../components/ui/Card';
+import CardTitle from '../../components/ui/CardTitle';
+import SummaryRow from '../../components/ui/SummaryRow';
+import BottomNav from '../../components/BottomNav';
+import PrimaryButton from '../../components/ui/PrimaryButton';
 
 const Review = () => {
   const navigate = useNavigate();
@@ -24,8 +28,7 @@ const Review = () => {
           </p>
         </div>
 
-        {/* Facility Details Card */}
-        <div className="bg-surface-muted rounded-2xl p-5 mb-4 border border-line">
+        <Card tone="muted" className="p-5 mb-4">
           <div className="flex items-center gap-3 mb-5">
             <div className="w-10 h-10 rounded-full bg-primary flex items-center justify-center text-ink shrink-0">
               <Snowflake size={20} />
@@ -39,47 +42,25 @@ const Review = () => {
           </div>
 
           <div className="bg-surface rounded-xl p-4 border border-line flex flex-col gap-3">
-            <div className="flex justify-between items-center text-body">
-              <span className="text-copy-muted">Produce</span>
-              <span className="font-semibold text-ink">Tomato</span>
-            </div>
-            <div className="flex justify-between items-center text-body">
-              <span className="text-copy-muted">Quantity</span>
-              <span className="font-semibold text-ink">2 Crates (100kg)</span>
-            </div>
-            <div className="flex justify-between items-center text-body">
-              <span className="text-copy-muted">Duration</span>
-              <span className="font-semibold text-ink">3 Days</span>
-            </div>
+            <SummaryRow label="Produce" value="Tomato" />
+            <SummaryRow label="Quantity" value="2 Crates (100kg)" />
+            <SummaryRow label="Duration" value="3 Days" />
           </div>
-        </div>
+        </Card>
 
-        {/* Cost Summary Card */}
-        <div className="bg-surface-muted rounded-2xl p-5 mb-4 border border-line">
-          <h3 className="font-heading font-semibold text-ink mb-4">Cost Summary</h3>
+        <Card tone="muted" className="p-5 mb-4">
+          <CardTitle>Cost Summary</CardTitle>
 
           <div className="flex flex-col gap-3 mb-4">
-            <div className="flex justify-between items-center text-body">
-              <span className="text-copy-muted">Storage (3 days)</span>
-              <span className="text-copy">₦4,500</span>
-            </div>
-            <div className="flex justify-between items-center text-body">
-              <span className="text-copy-muted">Delivery</span>
-              <span className="text-copy">₦600</span>
-            </div>
-            <div className="flex justify-between items-center text-body">
-              <span className="text-copy-muted">Service Fee</span>
-              <span className="text-copy">₦300</span>
-            </div>
+            <SummaryRow label="Storage (3 days)" value="₦4,500" />
+            <SummaryRow label="Delivery" value="₦600" />
+            <SummaryRow label="Service Fee" value="₦300" />
           </div>
 
           <div className="h-[1px] bg-line-strong mb-4 w-full"></div>
 
-          <div className="flex justify-between items-center">
-            <span className="font-bold text-subtitle text-ink">Total</span>
-            <span className="font-bold text-subtitle text-primary-strong">₦5,400</span>
-          </div>
-        </div>
+          <SummaryRow label="Total" value="₦5,400" variant="total" />
+        </Card>
 
         {/* Split Payment Plan Card */}
         <div className="bg-accent rounded-2xl p-5 mb-8">
@@ -111,16 +92,9 @@ const Review = () => {
 
         {/* Action Buttons */}
         <div className="flex flex-col gap-4">
-          <button
-            onClick={() => void navigate('/payment')}
-            className="group flex items-center justify-center w-full py-4 rounded-lg bg-primary hover:bg-primary-hover text-ink font-medium text-subtitle transition-colors shadow-md"
-          >
-            <span>Pay ₦2,700</span>
-            <ArrowRight
-              size={20}
-              className="ml-2 transition-transform duration-300 group-hover:translate-x-1.5"
-            />
-          </button>
+          <PrimaryButton onClick={() => void navigate('/payment')} withArrow>
+            Pay ₦2,700
+          </PrimaryButton>
           <button
             onClick={() => void navigate(-1)}
             className="w-full py-3 text-primary-strong font-medium text-lead hover:bg-surface-muted rounded-lg transition-colors"

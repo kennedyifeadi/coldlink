@@ -1,16 +1,16 @@
 import React, { useState } from 'react';
-import { ArrowRight, CheckCircle2 } from 'lucide-react';
-import * as Icons from 'lucide-react';
+import { CheckCircle2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { produceOptions, type ProduceId, type ProduceOption } from '../data/mockData';
-import TopNavBar from '../components/TopNavBar';
-
-type ProduceChoice = ProduceId | 'other';
+import { produceOptions, type ProduceOption } from '../../data/mockData';
+import TopNavBar from '../../components/TopNavBar';
+import BottomActionBar from '../../components/ui/BottomActionBar';
+import PrimaryButton from '../../components/ui/PrimaryButton';
+import { produceIcons, type ProduceChoice } from './produceIcons';
 
 // Append 'Other' for the UI
 const optionsToRender: ProduceOption<ProduceChoice>[] = [
   ...produceOptions,
-  { id: 'other', name: 'Other', icon: 'Shapes' },
+  { id: 'other', name: 'Other' },
 ];
 
 const Produce = () => {
@@ -43,12 +43,13 @@ const Produce = () => {
         <div className="grid grid-cols-2 gap-4">
           {optionsToRender.map((produce) => {
             const isSelected = selectedProduce === produce.id;
-            const IconComponent = Icons[produce.icon] || Icons.HelpCircle;
+            const IconComponent = produceIcons[produce.id];
 
             return (
               <button
                 key={produce.id}
                 onClick={() => setSelectedProduce(produce.id)}
+                aria-pressed={isSelected}
                 className={`relative flex flex-col items-center justify-center p-6 rounded-2xl border transition-all ${
                   isSelected
                     ? 'bg-primary-soft border-primary shadow-sm'
@@ -81,22 +82,11 @@ const Produce = () => {
         </div>
       </div>
 
-      {/* Bottom Action Area (Sticky) */}
-      <div className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[430px] px-6 pt-6 pb-safe-6 bg-surface border-t border-line z-20">
-        <button
-          onClick={handleContinue}
-          disabled={!selectedProduce}
-          className={`group flex items-center justify-center w-full py-4 rounded-lg font-medium text-subtitle transition-all
-            ${!selectedProduce ? 'bg-primary-muted text-ink/50 cursor-not-allowed opacity-80' : 'bg-primary hover:bg-primary-hover text-ink shadow-md'}
-          `}
-        >
-          <span>Find cold storage</span>
-          <ArrowRight
-            size={20}
-            className="ml-2 transition-transform duration-300 group-hover:translate-x-1.5"
-          />
-        </button>
-      </div>
+      <BottomActionBar>
+        <PrimaryButton onClick={handleContinue} disabled={!selectedProduce} withArrow>
+          Find cold storage
+        </PrimaryButton>
+      </BottomActionBar>
     </div>
   );
 };
