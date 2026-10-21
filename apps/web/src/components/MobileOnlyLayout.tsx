@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 import { Outlet } from 'react-router-dom';
+import RouteFallback from './RouteFallback';
 
 const MobileOnlyLayout = () => {
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
@@ -47,7 +48,9 @@ const MobileOnlyLayout = () => {
 
   return (
     <div className="min-h-screen bg-background relative max-w-107.5 mx-auto shadow-xl overflow-hidden">
-      <Outlet />
+      <Suspense fallback={<RouteFallback />}>
+        <Outlet />
+      </Suspense>
     </div>
   );
 };
