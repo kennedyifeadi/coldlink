@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { ReceiptText, CreditCard, Landmark, Grip, HelpCircle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import TopNavBar from '../../components/TopNavBar';
 import Card from '../../components/ui/Card';
 import BottomActionBar from '../../components/ui/BottomActionBar';
@@ -10,23 +11,25 @@ type PaymentMethod = 'card' | 'transfer' | 'ussd';
 
 const Payment = () => {
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState<PaymentMethod>('card');
   const [saveCard, setSaveCard] = useState(false);
 
   return (
     <div className="flex flex-col h-full min-h-screen bg-background relative pb-28">
       {/* Top App Bar */}
-      <TopNavBar title="Payment" showBack={true} />
+      <TopNavBar title={t('booking.payment.navTitle')} showBack={true} />
 
       <div className="flex flex-col px-5 pt-6 flex-grow overflow-y-auto">
         <Card
           tone="muted"
           className="p-6 mb-6 flex flex-col items-center justify-center text-center"
         >
-          <p className="text-copy-muted text-body mb-1">Total to pay</p>
+          <p className="text-copy-muted text-body mb-1">{t('booking.payment.totalToPay')}</p>
           <p className="text-primary-strong text-headline font-semibold mb-3">₦2,700</p>
           <div className="flex items-center text-copy-subtle text-label">
-            <ReceiptText size={14} className="mr-1.5" /> Order #882-991A
+            <ReceiptText size={14} className="mr-1.5" />{' '}
+            {t('booking.payment.orderNumber', { orderNumber: '882-991A' })}
           </div>
         </Card>
 
@@ -41,7 +44,7 @@ const Payment = () => {
                 : 'bg-surface-muted text-copy-muted hover:bg-surface-sunken'
             }`}
           >
-            <CreditCard size={18} /> Card
+            <CreditCard size={18} /> {t('booking.payment.methods.card')}
           </button>
 
           <button
@@ -53,7 +56,7 @@ const Payment = () => {
                 : 'bg-surface-muted text-copy-muted hover:bg-surface-sunken'
             }`}
           >
-            <Landmark size={18} /> Transfer
+            <Landmark size={18} /> {t('booking.payment.methods.transfer')}
           </button>
 
           <button
@@ -65,7 +68,7 @@ const Payment = () => {
                 : 'bg-surface-muted text-copy-muted hover:bg-surface-sunken'
             }`}
           >
-            <Grip size={18} /> USSD
+            <Grip size={18} /> {t('booking.payment.methods.ussd')}
           </button>
         </div>
 
@@ -75,7 +78,7 @@ const Payment = () => {
             {/* Card Number */}
             <div className="flex flex-col gap-2">
               <label htmlFor="card-number" className="text-ink text-label font-medium">
-                Card Number
+                {t('booking.payment.cardNumber')}
               </label>
               <div className="relative flex items-center">
                 <div className="absolute left-4 text-copy-subtle">
@@ -84,7 +87,7 @@ const Payment = () => {
                 <input
                   id="card-number"
                   type="text"
-                  placeholder="0000 0000 0000 0000"
+                  placeholder={t('booking.payment.cardNumberPlaceholder')}
                   className="w-full pl-12 pr-4 py-3.5 bg-surface border border-line rounded-xl text-body placeholder:text-copy-subtle outline-none focus:border-primary-strong focus:ring-1 focus:ring-primary-strong transition-all"
                 />
               </div>
@@ -94,12 +97,12 @@ const Payment = () => {
               {/* Expiry Date */}
               <div className="flex flex-col gap-2 flex-1">
                 <label htmlFor="card-expiry" className="text-ink text-label font-medium">
-                  Expiry Date
+                  {t('booking.payment.expiry')}
                 </label>
                 <input
                   id="card-expiry"
                   type="text"
-                  placeholder="MM/YY"
+                  placeholder={t('booking.payment.expiryPlaceholder')}
                   className="w-full px-4 py-3.5 bg-surface border border-line rounded-xl text-body placeholder:text-copy-subtle outline-none focus:border-primary-strong focus:ring-1 focus:ring-primary-strong transition-all text-center"
                 />
               </div>
@@ -107,13 +110,13 @@ const Payment = () => {
               {/* CVV */}
               <div className="flex flex-col gap-2 flex-1">
                 <label htmlFor="card-cvv" className="text-ink text-label font-medium">
-                  CVV
+                  {t('booking.payment.cvv')}
                 </label>
                 <div className="relative flex items-center">
                   <input
                     id="card-cvv"
                     type="text"
-                    placeholder="123"
+                    placeholder={t('booking.payment.cvvPlaceholder')}
                     className="w-full pl-4 pr-10 py-3.5 bg-surface border border-line rounded-xl text-body placeholder:text-copy-subtle outline-none focus:border-primary-strong focus:ring-1 focus:ring-primary-strong transition-all text-center"
                   />
                   <div className="absolute right-4 text-copy-subtle">
@@ -138,21 +141,21 @@ const Payment = () => {
               >
                 {saveCard && <span className="w-2.5 h-2.5 bg-ink rounded-sm"></span>}
               </span>
-              <span className="text-body text-copy-muted">Save card for future payments</span>
+              <span className="text-body text-copy-muted">{t('booking.payment.saveCard')}</span>
             </label>
           </div>
         )}
 
         {activeTab !== 'card' && (
           <div className="flex items-center justify-center py-10 text-copy-subtle">
-            <p>Select card to view the mock flow.</p>
+            <p>{t('booking.payment.mockFlowHint')}</p>
           </div>
         )}
       </div>
 
       <BottomActionBar>
         <PrimaryButton onClick={() => void navigate('/confirmation')} withArrow>
-          Pay ₦2,700
+          {t('booking.payAmount', { amount: '₦2,700' })}
         </PrimaryButton>
       </BottomActionBar>
     </div>
