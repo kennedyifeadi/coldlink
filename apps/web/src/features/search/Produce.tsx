@@ -1,16 +1,14 @@
 import React, { useState } from 'react';
 import { ArrowRight, CheckCircle2 } from 'lucide-react';
-import * as Icons from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { produceOptions, type ProduceId, type ProduceOption } from '../../data/mockData';
+import { produceOptions, type ProduceOption } from '../../data/mockData';
 import TopNavBar from '../../components/TopNavBar';
-
-type ProduceChoice = ProduceId | 'other';
+import { produceIcons, type ProduceChoice } from './produceIcons';
 
 // Append 'Other' for the UI
 const optionsToRender: ProduceOption<ProduceChoice>[] = [
   ...produceOptions,
-  { id: 'other', name: 'Other', icon: 'Shapes' },
+  { id: 'other', name: 'Other' },
 ];
 
 const Produce = () => {
@@ -43,7 +41,7 @@ const Produce = () => {
         <div className="grid grid-cols-2 gap-4">
           {optionsToRender.map((produce) => {
             const isSelected = selectedProduce === produce.id;
-            const IconComponent = Icons[produce.icon] || Icons.HelpCircle;
+            const IconComponent = produceIcons[produce.id];
 
             return (
               <button

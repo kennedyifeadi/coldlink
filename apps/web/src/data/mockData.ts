@@ -1,26 +1,18 @@
-import type * as Icons from 'lucide-react';
-import type { LucideIcon } from 'lucide-react';
-
-export type LucideIconName = {
-  [Name in keyof typeof Icons]: (typeof Icons)[Name] extends LucideIcon ? Name : never;
-}[keyof typeof Icons];
-
 export interface ProduceOption<Id extends string = string> {
   id: Id;
   name: string;
-  icon: LucideIconName;
 }
 
 export const produceOptions = [
-  { id: 'tomato', name: 'Tomatoes', icon: 'Apple' }, // Placeholder icons
-  { id: 'pepper', name: 'Peppers', icon: 'Flame' },
-  { id: 'onion', name: 'Onions', icon: 'CircleDot' },
-  { id: 'vegetables', name: 'Leafy Vegetables', icon: 'Leaf' },
-  { id: 'fruits', name: 'Fruits', icon: 'Cherry' },
-  { id: 'yam', name: 'Yams / Tubers', icon: 'Carrot' },
-  { id: 'meat', name: 'Meat & Poultry', icon: 'Drumstick' },
-  { id: 'fish', name: 'Fish & Seafood', icon: 'Fish' },
-  { id: 'dairy', name: 'Dairy Products', icon: 'Milk' },
+  { id: 'tomato', name: 'Tomatoes' },
+  { id: 'pepper', name: 'Peppers' },
+  { id: 'onion', name: 'Onions' },
+  { id: 'vegetables', name: 'Leafy Vegetables' },
+  { id: 'fruits', name: 'Fruits' },
+  { id: 'yam', name: 'Yams / Tubers' },
+  { id: 'meat', name: 'Meat & Poultry' },
+  { id: 'fish', name: 'Fish & Seafood' },
+  { id: 'dairy', name: 'Dairy Products' },
 ] as const satisfies readonly ProduceOption[];
 
 export type ProduceId = (typeof produceOptions)[number]['id'];
