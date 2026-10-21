@@ -1,6 +1,7 @@
 import React, { lazy, type ComponentType } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import AppLayout from './components/AppLayout';
+import NotFound from './components/NotFound';
 
 // One chunk per feature: every screen of a feature loads with the first one visited.
 const lazyScreen = <Module extends Record<Name, ComponentType>, Name extends keyof Module>(
@@ -37,6 +38,7 @@ const AppRoutes = () => (
       <Route path="/review" element={<Review />} />
       <Route path="/payment" element={<Payment />} />
       <Route path="/confirmation" element={<Confirmation />} />
+      <Route path="*" element={<NotFound />} />
     </Route>
   </Routes>
 );
