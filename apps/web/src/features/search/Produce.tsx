@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
-import { ArrowRight, CheckCircle2 } from 'lucide-react';
+import { CheckCircle2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { produceOptions, type ProduceOption } from '../../data/mockData';
 import TopNavBar from '../../components/TopNavBar';
+import PrimaryButton from '../../components/ui/PrimaryButton';
 import { produceIcons, type ProduceChoice } from './produceIcons';
 
 // Append 'Other' for the UI
@@ -81,19 +82,9 @@ const Produce = () => {
 
       {/* Bottom Action Area (Sticky) */}
       <div className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[430px] px-6 pt-6 pb-safe-6 bg-surface border-t border-line z-20">
-        <button
-          onClick={handleContinue}
-          disabled={!selectedProduce}
-          className={`group flex items-center justify-center w-full py-4 rounded-lg font-medium text-subtitle transition-all
-            ${!selectedProduce ? 'bg-primary-muted text-ink/50 cursor-not-allowed opacity-80' : 'bg-primary hover:bg-primary-hover text-ink shadow-md'}
-          `}
-        >
-          <span>Find cold storage</span>
-          <ArrowRight
-            size={20}
-            className="ml-2 transition-transform duration-300 group-hover:translate-x-1.5"
-          />
-        </button>
+        <PrimaryButton onClick={handleContinue} disabled={!selectedProduce} withArrow>
+          Find cold storage
+        </PrimaryButton>
       </div>
     </div>
   );

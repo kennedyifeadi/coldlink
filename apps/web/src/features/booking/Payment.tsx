@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
-import { ReceiptText, CreditCard, Landmark, Grip, HelpCircle, ArrowRight } from 'lucide-react';
+import { ReceiptText, CreditCard, Landmark, Grip, HelpCircle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import TopNavBar from '../../components/TopNavBar';
+import PrimaryButton from '../../components/ui/PrimaryButton';
 
 type PaymentMethod = 'card' | 'transfer' | 'ussd';
 
@@ -130,16 +131,9 @@ const Payment = () => {
 
       {/* Bottom Fixed Action Area */}
       <div className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[430px] px-6 pt-6 pb-safe-6 bg-surface border-t border-line z-20">
-        <button
-          onClick={() => void navigate('/confirmation')}
-          className="group flex items-center justify-center w-full py-4 rounded-lg bg-primary hover:bg-primary-hover text-ink font-medium text-subtitle transition-colors shadow-md"
-        >
-          <span>Pay ₦2,700</span>
-          <ArrowRight
-            size={20}
-            className="ml-2 transition-transform duration-300 group-hover:translate-x-1.5"
-          />
-        </button>
+        <PrimaryButton onClick={() => void navigate('/confirmation')} withArrow>
+          Pay ₦2,700
+        </PrimaryButton>
       </div>
     </div>
   );

@@ -3,6 +3,7 @@ import { CheckCircle2, Copy } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import TopNavBar from '../../components/TopNavBar';
 import BottomNav from '../../components/BottomNav';
+import PrimaryButton from '../../components/ui/PrimaryButton';
 
 const UserId = () => {
   const navigate = useNavigate();
@@ -62,12 +63,7 @@ const UserId = () => {
 
       {/* Action Button */}
       <div className="px-6 mb-6">
-        <button
-          onClick={handleFindStorage}
-          className="w-full bg-primary hover:bg-primary-hover text-ink py-4 rounded-lg font-medium text-subtitle transition-colors shadow-md"
-        >
-          Find storage
-        </button>
+        <PrimaryButton onClick={handleFindStorage}>Find storage</PrimaryButton>
       </div>
 
       {/* Bottom Navigation */}

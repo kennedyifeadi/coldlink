@@ -1,8 +1,9 @@
 import React from 'react';
-import { CheckCircle2, Home, MapPin, Leaf, CalendarDays, ArrowRight } from 'lucide-react';
+import { CheckCircle2, Home, MapPin, Leaf, CalendarDays } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import logoMain from '../../assets/logo_main.webp';
 import { sampleColdRoom as room } from '../../data/mockData';
+import PrimaryButton from '../../components/ui/PrimaryButton';
 
 const Confirmation = () => {
   const navigate = useNavigate();
@@ -102,16 +103,9 @@ const Confirmation = () => {
 
         {/* Action Buttons */}
         <div className="flex flex-col gap-4 mt-auto">
-          <button
-            onClick={() => void navigate('/discovery')}
-            className="group flex items-center justify-center w-full py-4 rounded-lg bg-primary hover:bg-primary-hover text-ink font-medium text-subtitle transition-colors shadow-md"
-          >
-            <span>View booking</span>
-            <ArrowRight
-              size={20}
-              className="ml-2 transition-transform duration-300 group-hover:translate-x-1.5"
-            />
-          </button>
+          <PrimaryButton onClick={() => void navigate('/discovery')} withArrow>
+            View booking
+          </PrimaryButton>
           <button
             onClick={() => void navigate('/discovery')}
             className="w-full py-4 bg-surface border border-line-strong text-ink font-medium text-lead hover:bg-surface-muted rounded-lg transition-colors"

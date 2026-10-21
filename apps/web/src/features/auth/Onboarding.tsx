@@ -1,7 +1,7 @@
 import React, { useState, type FormEvent } from 'react';
-import { ArrowRight } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import logoMain from '../../assets/logo_main.webp';
+import PrimaryButton from '../../components/ui/PrimaryButton';
 
 const Onboarding = () => {
   const [phoneNumber, setPhoneNumber] = useState('');
@@ -60,19 +60,9 @@ const Onboarding = () => {
         </div>
 
         {/* Continue Button */}
-        <button
-          type="submit"
-          disabled={phoneNumber.length < 5}
-          className={`group flex items-center justify-center w-full py-4 rounded-lg font-medium text-subtitle transition-all
-            ${phoneNumber.length < 5 ? 'bg-primary-muted text-ink/50 cursor-not-allowed' : 'bg-primary hover:bg-primary-hover text-ink shadow-md'}
-          `}
-        >
-          <span>Continue</span>
-          <ArrowRight
-            size={20}
-            className="ml-2 transition-transform duration-300 group-hover:translate-x-1.5"
-          />
-        </button>
+        <PrimaryButton type="submit" disabled={phoneNumber.length < 5} withArrow>
+          Continue
+        </PrimaryButton>
 
         {/* Footer Text */}
         <p className="text-center text-copy-muted text-body mt-8 px-4 leading-relaxed">

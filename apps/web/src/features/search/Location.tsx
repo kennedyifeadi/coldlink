@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
-import { MapPin, Search, Crosshair, ArrowRight, CheckCircle2 } from 'lucide-react';
+import { MapPin, Search, Crosshair, CheckCircle2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import TopNavBar from '../../components/TopNavBar';
+import PrimaryButton from '../../components/ui/PrimaryButton';
 
 type LocationOption = 'current' | 'manual';
 
@@ -170,19 +171,9 @@ const Location = () => {
 
       {/* Bottom Action Area (Sticky) */}
       <div className="absolute bottom-0 left-0 w-full p-6 bg-surface border-t border-line">
-        <button
-          onClick={handleContinue}
-          disabled={!confirmedLocation}
-          className={`group flex items-center justify-center w-full py-4 rounded-lg font-medium text-subtitle transition-all
-            ${!confirmedLocation ? 'bg-primary-muted text-ink/50 cursor-not-allowed opacity-80' : 'bg-primary hover:bg-primary-hover text-ink shadow-md'}
-          `}
-        >
-          <span>Continue</span>
-          <ArrowRight
-            size={20}
-            className="ml-2 transition-transform duration-300 group-hover:translate-x-1.5"
-          />
-        </button>
+        <PrimaryButton onClick={handleContinue} disabled={!confirmedLocation} withArrow>
+          Continue
+        </PrimaryButton>
       </div>
     </div>
   );

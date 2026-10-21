@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Minus, Plus, Info } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import TopNavBar from '../../components/TopNavBar';
+import PrimaryButton from '../../components/ui/PrimaryButton';
 
 const Duration = () => {
   const navigate = useNavigate();
@@ -99,12 +100,7 @@ const Duration = () => {
 
       {/* Sticky Bottom Action */}
       <div className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[430px] px-6 pt-6 pb-safe-6 bg-surface border-t border-line z-20">
-        <button
-          onClick={() => void navigate('/review')}
-          className="w-full py-4 rounded-xl bg-primary hover:bg-primary-hover text-ink font-medium text-subtitle transition-colors shadow-sm"
-        >
-          Continue to payment
-        </button>
+        <PrimaryButton onClick={() => void navigate('/review')}>Continue to payment</PrimaryButton>
       </div>
     </div>
   );

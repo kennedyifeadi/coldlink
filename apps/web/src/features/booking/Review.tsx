@@ -1,9 +1,10 @@
 import React from 'react';
-import { MapPin, Info, ArrowRight, Snowflake } from 'lucide-react';
+import { MapPin, Info, Snowflake } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { sampleColdRoom as room } from '../../data/mockData';
 import TopNavBar from '../../components/TopNavBar';
 import BottomNav from '../../components/BottomNav';
+import PrimaryButton from '../../components/ui/PrimaryButton';
 
 const Review = () => {
   const navigate = useNavigate();
@@ -111,16 +112,9 @@ const Review = () => {
 
         {/* Action Buttons */}
         <div className="flex flex-col gap-4">
-          <button
-            onClick={() => void navigate('/payment')}
-            className="group flex items-center justify-center w-full py-4 rounded-lg bg-primary hover:bg-primary-hover text-ink font-medium text-subtitle transition-colors shadow-md"
-          >
-            <span>Pay ₦2,700</span>
-            <ArrowRight
-              size={20}
-              className="ml-2 transition-transform duration-300 group-hover:translate-x-1.5"
-            />
-          </button>
+          <PrimaryButton onClick={() => void navigate('/payment')} withArrow>
+            Pay ₦2,700
+          </PrimaryButton>
           <button
             onClick={() => void navigate(-1)}
             className="w-full py-3 text-primary-strong font-medium text-lead hover:bg-surface-muted rounded-lg transition-colors"

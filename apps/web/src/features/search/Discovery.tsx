@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { coldRooms, type ColdRoom } from '../../data/mockData';
 import TopNavBar from '../../components/TopNavBar';
 import BottomNav from '../../components/BottomNav';
+import PrimaryButton from '../../components/ui/PrimaryButton';
 
 const Discovery = () => {
   const navigate = useNavigate();
@@ -97,12 +98,9 @@ const Discovery = () => {
                   </div>
 
                   {/* Action */}
-                  <button
-                    onClick={() => void navigate('/details')}
-                    className="w-full bg-primary hover:bg-primary-hover text-ink font-medium py-3.5 rounded-lg transition-colors"
-                  >
+                  <PrimaryButton onClick={() => void navigate('/details')} compact>
                     View storage
-                  </button>
+                  </PrimaryButton>
                 </div>
               </div>
             );

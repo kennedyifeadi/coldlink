@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
-import { MapPin, Star, Minus, Plus, ArrowRight, Warehouse } from 'lucide-react';
+import { MapPin, Star, Minus, Plus, Warehouse } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { sampleColdRoom as room } from '../../data/mockData';
 import TopNavBar from '../../components/TopNavBar';
+import PrimaryButton from '../../components/ui/PrimaryButton';
 
 const Details = () => {
   const navigate = useNavigate();
@@ -107,16 +108,9 @@ const Details = () => {
 
       {/* Sticky Bottom Action */}
       <div className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[430px] px-6 pt-6 pb-safe-6 bg-surface border-t border-line z-20">
-        <button
-          onClick={() => void navigate('/duration')}
-          className="group flex items-center justify-center w-full py-4 rounded-lg bg-primary hover:bg-primary-hover text-ink font-medium text-subtitle transition-colors shadow-md"
-        >
-          <span>Continue</span>
-          <ArrowRight
-            size={20}
-            className="ml-2 transition-transform duration-300 group-hover:translate-x-1.5"
-          />
-        </button>
+        <PrimaryButton onClick={() => void navigate('/duration')} withArrow>
+          Continue
+        </PrimaryButton>
       </div>
     </div>
   );
