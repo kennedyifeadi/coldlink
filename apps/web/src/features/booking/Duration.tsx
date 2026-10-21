@@ -2,9 +2,14 @@ import React, { useState } from 'react';
 import { Info } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import TopNavBar from '../../components/TopNavBar';
+import Card from '../../components/ui/Card';
+import CardTitle from '../../components/ui/CardTitle';
+import SummaryRow from '../../components/ui/SummaryRow';
 import QuantityStepper from '../../components/ui/QuantityStepper';
 import BottomActionBar from '../../components/ui/BottomActionBar';
 import PrimaryButton from '../../components/ui/PrimaryButton';
+
+const formatNaira = (amount: number) => `₦${amount.toLocaleString()}`;
 
 const Duration = () => {
   const navigate = useNavigate();
@@ -41,30 +46,19 @@ const Duration = () => {
           />
         </div>
 
-        {/* Cost Breakdown Card */}
-        <div className="bg-surface-muted rounded-2xl p-6 border border-line">
-          <h3 className="font-heading text-ink text-subtitle mb-5">Cost Breakdown</h3>
+        <Card tone="muted" className="p-6">
+          <CardTitle>Cost Breakdown</CardTitle>
 
           <div className="flex flex-col gap-4 mb-6">
-            <div className="flex justify-between items-center">
-              <span className="text-copy-muted text-lead">Storage</span>
-              <span className="text-ink text-lead">₦{storageCost.toLocaleString()}</span>
-            </div>
-            <div className="flex justify-between items-center">
-              <span className="text-copy-muted text-lead">Delivery</span>
-              <span className="text-ink text-lead">₦{deliveryCost.toLocaleString()}</span>
-            </div>
-            <div className="flex justify-between items-center">
-              <span className="text-copy-muted text-lead">Booking fee</span>
-              <span className="text-ink text-lead">₦{bookingFee.toLocaleString()}</span>
-            </div>
+            <SummaryRow label="Storage" value={formatNaira(storageCost)} />
+            <SummaryRow label="Delivery" value={formatNaira(deliveryCost)} />
+            <SummaryRow label="Booking fee" value={formatNaira(bookingFee)} />
           </div>
 
           <div className="h-[1px] bg-line-strong mb-5 w-full"></div>
 
-          <div className="flex justify-between items-center mb-6">
-            <span className="text-copy text-subtitle">Total</span>
-            <span className="text-primary-strong text-subtitle">₦{totalCost.toLocaleString()}</span>
+          <div className="mb-6">
+            <SummaryRow label="Total" value={formatNaira(totalCost)} variant="total" />
           </div>
 
           {/* Info Alert inside Card */}
@@ -74,7 +68,7 @@ const Duration = () => {
               Delivery is calculated based on the distance between your location and the cold room.
             </p>
           </div>
-        </div>
+        </Card>
       </div>
 
       <BottomActionBar>

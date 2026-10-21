@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { ReceiptText, CreditCard, Landmark, Grip, HelpCircle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import TopNavBar from '../../components/TopNavBar';
+import Card from '../../components/ui/Card';
 import BottomActionBar from '../../components/ui/BottomActionBar';
 import PrimaryButton from '../../components/ui/PrimaryButton';
 
@@ -18,14 +19,16 @@ const Payment = () => {
       <TopNavBar title="Payment" showBack={true} />
 
       <div className="flex flex-col px-5 pt-6 flex-grow overflow-y-auto">
-        {/* Order Summary Box */}
-        <div className="bg-surface-muted rounded-2xl p-6 mb-6 flex flex-col items-center justify-center text-center">
+        <Card
+          tone="muted"
+          className="p-6 mb-6 flex flex-col items-center justify-center text-center"
+        >
           <p className="text-copy-muted text-body mb-1">Total to pay</p>
           <p className="text-primary-strong text-headline font-semibold mb-3">₦2,700</p>
           <div className="flex items-center text-copy-subtle text-label">
             <ReceiptText size={14} className="mr-1.5" /> Order #882-991A
           </div>
-        </div>
+        </Card>
 
         {/* Payment Method Tabs */}
         <div className="flex justify-between gap-3 mb-8">

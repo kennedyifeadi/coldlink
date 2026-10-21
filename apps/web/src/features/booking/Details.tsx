@@ -3,6 +3,8 @@ import { MapPin, Star, Warehouse } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { sampleColdRoom as room } from '../../data/mockData';
 import TopNavBar from '../../components/TopNavBar';
+import Card from '../../components/ui/Card';
+import CardTitle from '../../components/ui/CardTitle';
 import QuantityStepper from '../../components/ui/QuantityStepper';
 import BottomActionBar from '../../components/ui/BottomActionBar';
 import PrimaryButton from '../../components/ui/PrimaryButton';
@@ -42,16 +44,10 @@ const Details = () => {
           </div>
         </div>
 
-        {/* Storage Capacity Section */}
-        <div className="bg-surface border border-line rounded-2xl p-5 shadow-card mb-8">
-          <div className="flex justify-between items-end mb-2">
-            <span className="font-heading font-semibold text-ink text-subtitle">
-              Storage Capacity
-            </span>
-            <span className="text-copy-muted text-body">
-              {room.availableCapacity} of {room.totalCapacity} units available
-            </span>
-          </div>
+        <Card className="p-5 mb-8">
+          <CardTitle aside={`${room.availableCapacity} of ${room.totalCapacity} units available`}>
+            Storage Capacity
+          </CardTitle>
 
           {/* Progress Bar */}
           <div className="w-full h-2 bg-line-strong rounded-full overflow-hidden">
@@ -60,7 +56,7 @@ const Details = () => {
               style={{ width: `${availablePercentage}%` }}
             ></div>
           </div>
-        </div>
+        </Card>
 
         {/* How much storage Section */}
         <div className="mb-6">

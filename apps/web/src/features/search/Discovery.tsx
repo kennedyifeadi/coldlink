@@ -3,6 +3,7 @@ import { MapPin, SlidersHorizontal, Star, Leaf, Warehouse } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { coldRooms, type ColdRoom } from '../../data/mockData';
 import TopNavBar from '../../components/TopNavBar';
+import Card from '../../components/ui/Card';
 import BottomNav from '../../components/BottomNav';
 import PrimaryButton from '../../components/ui/PrimaryButton';
 
@@ -53,10 +54,7 @@ const Discovery = () => {
             const isLow = room.availableCapacity / room.totalCapacity <= 0.1;
 
             return (
-              <div
-                key={room.id}
-                className="bg-surface rounded-2xl overflow-hidden border border-line-strong shadow-card"
-              >
+              <Card key={room.id} className="overflow-hidden">
                 <div className="w-full h-36 bg-primary-soft flex items-center justify-center text-primary-strong">
                   <Warehouse size={40} strokeWidth={1.75} />
                 </div>
@@ -102,7 +100,7 @@ const Discovery = () => {
                     View storage
                   </PrimaryButton>
                 </div>
-              </div>
+              </Card>
             );
           })}
         </div>
