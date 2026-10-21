@@ -1,0 +1,20 @@
+{
+  "common": {
+    "logoAlt": "ColdLink, storage nearby",
+    "logoShortAlt": "ColdLink",
+    "loading": "Loading...",
+    "goBack": "Go back",
+    "continue": "Continue"
+  },
+  "nav": {
+    "label": "Main",
+    "findCold": "Find Cold",
+    "bookings": "Bookings",
+    "profile": "Profile"
+  },
+  "notFound": {
+    "title": "Page not found",
+    "body": "The link may be mistyped or out of date. Go to the start to find cold storage near you.",
+    "goToStart": "Go to start"
+  }
+}

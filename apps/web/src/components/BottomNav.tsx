@@ -1,6 +1,7 @@
 import React from 'react';
 import { Snowflake, User, ShoppingBag } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 
 type BottomNavTab = 'find' | 'bookings' | 'profile';
 
@@ -10,10 +11,11 @@ interface BottomNavProps {
 
 const BottomNav = ({ activeTab = 'find' }: BottomNavProps) => {
   const navigate = useNavigate();
+  const { t } = useTranslation();
 
   return (
     <nav
-      aria-label="Main"
+      aria-label={t('nav.label')}
       className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[430px] bg-surface border-t border-line flex justify-between px-8 pt-3 pb-safe-3 z-20 shadow-bar"
     >
       <button
@@ -22,7 +24,7 @@ const BottomNav = ({ activeTab = 'find' }: BottomNavProps) => {
         className={`flex flex-col items-center gap-1 transition-colors ${activeTab === 'find' ? 'text-primary-strong' : 'text-copy-subtle hover:text-copy'}`}
       >
         <Snowflake size={24} />
-        <span className="text-caption font-medium">Find Cold</span>
+        <span className="text-caption font-medium">{t('nav.findCold')}</span>
       </button>
 
       <button
@@ -30,7 +32,7 @@ const BottomNav = ({ activeTab = 'find' }: BottomNavProps) => {
         className={`flex flex-col items-center gap-1 transition-colors ${activeTab === 'bookings' ? 'text-primary-strong' : 'text-copy-subtle hover:text-copy'}`}
       >
         <ShoppingBag size={24} />
-        <span className="text-caption font-medium">Bookings</span>
+        <span className="text-caption font-medium">{t('nav.bookings')}</span>
       </button>
 
       <button
@@ -39,7 +41,7 @@ const BottomNav = ({ activeTab = 'find' }: BottomNavProps) => {
         className={`flex flex-col items-center gap-1 transition-colors ${activeTab === 'profile' ? 'text-primary-strong' : 'text-copy-subtle hover:text-copy'}`}
       >
         <User size={24} />
-        <span className="text-caption font-medium">Profile</span>
+        <span className="text-caption font-medium">{t('nav.profile')}</span>
       </button>
     </nav>
   );
