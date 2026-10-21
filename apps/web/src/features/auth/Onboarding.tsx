@@ -1,11 +1,13 @@
 import React, { useState, type FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import logoMain from '../../assets/logo_main.webp';
 import PrimaryButton from '../../components/ui/PrimaryButton';
 
 const Onboarding = () => {
   const [phoneNumber, setPhoneNumber] = useState('');
   const navigate = useNavigate();
+  const { t } = useTranslation();
 
   const handleContinue = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -18,17 +20,15 @@ const Onboarding = () => {
     <div className="flex flex-col h-full min-h-screen bg-background p-6 relative">
       {/* Header / Logo Area */}
       <div className="flex items-center mt-8 mb-16">
-        <img src={logoMain} alt="ColdLink, storage nearby" width={190} height={44} />
+        <img src={logoMain} alt={t('common.logoAlt')} width={190} height={44} />
       </div>
 
       {/* Hero Text */}
       <div className="mb-auto">
         <h1 className="font-heading text-display font-bold text-ink tracking-tight leading-tight mb-4">
-          Find cold storage near you.
+          {t('auth.onboarding.title')}
         </h1>
-        <p className="text-copy-muted text-lead leading-relaxed">
-          Keep your harvest fresh by finding available cold storage nearby.
-        </p>
+        <p className="text-copy-muted text-lead leading-relaxed">{t('auth.onboarding.intro')}</p>
       </div>
 
       {/* Form and Action Area */}
@@ -36,7 +36,7 @@ const Onboarding = () => {
         {/* Phone Number Input */}
         <div className="mb-8">
           <label htmlFor="phone-number" className="block text-label font-medium text-copy mb-2">
-            Phone number
+            {t('auth.onboarding.phoneLabel')}
           </label>
           <div className="flex items-center border border-line-strong rounded-lg overflow-hidden focus-within:border-primary-strong focus-within:ring-1 focus-within:ring-primary-strong transition-all">
             {/* Country Code & Flag */}
@@ -54,7 +54,7 @@ const Onboarding = () => {
             <input
               id="phone-number"
               type="tel"
-              placeholder="800 000 0000"
+              placeholder={t('auth.onboarding.phonePlaceholder')}
               className="w-full px-4 py-3.5 text-subtitle text-copy bg-surface placeholder-copy-subtle focus:outline-none"
               value={phoneNumber}
               onChange={(e) => setPhoneNumber(e.target.value)}
@@ -64,12 +64,12 @@ const Onboarding = () => {
 
         {/* Continue Button */}
         <PrimaryButton type="submit" disabled={phoneNumber.length < 5} withArrow>
-          Continue
+          {t('common.continue')}
         </PrimaryButton>
 
         {/* Footer Text */}
         <p className="text-center text-copy-muted text-body mt-8 px-4 leading-relaxed">
-          Your phone number creates your ColdLink User ID. No password required.
+          {t('auth.onboarding.footer')}
         </p>
       </form>
     </div>

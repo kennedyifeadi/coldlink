@@ -16,5 +16,23 @@
     "title": "Page not found",
     "body": "The link may be mistyped or out of date. Go to the start to find cold storage near you.",
     "goToStart": "Go to start"
+  },
+  "auth": {
+    "onboarding": {
+      "title": "Find cold storage near you.",
+      "intro": "Keep your harvest fresh by finding available cold storage nearby.",
+      "phoneLabel": "Phone number",
+      "phonePlaceholder": "800 000 0000",
+      "footer": "Your phone number creates your ColdLink User ID. No password required."
+    },
+    "userId": {
+      "navTitle": "User Id",
+      "title": "You're all set!",
+      "idLabel": "Your ColdLink ID",
+      "copy": "Copy ID",
+      "copied": "Copied!",
+      "channels": "This ID works across ColdLink Web, WhatsApp and USSD.",
+      "findStorage": "Find storage"
+    }
   }
 }
