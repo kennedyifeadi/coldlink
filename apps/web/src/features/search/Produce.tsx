@@ -2,17 +2,14 @@ import React, { useState } from 'react';
 import { CheckCircle2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { produceOptions, type ProduceOption } from '../../data/mockData';
+import { produceIds } from '../../data/mockData';
 import TopNavBar from '../../components/TopNavBar';
 import BottomActionBar from '../../components/ui/BottomActionBar';
 import PrimaryButton from '../../components/ui/PrimaryButton';
 import { produceIcons, type ProduceChoice } from './produceIcons';
 
 // Append 'Other' for the UI
-const optionsToRender: ProduceOption<ProduceChoice>[] = [
-  ...produceOptions,
-  { id: 'other', name: 'Other' },
-];
+const choices: ProduceChoice[] = [...produceIds, 'other'];
 
 const Produce = () => {
   const navigate = useNavigate();
@@ -41,14 +38,14 @@ const Produce = () => {
 
         {/* Produce Grid */}
         <div className="grid grid-cols-2 gap-4">
-          {optionsToRender.map((produce) => {
-            const isSelected = selectedProduce === produce.id;
-            const IconComponent = produceIcons[produce.id];
+          {choices.map((produce) => {
+            const isSelected = selectedProduce === produce;
+            const IconComponent = produceIcons[produce];
 
             return (
               <button
-                key={produce.id}
-                onClick={() => setSelectedProduce(produce.id)}
+                key={produce}
+                onClick={() => setSelectedProduce(produce)}
                 aria-pressed={isSelected}
                 className={`relative flex flex-col items-center justify-center p-6 rounded-2xl border transition-all ${
                   isSelected
@@ -74,7 +71,7 @@ const Produce = () => {
 
                 {/* Name */}
                 <span className={`font-medium ${isSelected ? 'text-ink' : 'text-copy'}`}>
-                  {produce.name}
+                  {produce === 'other' ? t('search.produce.other') : t(`mock.produce.${produce}`)}
                 </span>
               </button>
             );

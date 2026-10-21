@@ -40,10 +40,10 @@ const Discovery = () => {
         {/* Filter Pills */}
         <div className="flex items-center gap-3 mb-6 overflow-x-auto pb-2 scrollbar-hide">
           <button className="flex items-center gap-1.5 bg-primary-soft text-ink px-3.5 py-1.5 rounded-full font-medium text-label whitespace-nowrap shrink-0">
-            <Leaf size={14} /> Tomatoes
+            <Leaf size={14} /> {t('mock.produce.tomato')}
           </button>
           <button className="flex items-center gap-1.5 bg-primary-soft text-ink px-3.5 py-1.5 rounded-full font-medium text-label whitespace-nowrap shrink-0">
-            <MapPin size={14} /> Ibadan
+            <MapPin size={14} /> {t('mock.places.ibadan')}
           </button>
           <button className="flex items-center gap-1.5 bg-primary-soft text-ink px-3.5 py-1.5 rounded-full font-medium text-label whitespace-nowrap shrink-0">
             <SlidersHorizontal size={14} /> {t('search.discovery.filters')}
@@ -65,7 +65,7 @@ const Discovery = () => {
                 <div className="p-4">
                   <div className="flex justify-between items-start mb-2">
                     <h2 className="font-heading text-title font-bold text-ink leading-tight">
-                      {room.name}
+                      {t(`mock.coldRooms.${room.id}.name`)}
                     </h2>
                     <div className="flex items-center gap-1 bg-primary-soft text-ink px-2 py-0.5 rounded text-label font-medium shrink-0">
                       <Star size={12} className="fill-current" /> {room.rating}

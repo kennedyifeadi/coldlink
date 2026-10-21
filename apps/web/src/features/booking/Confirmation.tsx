@@ -8,6 +8,8 @@ import Card from '../../components/ui/Card';
 import SummaryRow from '../../components/ui/SummaryRow';
 import PrimaryButton from '../../components/ui/PrimaryButton';
 
+const bookingCode = 'CL-847291';
+
 const Confirmation = () => {
   const navigate = useNavigate();
   const { t } = useTranslation();
@@ -36,7 +38,7 @@ const Confirmation = () => {
             {t('booking.confirmation.codeTitle')}
           </h2>
           <div className="border border-primary-soft text-primary-strong font-bold text-headline tracking-widest py-3 px-8 rounded-xl mb-4 inline-block bg-surface">
-            CL-847291
+            {bookingCode}
           </div>
           <p className="text-copy-muted text-body">{t('booking.confirmation.codeHint')}</p>
         </Card>
@@ -51,7 +53,7 @@ const Confirmation = () => {
               <Home size={18} className="text-primary mt-0.5" />
               <div>
                 <p className="text-ink text-label mb-0.5">{t('booking.confirmation.coldRoom')}</p>
-                <p className="text-copy-muted text-body">{room.name}</p>
+                <p className="text-copy-muted text-body">{t(`mock.coldRooms.${room.id}.name`)}</p>
               </div>
             </div>
 
@@ -59,7 +61,9 @@ const Confirmation = () => {
               <MapPin size={18} className="text-primary mt-0.5" />
               <div>
                 <p className="text-ink text-label mb-0.5">{t('booking.confirmation.location')}</p>
-                <p className="text-copy-muted text-body">{room.location}</p>
+                <p className="text-copy-muted text-body">
+                  {t(`mock.coldRooms.${room.id}.location`)}
+                </p>
               </div>
             </div>
 
@@ -68,7 +72,10 @@ const Confirmation = () => {
               <div>
                 <p className="text-ink text-label mb-0.5">{t('booking.confirmation.produce')}</p>
                 <p className="text-copy-muted text-body">
-                  {t('booking.confirmation.produceValue', { produce: 'Tomatoes', count: 50 })}
+                  {t('booking.confirmation.produceValue', {
+                    produce: t('mock.produce.tomato'),
+                    count: 50,
+                  })}
                 </p>
               </div>
             </div>
@@ -78,7 +85,10 @@ const Confirmation = () => {
               <div>
                 <p className="text-ink text-label mb-0.5">{t('booking.confirmation.duration')}</p>
                 <p className="text-copy-muted text-body">
-                  {t('booking.confirmation.durationValue', { dates: 'Oct 12 - Oct 15', count: 3 })}
+                  {t('booking.confirmation.durationValue', {
+                    dates: t('mock.sampleBooking.dates'),
+                    count: 3,
+                  })}
                 </p>
               </div>
             </div>

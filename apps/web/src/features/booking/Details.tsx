@@ -34,10 +34,10 @@ const Details = () => {
           <div className="absolute bottom-4 left-4 right-4 flex justify-between items-end">
             <div>
               <h1 className="font-heading text-headline font-bold mb-1 leading-tight text-ink">
-                {room.name}
+                {t(`mock.coldRooms.${room.id}.name`)}
               </h1>
               <div className="flex items-center text-copy-muted text-label">
-                <MapPin size={14} className="mr-1" /> {room.location}
+                <MapPin size={14} className="mr-1" /> {t(`mock.coldRooms.${room.id}.location`)}
               </div>
             </div>
             <div className="flex items-center gap-1 bg-surface text-ink px-2.5 py-1 rounded-md text-label font-bold shadow-md shrink-0">

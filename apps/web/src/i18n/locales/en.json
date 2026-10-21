@@ -163,5 +163,42 @@
       "viewBooking": "View booking",
       "backHome": "Back to home"
     }
+  },
+  "mock": {
+    "produce": {
+      "tomato": "Tomatoes",
+      "pepper": "Peppers",
+      "onion": "Onions",
+      "vegetables": "Leafy Vegetables",
+      "fruits": "Fruits",
+      "yam": "Yams / Tubers",
+      "meat": "Meat & Poultry",
+      "fish": "Fish & Seafood",
+      "dairy": "Dairy Products"
+    },
+    "coldRooms": {
+      "cr-001": {
+        "name": "Oyo Fresh Store",
+        "location": "Bodija Market, Ibadan"
+      },
+      "cr-002": {
+        "name": "Ibadan North Cold Storage",
+        "location": "Oje Market, Ibadan"
+      },
+      "cr-003": {
+        "name": "Moniya Hub Coolers",
+        "location": "Moniya, Ibadan"
+      }
+    },
+    "places": {
+      "ibadan": "Ibadan",
+      "bodija": "Bodija, Ibadan",
+      "apata": "Apata, Ibadan",
+      "iwoRoad": "Iwo Road, Ibadan"
+    },
+    "sampleBooking": {
+      "produce": "Tomato",
+      "dates": "Oct 12 - Oct 15"
+    }
   }
 }

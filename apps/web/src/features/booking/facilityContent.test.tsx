@@ -2,6 +2,7 @@ import React, { type ReactElement } from 'react';
 import { describe, expect, it } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
+import i18n from '../../i18n';
 import { sampleColdRoom } from '../../data/mockData';
 import Details from './Details';
 import Review from './Review';
@@ -17,8 +18,12 @@ describe('facility shown after Discovery', () => {
   ])('%s shows the sample cold room', (_name, Screen) => {
     renderScreen(<Screen />);
 
-    expect(screen.getByText(sampleColdRoom.name)).toBeInTheDocument();
-    expect(screen.getByText(sampleColdRoom.location, { exact: false })).toBeInTheDocument();
+    expect(
+      screen.getByText(i18n.t(`mock.coldRooms.${sampleColdRoom.id}.name`)),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(i18n.t(`mock.coldRooms.${sampleColdRoom.id}.location`), { exact: false }),
+    ).toBeInTheDocument();
   });
 
   it('Details shows the room rating and space', () => {

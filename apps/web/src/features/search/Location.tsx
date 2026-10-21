@@ -18,7 +18,7 @@ const Location = () => {
 
   const handleSelectCurrent = () => {
     setSelectedOption('current');
-    setConfirmedLocation('Bodija, Ibadan');
+    setConfirmedLocation(t('mock.places.bodija'));
     setShowSuggestions(false);
     setManualSearch('');
   };
@@ -42,7 +42,7 @@ const Location = () => {
   };
 
   // Mock suggestions — only shown when manual is selected
-  const suggestions = ['Bodija, Ibadan', 'Apata, Ibadan', 'Iwo Road, Ibadan'];
+  const suggestions = [t('mock.places.bodija'), t('mock.places.apata'), t('mock.places.iwoRoad')];
 
   return (
     <div className="flex flex-col h-full min-h-screen bg-background relative">

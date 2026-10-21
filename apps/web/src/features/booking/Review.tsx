@@ -34,11 +34,13 @@ const Review = () => {
               <Snowflake size={20} />
             </div>
             <div>
-              <h2 className="font-heading font-semibold text-ink text-lead">{room.name}</h2>
+              <h2 className="font-heading font-semibold text-ink text-lead">
+                {t(`mock.coldRooms.${room.id}.name`)}
+              </h2>
               <div className="flex items-center text-copy-subtle text-label mt-0.5">
                 <MapPin size={12} className="mr-1" />{' '}
                 {t('booking.review.roomLocation', {
-                  location: room.location,
+                  location: t(`mock.coldRooms.${room.id}.location`),
                   distance: room.distance,
                 })}
               </div>
@@ -46,7 +48,10 @@ const Review = () => {
           </div>
 
           <div className="bg-surface rounded-xl p-4 border border-line flex flex-col gap-3">
-            <SummaryRow label={t('booking.review.produce')} value="Tomato" />
+            <SummaryRow
+              label={t('booking.review.produce')}
+              value={t('mock.sampleBooking.produce')}
+            />
             <SummaryRow
               label={t('booking.review.quantity')}
               value={t('booking.review.quantityValue', { count: 2, weight: 100 })}
