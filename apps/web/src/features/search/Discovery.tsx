@@ -1,6 +1,7 @@
 import React from 'react';
 import { MapPin, SlidersHorizontal, Star, Leaf, Warehouse } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { coldRooms, type ColdRoom } from '../../data/mockData';
 import TopNavBar from '../../components/TopNavBar';
 import Card from '../../components/ui/Card';
@@ -9,6 +10,7 @@ import PrimaryButton from '../../components/ui/PrimaryButton';
 
 const Discovery = () => {
   const navigate = useNavigate();
+  const { t } = useTranslation();
 
   const renderAvailabilityBar = (room: ColdRoom) => {
     const percentage = (room.availableCapacity / room.totalCapacity) * 100;
@@ -27,12 +29,12 @@ const Discovery = () => {
   return (
     <div className="flex flex-col h-full min-h-screen bg-background relative pb-20">
       {/* Top App Bar */}
-      <TopNavBar title="Cold Rooms" showProfile={true} />
+      <TopNavBar title={t('search.discovery.navTitle')} showProfile={true} />
 
       <div className="flex flex-col px-4 pt-6 flex-grow overflow-y-auto">
         {/* Page Title */}
         <h1 className="font-heading text-headline-lg font-bold text-ink mb-4 tracking-tight">
-          Cold storage near you
+          {t('search.discovery.title')}
         </h1>
 
         {/* Filter Pills */}
@@ -44,7 +46,7 @@ const Discovery = () => {
             <MapPin size={14} /> Ibadan
           </button>
           <button className="flex items-center gap-1.5 bg-primary-soft text-ink px-3.5 py-1.5 rounded-full font-medium text-label whitespace-nowrap shrink-0">
-            <SlidersHorizontal size={14} /> Filters
+            <SlidersHorizontal size={14} /> {t('search.discovery.filters')}
           </button>
         </div>
 
@@ -72,24 +74,30 @@ const Discovery = () => {
 
                   <div className="flex justify-between items-end mb-4">
                     <div className="flex items-center text-copy-muted text-body">
-                      <MapPin size={14} className="mr-1 opacity-70" /> {room.distance} km away
+                      <MapPin size={14} className="mr-1 opacity-70" />{' '}
+                      {t('search.discovery.distance', { distance: room.distance })}
                     </div>
                     <div className="text-copy">
                       <span className="font-bold text-subtitle">
                         ₦{room.pricePerDay.toLocaleString()}
                       </span>{' '}
-                      <span className="text-copy-subtle text-label">/ day</span>
+                      <span className="text-copy-subtle text-label">
+                        {t('search.discovery.perDay')}
+                      </span>
                     </div>
                   </div>
 
                   {/* Availability */}
                   <div className="mb-6">
                     <div className="flex justify-between items-end text-label mb-1">
-                      <span className="text-copy-muted">Availability</span>
+                      <span className="text-copy-muted">{t('search.discovery.availability')}</span>
                       <span className={`font-medium ${isLow ? 'text-alert-strong' : 'text-ink'}`}>
                         {isLow
-                          ? `Only ${room.availableCapacity} spaces left`
-                          : `${room.availableCapacity} of ${room.totalCapacity} spaces`}
+                          ? t('search.discovery.spacesLeft', { count: room.availableCapacity })
+                          : t('search.discovery.spacesOfTotal', {
+                              available: room.availableCapacity,
+                              count: room.totalCapacity,
+                            })}
                       </span>
                     </div>
                     {renderAvailabilityBar(room)}
@@ -97,7 +105,7 @@ const Discovery = () => {
 
                   {/* Action */}
                   <PrimaryButton onClick={() => void navigate('/details')} compact>
-                    View storage
+                    {t('search.discovery.viewStorage')}
                   </PrimaryButton>
                 </div>
               </Card>

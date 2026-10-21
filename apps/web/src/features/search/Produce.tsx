@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { CheckCircle2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { produceOptions, type ProduceOption } from '../../data/mockData';
 import TopNavBar from '../../components/TopNavBar';
 import BottomActionBar from '../../components/ui/BottomActionBar';
@@ -15,6 +16,7 @@ const optionsToRender: ProduceOption<ProduceChoice>[] = [
 
 const Produce = () => {
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const [selectedProduce, setSelectedProduce] = useState<ProduceChoice | null>(null);
 
   const handleContinue = () => {
@@ -26,17 +28,15 @@ const Produce = () => {
   return (
     <div className="flex flex-col h-full min-h-screen bg-background relative">
       {/* Top App Bar */}
-      <TopNavBar title="Produce" showBack={true} />
+      <TopNavBar title={t('search.produce.navTitle')} showBack={true} />
 
       <div className="flex flex-col px-6 pt-8 pb-28 flex-grow overflow-y-auto">
         {/* Text Content */}
         <div className="mb-8">
           <h1 className="font-heading text-headline-lg font-bold text-ink mb-3 leading-tight tracking-tight">
-            What do you want to store?
+            {t('search.produce.title')}
           </h1>
-          <p className="text-copy-muted text-lead leading-relaxed">
-            Select the produce you're looking to preserve.
-          </p>
+          <p className="text-copy-muted text-lead leading-relaxed">{t('search.produce.intro')}</p>
         </div>
 
         {/* Produce Grid */}
@@ -84,7 +84,7 @@ const Produce = () => {
 
       <BottomActionBar>
         <PrimaryButton onClick={handleContinue} disabled={!selectedProduce} withArrow>
-          Find cold storage
+          {t('search.produce.findStorage')}
         </PrimaryButton>
       </BottomActionBar>
     </div>

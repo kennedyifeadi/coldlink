@@ -34,5 +34,38 @@
       "channels": "This ID works across ColdLink Web, WhatsApp and USSD.",
       "findStorage": "Find storage"
     }
+  },
+  "search": {
+    "location": {
+      "navTitle": "Location",
+      "title": "Where are you storing from?",
+      "intro": "We'll use your location to find the closest available cold rooms and calculate delivery.",
+      "useCurrent": "Use my current location",
+      "useCurrentHint": "Recommended for accuracy",
+      "or": "OR",
+      "enterManually": "Enter location manually",
+      "searchLabel": "Search for a location",
+      "searchPlaceholder": "Search for a location..."
+    },
+    "produce": {
+      "navTitle": "Produce",
+      "title": "What do you want to store?",
+      "intro": "Select the produce you're looking to preserve.",
+      "other": "Other",
+      "findStorage": "Find cold storage"
+    },
+    "discovery": {
+      "navTitle": "Cold Rooms",
+      "title": "Cold storage near you",
+      "filters": "Filters",
+      "distance": "{{distance}} km away",
+      "perDay": "/ day",
+      "availability": "Availability",
+      "spacesLeft_one": "Only {{count}} space left",
+      "spacesLeft_other": "Only {{count}} spaces left",
+      "spacesOfTotal_one": "{{available}} of {{count}} space",
+      "spacesOfTotal_other": "{{available}} of {{count}} spaces",
+      "viewStorage": "View storage"
+    }
   }
 }
