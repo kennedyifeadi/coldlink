@@ -4,6 +4,7 @@ import helmet from 'helmet';
 import type { Logger } from 'pino';
 import type { Config } from './config.js';
 import { createLogger } from './logger.js';
+import { errorHandler, notFound } from './middleware/errorHandler.js';
 import { requestId } from './middleware/requestId.js';
 import { requestLogger } from './middleware/requestLogger.js';
 import { apiRoutes } from './routes/index.js';
@@ -27,5 +28,7 @@ export function createApp(
   app.use(cors({ origin: config.corsOrigins }));
   app.use(express.json({ limit: JSON_BODY_LIMIT }));
   app.use(API_BASE_PATH, routes);
+  app.use(notFound);
+  app.use(errorHandler);
   return app;
 }
