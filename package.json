@@ -8,10 +8,11 @@
   },
   "scripts": {
     "dev": "pnpm -r --parallel --if-present run dev",
+    "build:shared": "pnpm --filter @coldlink/shared build",
     "build": "pnpm -r --if-present run build",
-    "lint": "pnpm -r --if-present run lint",
-    "typecheck": "pnpm -r --if-present run typecheck",
-    "test": "pnpm -r --if-present run test",
+    "lint": "pnpm build:shared && pnpm -r --if-present run lint",
+    "typecheck": "pnpm build:shared && pnpm -r --if-present run typecheck",
+    "test": "pnpm build:shared && pnpm -r --if-present run test",
     "format": "prettier --write .",
     "format:check": "prettier --check ."
   },

@@ -7,7 +7,7 @@ ColdLink connects farmers in Oyo State with nearby cold storage, so they can fin
 ```
 apps/
   web/        React + Vite frontend
-  api/        Backend (TypeScript)
+  api/        Express API (TypeScript)
 packages/
   shared/     Types and constants shared by web and api
 docs/         Product requirements, decisions and audits
@@ -23,9 +23,12 @@ docs/         Product requirements, decisions and audits
 ```bash
 pnpm install
 pnpm --filter web dev
+pnpm --filter @coldlink/api dev
 ```
 
-The web app runs at http://localhost:5173.
+The web app runs at http://localhost:5173 and the API at http://localhost:3000/api/v1 (try `/health`). The API reads `apps/api/.env` if it exists; copy `apps/api/.env.example` to change the defaults.
+
+`apps/api` imports `@coldlink/shared` from its built `dist`. The root `lint`, `typecheck` and `test` scripts and the API `dev` script build it first; after changing shared while the API dev server runs, run `pnpm build:shared`.
 
 Scripts at the root run across every workspace:
 
@@ -41,6 +44,7 @@ Scripts at the root run across every workspace:
 
 - [Product requirements](docs/prd.md)
 - [Decisions](docs/decisions.md)
+- [API reference](docs/api.md)
 - [UX writing](docs/ux-writing.md)
 - [Current state of the app](docs/current-state.md)
 - [Discrepancies between the app and the PRD](docs/discrepancies.md)
