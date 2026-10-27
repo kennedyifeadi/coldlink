@@ -6,7 +6,7 @@ No step here needs Docker. Migrations are applied straight to a hosted Supabase 
 
 ## Conventions
 
-- **Ids:** every table has `id uuid primary key default gen_random_uuid()`. `gen_random_uuid()` is built into Postgres 13+, so no extension is needed. The one exception is `app_config`, which is keyed by `key text primary key` because the API reads it by name.
+- **Ids:** every table has `id uuid primary key default gen_random_uuid()`. `gen_random_uuid()` is built into Postgres 13+, so no extension is needed. The exceptions are `app_config`, which is keyed by `key text primary key` because the API reads it by name, and the join table `provider_crop_support`, keyed by `(provider_id, category_id)` (decision 24).
 - **Timestamps:** every table has `created_at timestamptz not null default now()` and `updated_at timestamptz not null default now()`. Store UTC; display in Africa/Lagos.
 - **`updated_at` trigger:** every table gets a `before update` trigger that calls `public.set_updated_at()`:
 
@@ -53,7 +53,9 @@ The `Migrations` job in `.github/workflows/ci.yml` starts a `supabase/postgres` 
 - an expected table or index is missing
 - any table in `public` lacks RLS, has a policy, or grants anything to `anon` or `authenticated`
 - defaults or the `updated_at` trigger are wrong
-- a check constraint accepts a bad value (phone, `coldlink_id`, role, channel, location, OTP attempts, config key)
+- `providers.location` is not `extensions.geography(Point,4326)` with a GiST index, or a valid provider at a real point fails to insert
+- a check constraint accepts a bad value (phone, `coldlink_id`, role, channel, location, OTP attempts, config key, category slug, crop shelf life and temperatures, and every provider enum, phone, capacity, price, temperature, rating, photo and verification rule)
+- a user who owns a provider can be deleted
 - `anon` or `authenticated` can read or write a table, or RLS shows rows when privileges are granted back
 
 The checks run in one transaction that is rolled back. The job has no secrets and never connects to a Supabase project.
