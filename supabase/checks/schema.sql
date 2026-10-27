@@ -43,6 +43,25 @@ exception
 end;
 $$;
 
+create function pg_temp.expect_unique_violation(statement text, expected_constraint text)
+returns void
+language plpgsql
+as $$
+declare
+  actual_constraint text;
+begin
+  execute statement;
+  raise exception 'expected % to reject: %', expected_constraint, statement;
+exception
+  when unique_violation then
+    get stacked diagnostics actual_constraint = constraint_name;
+    if actual_constraint <> expected_constraint then
+      raise exception 'expected % to reject (%), but % did',
+        expected_constraint, statement, actual_constraint;
+    end if;
+end;
+$$;
+
 create function pg_temp.expect_denied(role_name text, statement text)
 returns void
 language plpgsql
@@ -90,7 +109,39 @@ begin
     'public.providers_owner_user_id_idx',
     'public.provider_crop_support',
     'public.provider_crop_support_pkey',
-    'public.provider_crop_support_category_id_idx'
+    'public.provider_crop_support_category_id_idx',
+    'public.bookings',
+    'public.bookings_code_key',
+    'public.bookings_provider_capacity_idx',
+    'public.bookings_provider_id_created_at_idx',
+    'public.bookings_farmer_id_created_at_idx',
+    'public.bookings_status_payment_expires_at_idx',
+    'public.bookings_status_provider_response_due_at_idx',
+    'public.bookings_status_end_date_idx',
+    'public.booking_events',
+    'public.booking_events_booking_id_created_at_idx',
+    'public.payments',
+    'public.payments_provider_ref_key',
+    'public.payments_booking_id_idx',
+    'public.payouts',
+    'public.payouts_booking_id_key',
+    'public.payouts_provider_id_status_idx',
+    'public.payouts_status_created_at_idx',
+    'public.ratings',
+    'public.ratings_booking_id_key',
+    'public.ratings_provider_id_idx',
+    'public.notifications',
+    'public.notifications_status_created_at_idx',
+    'public.notifications_user_id_idx',
+    'public.action_tokens',
+    'public.action_tokens_token_hash_key',
+    'public.action_tokens_expires_at_idx',
+    'public.action_tokens_subject_id_idx',
+    'public.search_logs',
+    'public.search_logs_created_at_idx',
+    'public.search_logs_user_id_idx',
+    'public.booking_reminders',
+    'public.booking_reminders_booking_id_kind_key'
   ]) as name
   where to_regclass(name) is null;
 
@@ -432,6 +483,531 @@ select pg_temp.expect_foreign_key_violation(
   'providers_owner_user_id_fkey'
 );
 
+-- Bookings and the tables around them. Moniya Cold Room is priced like the PRD 6.1 worked example.
+insert into public.providers (
+  owner_user_id, display_name, facility_type, phone, address_text, location, capacity_total,
+  capacity_unit, price_per_unit_per_day_kobo
+)
+select
+  id,
+  'Moniya Cold Room',
+  'cold_room',
+  '+2348098765432',
+  'Moniya, Ibadan',
+  extensions.st_setsrid(extensions.st_makepoint(3.88, 7.53), 4326)::extensions.geography,
+  10,
+  'sqm',
+  225800
+from public.users
+where phone = '+2348098765432';
+
+-- PRD 6.1 worked example in kobo: 2 sqm × 30 days × 225,800 = 13,548,000; commission at 7.5% =
+-- 1,016,100; deposit at 30% = 4,064,400; balance 9,483,600; no service or delivery fee. The same
+-- figures are in packages/shared/src/pricing.test.ts. delivery_fee_kobo is left to its default.
+insert into public.bookings (
+  code, farmer_id, provider_id, crop_id, quantity, capacity_unit, start_date, duration_days,
+  end_date, status, unit_price_kobo, storage_subtotal_kobo, commission_rate, commission_kobo,
+  service_fee_kobo, deposit_percent, deposit_kobo, balance_due_kobo, total_charged_online_kobo,
+  created_at, updated_at
+)
+select
+  'CL-7K3Q9', u.id, p.id, c.id, 2, 'sqm', '2026-11-02', 30, '2026-12-02', 'confirmed',
+  225800, 13548000, 0.075, 1016100, 0, 0.30, 4064400, 9483600, 4064400,
+  '2000-01-01', '2000-01-01'
+from public.users u
+cross join public.providers p
+cross join public.crops c
+where u.phone = '+2348098765432' and p.display_name = 'Moniya Cold Room' and c.name = 'Tomatoes';
+
+-- Rounding cases from pricing.test.ts, to show the checks round half up as the pricing module does:
+-- 2.5 × 3 days × 333 = 2,497.5, so the subtotal is 2,498; and 200 × 7.25% = 14.5, so the
+-- commission is 15.
+insert into public.bookings (
+  code, farmer_id, provider_id, crop_id, quantity, capacity_unit, start_date, duration_days,
+  end_date, status, unit_price_kobo, storage_subtotal_kobo, commission_rate, commission_kobo,
+  service_fee_kobo, deposit_percent, deposit_kobo, balance_due_kobo, total_charged_online_kobo
+)
+select v.code, u.id, p.id, c.id, v.quantity, 'sqm', '2026-11-02', v.duration_days,
+  '2026-11-02'::date + v.duration_days, 'payment_pending', v.unit_price_kobo, v.subtotal,
+  v.commission_rate, v.commission, 0, 0.30, v.deposit, v.subtotal - v.deposit, v.deposit
+from (
+  values
+    ('CL-H4LF2', 2.5, 3, 333, 2498, 0.075, 187, 749),
+    ('CL-RW8NX', 1, 1, 200, 200, 0.0725, 15, 60)
+) as v(code, quantity, duration_days, unit_price_kobo, subtotal, commission_rate, commission, deposit)
+cross join public.users u
+cross join public.providers p
+cross join public.crops c
+where u.phone = '+2348098765432' and p.display_name = 'Moniya Cold Room' and c.name = 'Tomatoes';
+
+insert into public.booking_events (booking_id, from_status, to_status, actor_type, actor_id)
+select id, null, 'payment_pending', 'farmer', farmer_id
+from public.bookings
+where code in ('CL-7K3Q9', 'CL-RW8NX');
+
+insert into public.booking_events (booking_id, from_status, to_status, actor_type, metadata)
+select b.id, v.from_status, v.to_status, v.actor_type, v.metadata::jsonb
+from public.bookings b
+cross join (
+  values
+    ('payment_pending', 'pending_provider', 'system', '{"provider_ref": "T-0001"}'),
+    ('pending_provider', 'confirmed', 'provider', '{"via": "action_token"}')
+) as v(from_status, to_status, actor_type, metadata)
+where b.code = 'CL-7K3Q9';
+
+insert into public.payments (
+  booking_id, provider_ref, purpose, amount_kobo, status, paystack_payload, paid_at, created_at,
+  updated_at
+)
+select id, 'T-0001', 'booking_deposit', 4064400, 'success', '{"status": "success"}', now(),
+  '2000-01-01', '2000-01-01'
+from public.bookings
+where code = 'CL-7K3Q9';
+
+insert into public.payments (booking_id, provider_ref, purpose, amount_kobo)
+select id, 'T-0002', 'booking_deposit', 4064400 from public.bookings where code = 'CL-7K3Q9';
+
+-- delivery_requests does not exist yet, so any id is accepted until its migration adds the key.
+insert into public.payments (booking_id, delivery_request_id, provider_ref, purpose, amount_kobo)
+select id, gen_random_uuid(), 'T-0003', 'delivery_fee', 100000
+from public.bookings
+where code = 'CL-7K3Q9';
+
+insert into public.payouts (provider_id, booking_id, amount_kobo, created_at, updated_at)
+select provider_id, id, 3048300, '2000-01-01', '2000-01-01'
+from public.bookings
+where code = 'CL-7K3Q9';
+
+insert into public.ratings (booking_id, farmer_id, provider_id, stars, comment, created_at, updated_at)
+select id, farmer_id, provider_id, 5, 'Kept my tomatoes fresh', '2000-01-01', '2000-01-01'
+from public.bookings
+where code = 'CL-7K3Q9';
+
+insert into public.notifications (recipient_phone, channel, template, payload, created_at, updated_at)
+values (
+  '+2348098765432',
+  'sms',
+  'expiry_reminder',
+  '{"booking_code": "CL-7K3Q9"}',
+  '2000-01-01',
+  '2000-01-01'
+);
+
+insert into public.action_tokens (
+  token_hash, purpose, subject_id, expires_at, created_at, updated_at
+)
+select 'accept-hash', 'provider_accept_booking', id, now() + interval '12 hours', '2000-01-01',
+  '2000-01-01'
+from public.bookings
+where code = 'CL-7K3Q9';
+
+insert into public.search_logs (
+  lat, lng, crop_id, quantity, duration_days, result_count, channel, created_at, updated_at
+)
+select 7.43, 3.91, id, 2, 30, 0, 'web', '2000-01-01', '2000-01-01'
+from public.crops
+where name = 'Tomatoes';
+
+insert into public.booking_reminders (booking_id, kind, notification_id, created_at, updated_at)
+select b.id, 'expiry_two_days_before', n.id, '2000-01-01', '2000-01-01'
+from public.bookings b
+cross join public.notifications n
+where b.code = 'CL-7K3Q9';
+
+do $$
+declare
+  b public.bookings;
+  pay public.payments;
+  po public.payouts;
+  n public.notifications;
+  t public.action_tokens;
+  s public.search_logs;
+  e public.booking_events;
+begin
+  select * into b from public.bookings where code = 'CL-7K3Q9';
+  if b.id is null or b.delivery_fee_kobo <> 0 then
+    raise exception 'bookings defaults are wrong: %', row_to_json(b);
+  end if;
+
+  if (select count(*) from public.bookings) <> 3 then
+    raise exception 'expected 3 valid bookings';
+  end if;
+
+  select * into pay from public.payments where provider_ref = 'T-0002';
+  if pay.status <> 'initiated' or pay.paid_at is not null then
+    raise exception 'payments defaults are wrong: %', row_to_json(pay);
+  end if;
+
+  select * into po from public.payouts;
+  if po.status <> 'owed' or po.paid_at is not null then
+    raise exception 'payouts defaults are wrong: %', row_to_json(po);
+  end if;
+
+  select * into n from public.notifications;
+  if n.status <> 'queued' or n.attempts <> 0 or n.user_id is not null or n.sent_at is not null then
+    raise exception 'notifications defaults are wrong: %', row_to_json(n);
+  end if;
+
+  select * into t from public.action_tokens;
+  if t.used_at is not null then
+    raise exception 'action_tokens defaults are wrong: %', row_to_json(t);
+  end if;
+
+  select * into s from public.search_logs;
+  if s.expanded_radius or s.user_id is not null then
+    raise exception 'search_logs defaults are wrong: %', row_to_json(s);
+  end if;
+
+  select * into e from public.booking_events where from_status is null limit 1;
+  if e.metadata <> '{}' or (select count(*) from public.booking_events) <> 4 then
+    raise exception 'booking_events defaults are wrong: %', row_to_json(e);
+  end if;
+
+  if not exists (
+    select
+    from pg_index
+    where indexrelid = 'public.bookings_provider_capacity_idx'::regclass and indpred is not null
+  ) then
+    raise exception 'bookings_provider_capacity_idx is not partial';
+  end if;
+end;
+$$;
+
+update public.bookings set notes = 'Bring crates' where code = 'CL-7K3Q9';
+update public.payments set paystack_payload = '{"status": "success", "verified": true}'
+where provider_ref = 'T-0001';
+update public.payouts
+set status = 'paid', paid_at = now(), reference = 'TRF-0001', recorded_by = (
+  select id from public.users where phone = '+2348098765432'
+);
+update public.ratings set comment = 'Kept my tomatoes fresh for a month';
+update public.notifications set status = 'sent', sent_at = now(), provider_message_id = 'msg-1',
+  attempts = 1;
+update public.action_tokens set used_at = now();
+update public.search_logs set expanded_radius = true;
+update public.booking_reminders set notification_id = notification_id;
+
+do $$
+declare
+  stale text;
+begin
+  select string_agg(name, ', ') into stale
+  from (
+    select 'bookings' as name, created_at, updated_at from public.bookings where code = 'CL-7K3Q9'
+    union all
+    select 'payments', created_at, updated_at from public.payments where provider_ref = 'T-0001'
+    union all
+    select 'payouts', created_at, updated_at from public.payouts
+    union all
+    select 'ratings', created_at, updated_at from public.ratings
+    union all
+    select 'notifications', created_at, updated_at from public.notifications
+    union all
+    select 'action_tokens', created_at, updated_at from public.action_tokens
+    union all
+    select 'search_logs', created_at, updated_at from public.search_logs
+    union all
+    select 'booking_reminders', created_at, updated_at from public.booking_reminders
+  ) as touched
+  where updated_at <> now() or created_at <> '2000-01-01';
+
+  if stale is not null then
+    raise exception 'set_updated_at did not run, or changed created_at, on: %', stale;
+  end if;
+end;
+$$;
+
+-- Each case breaks exactly one rule, so the amounts it changes are kept consistent otherwise.
+select pg_temp.expect_check_violation(
+  format($$update public.bookings set %s where code = 'CL-7K3Q9'$$, v.assignment),
+  v.expected_constraint
+)
+from (
+  values
+    ($$status = 'paid'$$, 'bookings_status_valid'),
+    ($$code = 'CL-7K3O9'$$, 'bookings_code_format'),
+    ($$code = 'CL-7K309'$$, 'bookings_code_format'),
+    ($$code = 'CL-7K3I9'$$, 'bookings_code_format'),
+    ($$code = 'CL-7K319'$$, 'bookings_code_format'),
+    ($$code = 'cl-7k3q9'$$, 'bookings_code_format'),
+    ($$code = 'CL-7K3Q'$$, 'bookings_code_format'),
+    ($$code = 'CL-7K3Q9A'$$, 'bookings_code_format'),
+    ($$capacity_unit = 'litres'$$, 'bookings_capacity_unit_valid'),
+    ($$end_date = '2026-12-01'$$, 'bookings_end_date_matches'),
+    ($$cancelled_by = 'farmer'$$, 'bookings_cancelled_by_status'),
+    ($$status = 'cancelled'$$, 'bookings_cancelled_by_status'),
+    ($$status = 'cancelled', cancelled_by = 'driver'$$, 'bookings_cancelled_by_valid'),
+    (
+      'quantity = 0, storage_subtotal_kobo = 0, commission_kobo = 0, deposit_kobo = 0,
+        balance_due_kobo = 0, total_charged_online_kobo = 0',
+      'bookings_quantity_positive'
+    ),
+    (
+      'duration_days = 0, end_date = start_date, storage_subtotal_kobo = 0, commission_kobo = 0,
+        deposit_kobo = 0, balance_due_kobo = 0, total_charged_online_kobo = 0',
+      'bookings_duration_days_min'
+    ),
+    (
+      'unit_price_kobo = 0, storage_subtotal_kobo = 0, commission_kobo = 0, deposit_kobo = 0,
+        balance_due_kobo = 0, total_charged_online_kobo = 0',
+      'bookings_unit_price_kobo_positive'
+    ),
+    (
+      'deposit_percent = 0.075, deposit_kobo = 1016100, balance_due_kobo = 12531900,
+        total_charged_online_kobo = 1016100',
+      'bookings_deposit_percent_above_commission_rate'
+    ),
+    (
+      'deposit_percent = 1.1, deposit_kobo = 14902800, balance_due_kobo = -1354800,
+        total_charged_online_kobo = 14902800',
+      'bookings_deposit_percent_range'
+    ),
+    ('commission_rate = -0.1, commission_kobo = -1354800', 'bookings_commission_rate_range'),
+    (
+      'service_fee_kobo = -1, total_charged_online_kobo = 4064399',
+      'bookings_service_fee_kobo_nonnegative'
+    ),
+    (
+      'delivery_fee_kobo = -1, total_charged_online_kobo = 4064399',
+      'bookings_delivery_fee_kobo_nonnegative'
+    ),
+    (
+      'storage_subtotal_kobo = 13548001, balance_due_kobo = 9483601',
+      'bookings_storage_subtotal_consistent'
+    ),
+    ('commission_kobo = 1016101', 'bookings_commission_consistent'),
+    (
+      'deposit_kobo = 4064401, balance_due_kobo = 9483599, total_charged_online_kobo = 4064401',
+      'bookings_deposit_consistent'
+    ),
+    ('balance_due_kobo = 9483599', 'bookings_balance_due_consistent'),
+    ('total_charged_online_kobo = 4064401', 'bookings_total_charged_online_consistent'),
+    ('service_fee_kobo = 10000', 'bookings_total_charged_online_consistent'),
+    ('delivery_fee_kobo = 50000', 'bookings_total_charged_online_consistent')
+) as v(assignment, expected_constraint);
+
+-- Rounding the subtotal half down (2,497.5 to 2,497) is refused.
+select pg_temp.expect_check_violation(
+  $$update public.bookings
+    set storage_subtotal_kobo = 2497, deposit_kobo = 749, balance_due_kobo = 1748
+    where code = 'CL-H4LF2'$$,
+  'bookings_storage_subtotal_consistent'
+);
+select pg_temp.expect_check_violation(
+  $$update public.bookings set commission_kobo = 14 where code = 'CL-RW8NX'$$,
+  'bookings_commission_consistent'
+);
+
+-- What the rules allow: a cancelled booking with who cancelled it, a service fee and a delivery fee
+-- added to the online charge.
+update public.bookings
+set status = 'cancelled', cancelled_by = 'farmer', service_fee_kobo = 10000,
+  delivery_fee_kobo = 150000, total_charged_online_kobo = 4224400
+where code = 'CL-7K3Q9';
+
+select pg_temp.expect_unique_violation(
+  $$insert into public.bookings (
+      code, farmer_id, provider_id, crop_id, quantity, capacity_unit, start_date, duration_days,
+      end_date, status, unit_price_kobo, storage_subtotal_kobo, commission_rate, commission_kobo,
+      service_fee_kobo, deposit_percent, deposit_kobo, balance_due_kobo, delivery_fee_kobo,
+      total_charged_online_kobo
+    )
+    select 'CL-7K3Q9', farmer_id, provider_id, crop_id, quantity, capacity_unit, start_date,
+      duration_days, end_date, 'payment_pending', unit_price_kobo, storage_subtotal_kobo,
+      commission_rate, commission_kobo, service_fee_kobo, deposit_percent, deposit_kobo,
+      balance_due_kobo, delivery_fee_kobo, total_charged_online_kobo
+    from public.bookings
+    where code = 'CL-7K3Q9'$$,
+  'bookings_code_key'
+);
+
+select pg_temp.expect_check_violation(
+  format(
+    $$insert into public.booking_events (booking_id, from_status, to_status, actor_type, metadata)
+      select id, %s, %s, %s, %s from public.bookings where code = 'CL-7K3Q9'$$,
+    v.from_status, v.to_status, v.actor_type, v.metadata
+  ),
+  v.expected_constraint
+)
+from (
+  values
+    ($$'confirmed'$$, $$'paid'$$, $$'system'$$, $$'{}'$$, 'booking_events_to_status_valid'),
+    ($$'paid'$$, $$'confirmed'$$, $$'system'$$, $$'{}'$$, 'booking_events_from_status_valid'),
+    ($$'confirmed'$$, $$'cancelled'$$, $$'user'$$, $$'{}'$$, 'booking_events_actor_type_valid'),
+    ($$'confirmed'$$, $$'cancelled'$$, $$'farmer'$$, $$'[]'$$, 'booking_events_metadata_object')
+) as v(from_status, to_status, actor_type, metadata, expected_constraint);
+
+-- The audit log is append-only even for postgres, which owns the tables and bypasses RLS like the
+-- service role the API uses.
+do $$
+declare
+  change text;
+begin
+  if current_user <> 'postgres' then
+    raise exception 'the append-only check must run as postgres, not %', current_user;
+  end if;
+
+  foreach change in array array[
+    $sql$update public.booking_events set metadata = '{"edited": true}'$sql$,
+    'delete from public.booking_events',
+    'truncate public.booking_events'
+  ] loop
+    begin
+      execute change;
+      raise exception 'booking_events allowed: %', change;
+    exception
+      when restrict_violation then
+        null;
+    end;
+  end loop;
+
+  if (select count(*) from public.booking_events) <> 4 then
+    raise exception 'booking_events rows changed';
+  end if;
+end;
+$$;
+
+-- A booking with events cannot be deleted, so its history cannot go either.
+select pg_temp.expect_foreign_key_violation(
+  $$delete from public.bookings where code = 'CL-RW8NX'$$,
+  'booking_events_booking_id_fkey'
+);
+
+select pg_temp.expect_check_violation(
+  format($$update public.payments set %s where provider_ref = 'T-0002'$$, v.assignment),
+  v.expected_constraint
+)
+from (
+  values
+    ($$purpose = 'deposit'$$, 'payments_purpose_valid'),
+    ($$status = 'pending'$$, 'payments_status_valid'),
+    ('amount_kobo = 0', 'payments_amount_kobo_positive'),
+    ('paid_at = now()', 'payments_paid_at_status'),
+    ($$status = 'success'$$, 'payments_paid_at_status'),
+    ($$status = 'refunded'$$, 'payments_paid_at_status'),
+    ($$purpose = 'delivery_fee'$$, 'payments_delivery_request_purpose'),
+    ('delivery_request_id = gen_random_uuid()', 'payments_delivery_request_purpose')
+) as v(assignment, expected_constraint);
+
+select pg_temp.expect_check_violation(
+  $$update public.payments set status = 'failed' where provider_ref = 'T-0001'$$,
+  'payments_paid_at_status'
+);
+
+select pg_temp.expect_unique_violation(
+  $$insert into public.payments (booking_id, provider_ref, purpose, amount_kobo)
+    select booking_id, 'T-0001', 'refund', 100 from public.payments where provider_ref = 'T-0001'$$,
+  'payments_provider_ref_key'
+);
+
+select pg_temp.expect_check_violation(
+  format($$update public.payouts set %s$$, v.assignment),
+  v.expected_constraint
+)
+from (
+  values
+    ($$status = 'settled', paid_at = null, reference = null, recorded_by = null$$,
+      'payouts_status_valid'),
+    ('amount_kobo = 0', 'payouts_amount_kobo_positive'),
+    ('reference = null', 'payouts_paid_fields'),
+    ('paid_at = null', 'payouts_paid_fields'),
+    ('recorded_by = null', 'payouts_paid_fields'),
+    ($$status = 'owed'$$, 'payouts_paid_fields')
+) as v(assignment, expected_constraint);
+
+select pg_temp.expect_unique_violation(
+  $$insert into public.payouts (provider_id, booking_id, amount_kobo)
+    select provider_id, booking_id, amount_kobo from public.payouts$$,
+  'payouts_booking_id_key'
+);
+
+select pg_temp.expect_check_violation($$update public.ratings set stars = 0$$, 'ratings_stars_range');
+select pg_temp.expect_check_violation($$update public.ratings set stars = 6$$, 'ratings_stars_range');
+select pg_temp.expect_unique_violation(
+  $$insert into public.ratings (booking_id, farmer_id, provider_id, stars)
+    select booking_id, farmer_id, provider_id, 1 from public.ratings$$,
+  'ratings_booking_id_key'
+);
+
+select pg_temp.expect_check_violation(
+  format($$update public.notifications set %s$$, v.assignment),
+  v.expected_constraint
+)
+from (
+  values
+    ($$recipient_phone = '08098765432'$$, 'notifications_recipient_phone_format'),
+    ($$channel = 'web'$$, 'notifications_channel_valid'),
+    ($$template = 'Expiry Reminder'$$, 'notifications_template_format'),
+    ($$payload = '[]'$$, 'notifications_payload_object'),
+    ($$status = 'delivered', sent_at = null$$, 'notifications_status_valid'),
+    ('attempts = -1', 'notifications_attempts_nonnegative'),
+    ('sent_at = null', 'notifications_sent_at_status'),
+    ($$status = 'failed'$$, 'notifications_sent_at_status'),
+    ($$status = 'queued'$$, 'notifications_sent_at_status')
+) as v(assignment, expected_constraint);
+
+select pg_temp.expect_check_violation(
+  format($$update public.action_tokens set %s$$, v.assignment),
+  v.expected_constraint
+)
+from (
+  values
+    ($$purpose = 'login'$$, 'action_tokens_purpose_valid'),
+    ($$used_at = expires_at + interval '1 second'$$, 'action_tokens_used_before_expiry')
+) as v(assignment, expected_constraint);
+
+select pg_temp.expect_unique_violation(
+  $$insert into public.action_tokens (token_hash, purpose, subject_id, expires_at)
+    select token_hash, 'provider_reject_booking', subject_id, expires_at from public.action_tokens$$,
+  'action_tokens_token_hash_key'
+);
+
+select pg_temp.expect_check_violation(
+  format($$update public.search_logs set %s$$, v.assignment),
+  v.expected_constraint
+)
+from (
+  values
+    ('lat = 91', 'search_logs_lat_range'),
+    ('lng = -181', 'search_logs_lng_range'),
+    ('quantity = 0', 'search_logs_quantity_positive'),
+    ('duration_days = 0', 'search_logs_duration_days_min'),
+    ('result_count = -1', 'search_logs_result_count_nonnegative'),
+    ($$channel = 'ussd'$$, 'search_logs_channel_valid')
+) as v(assignment, expected_constraint);
+
+select pg_temp.expect_check_violation(
+  $$update public.booking_reminders set kind = 'expiry_reminder'$$,
+  'booking_reminders_kind_valid'
+);
+
+-- The reminder job's insert-or-skip: a second insert of the same kind does nothing, and a plain
+-- insert is refused.
+do $$
+declare
+  inserted integer;
+begin
+  insert into public.booking_reminders (booking_id, kind)
+  select booking_id, kind from public.booking_reminders
+  on conflict (booking_id, kind) do nothing;
+  get diagnostics inserted = row_count;
+
+  if inserted <> 0 then
+    raise exception 'booking_reminders sent a reminder twice';
+  end if;
+end;
+$$;
+
+select pg_temp.expect_unique_violation(
+  $$insert into public.booking_reminders (booking_id, kind)
+    select booking_id, kind from public.booking_reminders$$,
+  'booking_reminders_booking_id_kind_key'
+);
+
+-- Another kind for the same booking is a different reminder.
+insert into public.booking_reminders (booking_id, kind)
+select booking_id, 'collection_due' from public.booking_reminders;
+
 select pg_temp.expect_denied(r.role_name, s.statement)
 from (values ('anon'), ('authenticated')) as r(role_name)
 cross join (
@@ -443,6 +1019,15 @@ cross join (
     ('select * from public.crops'),
     ('select * from public.providers'),
     ('select * from public.provider_crop_support'),
+    ('select * from public.bookings'),
+    ('select * from public.booking_events'),
+    ('select * from public.payments'),
+    ('select * from public.payouts'),
+    ('select * from public.ratings'),
+    ('select * from public.notifications'),
+    ('select * from public.action_tokens'),
+    ('select * from public.search_logs'),
+    ('select * from public.booking_reminders'),
     ($$insert into public.users (phone, coldlink_id) values ('+2348000000002', '1000002')$$),
     ($$insert into public.otp_codes (phone, code_hash, expires_at)
        values ('+2348000000002', 'hash', now())$$),

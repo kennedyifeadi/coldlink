@@ -7,7 +7,7 @@ No step here needs Docker. Migrations are applied straight to a hosted Supabase 
 ## Conventions
 
 - **Ids:** every table has `id uuid primary key default gen_random_uuid()`. `gen_random_uuid()` is built into Postgres 13+, so no extension is needed. The exceptions are `app_config`, which is keyed by `key text primary key` because the API reads it by name, and the join table `provider_crop_support`, keyed by `(provider_id, category_id)` (decision 24).
-- **Timestamps:** every table has `created_at timestamptz not null default now()` and `updated_at timestamptz not null default now()`. Store UTC; display in Africa/Lagos.
+- **Timestamps:** every table has `created_at timestamptz not null default now()` and `updated_at timestamptz not null default now()`. Store UTC; display in Africa/Lagos. The exception is the append-only `booking_events`, which has only `created_at` (decision 27).
 - **`updated_at` trigger:** every table gets a `before update` trigger that calls `public.set_updated_at()`:
 
   ```sql
@@ -23,7 +23,7 @@ No step here needs Docker. Migrations are applied straight to a hosted Supabase 
   ```
 
 - **Constraints:** name check constraints `<table>_<column>_<rule>` (`users_phone_format`) so API errors can map them. Enum-like values match `packages/shared/src/enums.ts` exactly.
-- **Money** is integer kobo in `bigint` (decision 16). **Extensions** go in the `extensions` schema (`postgis` is there).
+- **Money** is integer kobo in `bigint` (decision 16). A table that stores a pricing snapshot checks it against the pricing rules (decision 17), as `bookings` does. **Extensions** go in the `extensions` schema (`postgis` is there).
 - **Forward-only:** never edit or delete a migration that has run anywhere (dev, staging or production). To change something, add a new migration.
 - **Naming:** `<timestamp>_<snake_case_description>.sql`, created by `pnpm db:new`. Describe the change (`add_providers`, `index_bookings_by_status`), not the ticket.
 
@@ -56,6 +56,9 @@ The `Migrations` job in `.github/workflows/ci.yml` starts a `supabase/postgres` 
 - `providers.location` is not `extensions.geography(Point,4326)` with a GiST index, or a valid provider at a real point fails to insert
 - a check constraint accepts a bad value (phone, `coldlink_id`, role, channel, location, OTP attempts, config key, category slug, crop shelf life and temperatures, and every provider enum, phone, capacity, price, temperature, rating, photo and verification rule)
 - a user who owns a provider can be deleted
+- a valid booking built from the PRD 6.1 worked example fails to insert, or a booking check accepts a bad status, code, unit, date range, rate or inconsistent amount, or `cancelled_by` without `cancelled`
+- a `booking_events` row can be updated, deleted or truncated, even by `postgres`, or a booking with events can be deleted
+- a payment, payout, rating, notification, action token, search log or reminder check accepts a bad value, or a unique key (booking code, Paystack reference, one payout and one rating per booking, token hash, one reminder of each kind per booking) accepts a duplicate
 - `anon` or `authenticated` can read or write a table, or RLS shows rows when privileges are granted back
 
 The checks run in one transaction that is rolled back. The job has no secrets and never connects to a Supabase project.
