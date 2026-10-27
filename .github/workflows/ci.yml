@@ -44,3 +44,43 @@ jobs:
 
       - name: Build
         run: pnpm build
+
+  migrations:
+    name: Migrations
+    runs-on: ubuntu-latest
+    # A throwaway database in the job. This job has no secrets and never touches a Supabase project.
+    services:
+      postgres:
+        # The image the pinned Supabase CLI runs for Postgres 17 (supabase/config.toml), so it has
+        # Supabase's roles, schemas and extensions. Bump it with the CLI.
+        image: supabase/postgres:17.11.0.006
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -h localhost"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 30
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/postgres?sslmode=disable
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: pnpm/action-setup@v6
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+
+      - name: Install
+        run: pnpm install --frozen-lockfile
+
+      # Same command as pnpm db:push, so the dev project and CI apply migrations the same way.
+      - name: Apply migrations
+        run: pnpm exec supabase db push --db-url "$DATABASE_URL" --yes
+
+      - name: Check schema
+        run: psql "$DATABASE_URL" --no-psqlrc --file supabase/checks/schema.sql

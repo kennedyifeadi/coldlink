@@ -14,9 +14,12 @@
     "typecheck": "pnpm build:shared && pnpm -r --if-present run typecheck",
     "test": "pnpm build:shared && pnpm -r --if-present run test",
     "format": "prettier --write .",
-    "format:check": "prettier --check ."
+    "format:check": "prettier --check .",
+    "db:new": "supabase migration new",
+    "db:push": "node --env-file=apps/api/.env scripts/db-push.mjs"
   },
   "devDependencies": {
-    "prettier": "^3.9.10"
+    "prettier": "^3.9.10",
+    "supabase": "^2.122.0"
   }
 }

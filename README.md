@@ -39,12 +39,15 @@ Scripts at the root run across every workspace:
 | `pnpm lint` | Lint every workspace |
 | `pnpm typecheck` | Type-check the TypeScript workspaces |
 | `pnpm test` | Run every workspace's tests |
+| `pnpm db:new <name>` | Create a database migration |
+| `pnpm db:push` | Apply pending migrations to the dev project ([supabase/README.md](supabase/README.md)) |
 
 ## Docs
 
 - [Product requirements](docs/prd.md)
 - [Decisions](docs/decisions.md)
 - [API reference](docs/api.md)
+- [Database conventions and migrations](supabase/README.md)
 - [UX writing](docs/ux-writing.md)
 - [Current state of the app](docs/current-state.md)
 - [Discrepancies between the app and the PRD](docs/discrepancies.md)
