@@ -116,11 +116,15 @@ begin
     raise exception 'providers_location_idx is not a GiST index on providers.location';
   end if;
 
-  if (
-    select format_type(a.atttypid, a.atttypmod)
+  if not exists (
+    select
     from pg_attribute a
-    where a.attrelid = 'public.providers'::regclass and a.attname = 'location'
-  ) <> 'extensions.geography(Point,4326)' then
+    where a.attrelid = 'public.providers'::regclass
+      and a.attname = 'location'
+      and a.atttypid = 'extensions.geography'::regtype
+      and extensions.postgis_typmod_type(a.atttypmod) = 'Point'
+      and extensions.postgis_typmod_srid(a.atttypmod) = 4326
+  ) then
     raise exception 'providers.location is not extensions.geography(Point,4326)';
   end if;
 end;
