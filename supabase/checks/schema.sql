@@ -141,7 +141,22 @@ begin
     'public.search_logs_created_at_idx',
     'public.search_logs_user_id_idx',
     'public.booking_reminders',
-    'public.booking_reminders_booking_id_kind_key'
+    'public.booking_reminders_booking_id_kind_key',
+    'public.delivery_partners',
+    'public.delivery_partners_user_id_key',
+    'public.delivery_requests',
+    'public.delivery_requests_context_idx',
+    'public.delivery_requests_status_created_at_idx',
+    'public.delivery_requests_partner_id_idx',
+    'public.payments_delivery_request_id_idx',
+    'public.produce_listings',
+    'public.produce_listings_booking_id_key',
+    'public.produce_listings_farmer_id_idx',
+    'public.produce_listings_status_created_at_idx',
+    'public.produce_listings_crop_id_idx',
+    'public.listing_reservations',
+    'public.listing_reservations_listing_id_idx',
+    'public.v_listing_price_observations'
   ]) as name
   where to_regclass(name) is null;
 
@@ -177,6 +192,28 @@ begin
       and extensions.postgis_typmod_srid(a.atttypmod) = 4326
   ) then
     raise exception 'providers.location is not extensions.geography(Point,4326)';
+  end if;
+
+  if (
+    select count(*)
+    from pg_attribute a
+    where a.attrelid = 'public.delivery_requests'::regclass
+      and a.attname in ('pickup_location', 'dropoff_location')
+      and a.atttypid = 'extensions.geography'::regtype
+      and extensions.postgis_typmod_type(a.atttypmod) = 'Point'
+      and extensions.postgis_typmod_srid(a.atttypmod) = 4326
+  ) <> 2 then
+    raise exception 'delivery_requests locations are not extensions.geography(Point,4326)';
+  end if;
+
+  -- Without it the view runs as its owner, which skips RLS on produce_listings.
+  if not exists (
+    select
+    from pg_class
+    where oid = 'public.v_listing_price_observations'::regclass
+      and 'security_invoker=true' = any(reloptions)
+  ) then
+    raise exception 'v_listing_price_observations does not have security_invoker set';
   end if;
 end;
 $$;
@@ -567,11 +604,60 @@ where code = 'CL-7K3Q9';
 insert into public.payments (booking_id, provider_ref, purpose, amount_kobo)
 select id, 'T-0002', 'booking_deposit', 4064400 from public.bookings where code = 'CL-7K3Q9';
 
--- delivery_requests does not exist yet, so any id is accepted until its migration adds the key.
+insert into public.users (phone, coldlink_id, roles)
+values ('+2348030000001', '3000001', '{delivery_partner}');
+
+insert into public.delivery_partners (
+  user_id, company_name, phone, vehicle_types, created_at, updated_at
+)
+select id, 'Ibadan Swift Logistics', '+2348030000001', '{bike,van}', '2000-01-01', '2000-01-01'
+from public.users
+where phone = '+2348030000001';
+
+-- Inbound delivery for the worked-example booking, from a farm in Akinyele to Moniya Cold Room. The
+-- fee is split 80% to the partner and 20% to ColdLink.
+insert into public.delivery_requests (
+  context_type, context_id, requested_by, pickup_text, pickup_location, dropoff_text,
+  dropoff_location, contact_phone, load_description, load_quantity, load_unit, distance_km,
+  vehicle_type, fee_kobo, partner_payout_kobo, platform_margin_kobo, status, handover_code,
+  created_at, updated_at
+)
+select
+  'booking_inbound',
+  b.id,
+  b.farmer_id,
+  'Akinyele farm road, Ibadan',
+  extensions.st_setsrid(extensions.st_makepoint(3.85, 7.55), 4326)::extensions.geography,
+  'Moniya Cold Room',
+  p.location,
+  '+2348098765432',
+  'Tomatoes in crates',
+  20,
+  'crates',
+  4.2,
+  'van',
+  100000,
+  80000,
+  20000,
+  'requested',
+  '0427',
+  '2000-01-01',
+  '2000-01-01'
+from public.bookings b
+join public.providers p on p.id = b.provider_id
+where b.code = 'CL-7K3Q9';
+
 insert into public.payments (booking_id, delivery_request_id, provider_ref, purpose, amount_kobo)
-select id, gen_random_uuid(), 'T-0003', 'delivery_fee', 100000
-from public.bookings
-where code = 'CL-7K3Q9';
+select context_id, id, 'T-0003', 'delivery_fee', fee_kobo
+from public.delivery_requests;
+
+select pg_temp.expect_foreign_key_violation(
+  $$insert into public.payments (booking_id, delivery_request_id, provider_ref, purpose, amount_kobo)
+    select id, gen_random_uuid(), 'T-0004', 'delivery_fee', 100000
+    from public.bookings
+    where code = 'CL-7K3Q9'$$,
+  'payments_delivery_request_id_fkey'
+);
 
 insert into public.payouts (provider_id, booking_id, amount_kobo, created_at, updated_at)
 select provider_id, id, 3048300, '2000-01-01', '2000-01-01'
@@ -1008,6 +1094,257 @@ select pg_temp.expect_unique_violation(
 insert into public.booking_reminders (booking_id, kind)
 select booking_id, 'collection_due' from public.booking_reminders;
 
+-- Delivery and the presale data layer. The listing is the draft a farmer creates by opting in to
+-- presale on the worked-example booking (PRD 7.10). Its created_at is 23:30 UTC on Sunday 1 November,
+-- which is already Monday 2 November in Lagos.
+insert into public.produce_listings (
+  farmer_id, provider_id, booking_id, crop_id, title, quantity, unit, unit_price_kobo,
+  available_quantity, available_from, created_at, updated_at
+)
+select farmer_id, provider_id, id, crop_id, 'Fresh tomatoes', 40, 'crate', 1500000, 40, end_date,
+  '2026-11-01 23:30:00+00', '2026-11-01 23:30:00+00'
+from public.bookings
+where code = 'CL-7K3Q9';
+
+-- A 20% deposit on 10 crates at ₦15,000.
+insert into public.listing_reservations (
+  listing_id, buyer_name, buyer_phone, quantity, total_kobo, deposit_kobo, status, created_at,
+  updated_at
+)
+select id, 'Funke Adeyemi', '+2348055555555', 10, 15000000, 3000000, 'payment_pending',
+  '2000-01-01', '2000-01-01'
+from public.produce_listings;
+
+do $$
+declare
+  dp public.delivery_partners;
+  l public.produce_listings;
+  r public.listing_reservations;
+  observation record;
+begin
+  select * into dp from public.delivery_partners;
+  if not dp.is_active or dp.avg_rating <> 0 or dp.coverage_lgas <> '{}' then
+    raise exception 'delivery_partners defaults are wrong: %', row_to_json(dp);
+  end if;
+
+  select * into l from public.produce_listings;
+  if l.status <> 'draft' then
+    raise exception 'produce_listings defaults are wrong: %', row_to_json(l);
+  end if;
+
+  select * into r from public.listing_reservations;
+  if r.deposit_percent <> 0.20 then
+    raise exception 'listing_reservations defaults are wrong: %', row_to_json(r);
+  end if;
+
+  if (select count(*) from public.v_listing_price_observations) <> 1 then
+    raise exception 'v_listing_price_observations does not return exactly the one listing';
+  end if;
+
+  select * into observation from public.v_listing_price_observations;
+  if observation.crop_id <> l.crop_id
+    or observation.week <> '2026-11-02'
+    or observation.unit_price_kobo <> 1500000
+    or observation.unit <> 'crate'
+  then
+    raise exception 'v_listing_price_observations returned the wrong observation: %',
+      row_to_json(observation);
+  end if;
+end;
+$$;
+
+update public.delivery_partners set coverage_lgas = '{Akinyele,"Ibadan North"}';
+update public.delivery_requests set notes = 'Call on arrival';
+update public.produce_listings set title = 'Fresh Roma tomatoes';
+update public.listing_reservations set buyer_name = 'Funke Adeyemi-Bello';
+
+do $$
+declare
+  stale text;
+begin
+  select string_agg(name, ', ') into stale
+  from (
+    select 'delivery_partners' as name, created_at, updated_at, '2000-01-01'::timestamptz as expected
+    from public.delivery_partners
+    union all
+    select 'delivery_requests', created_at, updated_at, '2000-01-01' from public.delivery_requests
+    union all
+    select 'produce_listings', created_at, updated_at, '2026-11-01 23:30:00+00'
+    from public.produce_listings
+    union all
+    select 'listing_reservations', created_at, updated_at, '2000-01-01'
+    from public.listing_reservations
+  ) as touched
+  where updated_at <> now() or created_at <> expected;
+
+  if stale is not null then
+    raise exception 'set_updated_at did not run, or changed created_at, on: %', stale;
+  end if;
+end;
+$$;
+
+select pg_temp.expect_check_violation(
+  format($$update public.delivery_partners set %s$$, v.assignment),
+  v.expected_constraint
+)
+from (
+  values
+    ($$phone = '08030000001'$$, 'delivery_partners_phone_format'),
+    ($$vehicle_types = '{}'$$, 'delivery_partners_vehicle_types_valid'),
+    ($$vehicle_types = '{bike,car}'$$, 'delivery_partners_vehicle_types_valid'),
+    ($$vehicle_types = '{bike,NULL}'$$, 'delivery_partners_vehicle_types_valid'),
+    ($$coverage_lgas = '{Akinyele,NULL}'$$, 'delivery_partners_coverage_lgas_no_nulls'),
+    ('avg_rating = 5.01', 'delivery_partners_avg_rating_range'),
+    ('avg_rating = -1', 'delivery_partners_avg_rating_range')
+) as v(assignment, expected_constraint);
+
+select pg_temp.expect_unique_violation(
+  $$insert into public.delivery_partners (user_id, company_name, phone, vehicle_types)
+    select user_id, 'Second company', phone, vehicle_types from public.delivery_partners$$,
+  'delivery_partners_user_id_key'
+);
+
+select pg_temp.expect_foreign_key_violation(
+  $$delete from public.users where phone = '+2348030000001'$$,
+  'delivery_partners_user_id_fkey'
+);
+
+-- The request is still requested, with no partner. Each case breaks exactly one rule.
+select pg_temp.expect_check_violation(
+  format($$update public.delivery_requests set %s$$, v.assignment),
+  v.expected_constraint
+)
+from (
+  values
+    ($$status = 'in_transit'$$, 'delivery_requests_status_valid'),
+    ($$vehicle_type = 'car'$$, 'delivery_requests_vehicle_type_valid'),
+    ($$context_type = 'booking'$$, 'delivery_requests_context_type_valid'),
+    ($$contact_phone = '08098765432'$$, 'delivery_requests_contact_phone_format'),
+    ('load_quantity = 0', 'delivery_requests_load_quantity_positive'),
+    ('distance_km = -1', 'delivery_requests_distance_km_nonnegative'),
+    (
+      'fee_kobo = 0, partner_payout_kobo = 0, platform_margin_kobo = 0',
+      'delivery_requests_fee_kobo_positive'
+    ),
+    (
+      'partner_payout_kobo = -1, platform_margin_kobo = 100001',
+      'delivery_requests_partner_payout_kobo_nonnegative'
+    ),
+    (
+      'partner_payout_kobo = 100001, platform_margin_kobo = -1',
+      'delivery_requests_platform_margin_kobo_nonnegative'
+    ),
+    ('partner_payout_kobo = 80001', 'delivery_requests_fee_split_consistent'),
+    ('fee_kobo = 100001', 'delivery_requests_fee_split_consistent'),
+    ($$handover_code = '042'$$, 'delivery_requests_handover_code_format'),
+    ($$handover_code = '04270'$$, 'delivery_requests_handover_code_format'),
+    ($$handover_code = '04a7'$$, 'delivery_requests_handover_code_format'),
+    ($$status = 'assigned'$$, 'delivery_requests_partner_id_status'),
+    (
+      'partner_id = (select id from public.delivery_partners), assigned_at = now()',
+      'delivery_requests_partner_id_status'
+    ),
+    ('assigned_at = now()', 'delivery_requests_assigned_at_partner_id'),
+    ('picked_up_at = now()', 'delivery_requests_picked_up_at_status'),
+    ('delivered_at = now()', 'delivery_requests_delivered_at_status')
+) as v(assignment, expected_constraint);
+
+-- What the rules allow: a request cancelled before a partner was assigned.
+update public.delivery_requests set status = 'cancelled';
+update public.delivery_requests set status = 'requested';
+
+update public.delivery_requests
+set status = 'assigned', partner_id = (select id from public.delivery_partners), assigned_at = now();
+
+select pg_temp.expect_check_violation(
+  format($$update public.delivery_requests set %s$$, v.assignment),
+  v.expected_constraint
+)
+from (
+  values
+    ('partner_id = null', 'delivery_requests_partner_id_status'),
+    ('assigned_at = null', 'delivery_requests_assigned_at_partner_id'),
+    ($$status = 'picked_up'$$, 'delivery_requests_picked_up_at_status'),
+    ($$status = 'delivered', picked_up_at = now()$$, 'delivery_requests_delivered_at_status')
+) as v(assignment, expected_constraint);
+
+update public.delivery_requests set status = 'accepted';
+update public.delivery_requests set status = 'picked_up', picked_up_at = now();
+update public.delivery_requests set status = 'delivered', delivered_at = now();
+
+select pg_temp.expect_check_violation(
+  $$update public.delivery_requests set picked_up_at = null$$,
+  'delivery_requests_picked_up_at_status'
+);
+
+-- A delivery that has been paid for cannot be deleted.
+select pg_temp.expect_foreign_key_violation(
+  'delete from public.delivery_requests',
+  'payments_delivery_request_id_fkey'
+);
+
+select pg_temp.expect_check_violation(
+  format($$update public.produce_listings set %s$$, v.assignment),
+  v.expected_constraint
+)
+from (
+  values
+    ($$status = 'published'$$, 'produce_listings_status_valid'),
+    ('quantity = 0, available_quantity = 0', 'produce_listings_quantity_positive'),
+    ('unit_price_kobo = 0', 'produce_listings_unit_price_kobo_positive'),
+    ('available_quantity = 41', 'produce_listings_available_quantity_range'),
+    ('available_quantity = -1', 'produce_listings_available_quantity_range')
+) as v(assignment, expected_constraint);
+
+-- The limits themselves are allowed: none left, or all of it.
+update public.produce_listings set available_quantity = 0, status = 'sold_out';
+update public.produce_listings set available_quantity = quantity, status = 'draft';
+
+select pg_temp.expect_unique_violation(
+  $$insert into public.produce_listings (
+      farmer_id, provider_id, booking_id, crop_id, title, quantity, unit, unit_price_kobo,
+      available_quantity, available_from
+    )
+    select farmer_id, provider_id, booking_id, crop_id, title, quantity, unit, unit_price_kobo,
+      available_quantity, available_from
+    from public.produce_listings$$,
+  'produce_listings_booking_id_key'
+);
+
+select pg_temp.expect_foreign_key_violation(
+  'delete from public.produce_listings',
+  'listing_reservations_listing_id_fkey'
+);
+
+select pg_temp.expect_check_violation(
+  format($$update public.listing_reservations set %s$$, v.assignment),
+  v.expected_constraint
+)
+from (
+  values
+    ($$status = 'collected'$$, 'listing_reservations_status_valid'),
+    ($$buyer_phone = '08055555555'$$, 'listing_reservations_buyer_phone_format'),
+    ('quantity = 0', 'listing_reservations_quantity_positive'),
+    ('total_kobo = 0, deposit_kobo = 0', 'listing_reservations_total_kobo_positive'),
+    ('deposit_percent = 0, deposit_kobo = 0', 'listing_reservations_deposit_percent_range'),
+    (
+      'deposit_percent = 1.1, deposit_kobo = 16500000',
+      'listing_reservations_deposit_percent_range'
+    ),
+    ('deposit_kobo = 3000001', 'listing_reservations_deposit_consistent'),
+    ('deposit_percent = 0.25', 'listing_reservations_deposit_consistent')
+) as v(assignment, expected_constraint);
+
+-- Rounding is half up: 20% of 15,000,003 is 3,000,000.6, so the deposit is 3,000,001, not 3,000,000.
+select pg_temp.expect_check_violation(
+  'update public.listing_reservations set total_kobo = 15000003',
+  'listing_reservations_deposit_consistent'
+);
+update public.listing_reservations set total_kobo = 15000003, deposit_kobo = 3000001;
+
+-- A deposit of the whole total is allowed.
+update public.listing_reservations set deposit_percent = 1, deposit_kobo = total_kobo;
+
 select pg_temp.expect_denied(r.role_name, s.statement)
 from (values ('anon'), ('authenticated')) as r(role_name)
 cross join (
@@ -1028,6 +1365,12 @@ cross join (
     ('select * from public.action_tokens'),
     ('select * from public.search_logs'),
     ('select * from public.booking_reminders'),
+    ('select * from public.delivery_partners'),
+    ('select * from public.delivery_requests'),
+    ('select * from public.produce_listings'),
+    ('select * from public.listing_reservations'),
+    ('select * from public.v_listing_price_observations'),
+    ('update public.produce_listings set title = title'),
     ($$insert into public.users (phone, coldlink_id) values ('+2348000000002', '1000002')$$),
     ($$insert into public.otp_codes (phone, code_hash, expires_at)
        values ('+2348000000002', 'hash', now())$$),
@@ -1064,6 +1407,32 @@ begin
   end;
 
   reset role;
+end;
+$$;
+
+-- The same for the price view: with security_invoker, a reader granted the view still meets RLS on
+-- produce_listings, so the draft listing stays hidden. A view running as its owner would show it.
+grant select on public.produce_listings, public.v_listing_price_observations to authenticated;
+
+do $$
+declare
+  visible bigint;
+begin
+  set local role authenticated;
+
+  select (select count(*) from public.produce_listings)
+    + (select count(*) from public.v_listing_price_observations)
+  into visible;
+
+  reset role;
+
+  if visible <> 0 then
+    raise exception 'RLS let authenticated see % listings or price observations', visible;
+  end if;
+
+  if (select count(*) from public.v_listing_price_observations) <> 1 then
+    raise exception 'v_listing_price_observations lost its row for postgres';
+  end if;
 end;
 $$;
 

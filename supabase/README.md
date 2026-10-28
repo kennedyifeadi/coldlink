@@ -50,7 +50,7 @@ This runs `supabase db push --db-url` with the URL from `apps/api/.env`, applies
 The `Migrations` job in `.github/workflows/ci.yml` starts a `supabase/postgres` service container, which has Supabase's roles, schemas and extensions. It applies every migration in order with the same `supabase db push` command, then runs `checks/schema.sql` with psql. The checks fail the job if:
 
 - `postgis` is missing from the `extensions` schema
-- an expected table or index is missing
+- an expected table, view or index is missing
 - any table in `public` lacks RLS, has a policy, or grants anything to `anon` or `authenticated`
 - defaults or the `updated_at` trigger are wrong
 - `providers.location` is not `extensions.geography(Point,4326)` with a GiST index, or a valid provider at a real point fails to insert
@@ -59,6 +59,9 @@ The `Migrations` job in `.github/workflows/ci.yml` starts a `supabase/postgres` 
 - a valid booking built from the PRD 6.1 worked example fails to insert, or a booking check accepts a bad status, code, unit, date range, rate or inconsistent amount, or `cancelled_by` without `cancelled`
 - a `booking_events` row can be updated, deleted or truncated, even by `postgres`, or a booking with events can be deleted
 - a payment, payout, rating, notification, action token, search log or reminder check accepts a bad value, or a unique key (booking code, Paystack reference, one payout and one rating per booking, token hash, one reminder of each kind per booking) accepts a duplicate
-- `anon` or `authenticated` can read or write a table, or RLS shows rows when privileges are granted back
+- a valid delivery partner, delivery request, draft listing or reservation fails to insert, or a check accepts a bad status, vehicle type, context type, phone, fee split, handover code, available quantity or reservation deposit, or a delivery request whose partner, `assigned_at`, `picked_up_at` or `delivered_at` disagrees with its status
+- a `delivery_fee` payment can point to a delivery request that does not exist, or a paid delivery, a listing with reservations or a partner's user can be deleted
+- `v_listing_price_observations` lacks `security_invoker`, or does not return the listing's crop, Lagos week, price and unit
+- `anon` or `authenticated` can read or write a table or the view, or RLS shows rows when privileges are granted back, including listings through the view
 
 The checks run in one transaction that is rolled back. The job has no secrets and never connects to a Supabase project.
