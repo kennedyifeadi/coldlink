@@ -3,11 +3,16 @@ import {
   actionTokenPurposeSchema,
   bookingEventActorTypeSchema,
   bookingReminderKindSchema,
+  deliveryContextTypeSchema,
+  deliveryStatusSchema,
+  listingReservationStatusSchema,
+  listingStatusSchema,
   notificationChannelSchema,
   notificationStatusSchema,
   paymentPurposeSchema,
   payoutStatusSchema,
   searchChannelSchema,
+  vehicleTypeSchema,
 } from './enums.js';
 
 // Database check constraints repeat these values, so a change here needs a migration too.
@@ -23,6 +28,36 @@ describe.each([
     schema: payoutStatusSchema,
     values: ['owed', 'paid'],
     rejected: ['due'],
+  },
+  {
+    name: 'delivery status',
+    schema: deliveryStatusSchema,
+    values: ['requested', 'assigned', 'accepted', 'picked_up', 'delivered', 'cancelled', 'failed'],
+    rejected: ['in_transit'],
+  },
+  {
+    name: 'vehicle type',
+    schema: vehicleTypeSchema,
+    values: ['bike', 'tricycle', 'van', 'truck'],
+    rejected: ['car'],
+  },
+  {
+    name: 'delivery context type',
+    schema: deliveryContextTypeSchema,
+    values: ['booking_inbound', 'booking_outbound', 'marketplace_order'],
+    rejected: ['booking'],
+  },
+  {
+    name: 'listing status',
+    schema: listingStatusSchema,
+    values: ['draft', 'active', 'sold_out', 'expired', 'cancelled'],
+    rejected: ['published'],
+  },
+  {
+    name: 'listing reservation status',
+    schema: listingReservationStatusSchema,
+    values: ['payment_pending', 'confirmed', 'completed', 'expired', 'cancelled'],
+    rejected: ['collected'],
   },
   {
     name: 'booking event actor type',
