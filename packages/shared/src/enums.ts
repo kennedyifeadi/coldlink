@@ -46,7 +46,8 @@ export const backupPowerValues = ['generator', 'solar', 'none', 'unknown'] as co
 export type BackupPower = (typeof backupPowerValues)[number];
 export const backupPowerSchema = z.enum(backupPowerValues);
 
-export const paymentPurposes = ['booking_deposit', 'refund'] as const;
+// delivery_fee pays for a delivery requested after booking, in its own transaction (PRD 7.7).
+export const paymentPurposes = ['booking_deposit', 'delivery_fee', 'refund'] as const;
 export type PaymentPurpose = (typeof paymentPurposes)[number];
 export const paymentPurposeSchema = z.enum(paymentPurposes);
 
@@ -59,6 +60,10 @@ export const paymentStatuses = [
 ] as const;
 export type PaymentStatus = (typeof paymentStatuses)[number];
 export const paymentStatusSchema = z.enum(paymentStatuses);
+
+export const payoutStatuses = ['owed', 'paid'] as const;
+export type PayoutStatus = (typeof payoutStatuses)[number];
+export const payoutStatusSchema = z.enum(payoutStatuses);
 
 export const deliveryStatuses = [
   'requested',
@@ -84,3 +89,46 @@ export const deliveryContextTypes = [
 ] as const;
 export type DeliveryContextType = (typeof deliveryContextTypes)[number];
 export const deliveryContextTypeSchema = z.enum(deliveryContextTypes);
+
+export const bookingEventActorTypes = [
+  'farmer',
+  'provider',
+  'delivery_partner',
+  'system',
+  'admin',
+] as const;
+export type BookingEventActorType = (typeof bookingEventActorTypes)[number];
+export const bookingEventActorTypeSchema = z.enum(bookingEventActorTypes);
+
+// expiry reminders go 2 days before end_date and on the last day; the collection reminder on
+// end_date (PRD 7.6). Each is sent at most once per booking.
+export const bookingReminderKinds = [
+  'expiry_two_days_before',
+  'expiry_last_day',
+  'collection_due',
+] as const;
+export type BookingReminderKind = (typeof bookingReminderKinds)[number];
+export const bookingReminderKindSchema = z.enum(bookingReminderKinds);
+
+export const notificationChannels = ['sms', 'whatsapp'] as const;
+export type NotificationChannel = (typeof notificationChannels)[number];
+export const notificationChannelSchema = z.enum(notificationChannels);
+
+// queued: logged and waiting for a first send or a retry. sent: the SMS provider accepted it.
+// failed: given up on. No delivered state, since nothing in this build reads delivery reports.
+export const notificationStatuses = ['queued', 'sent', 'failed'] as const;
+export type NotificationStatus = (typeof notificationStatuses)[number];
+export const notificationStatusSchema = z.enum(notificationStatuses);
+
+export const actionTokenPurposes = [
+  'provider_accept_booking',
+  'provider_reject_booking',
+  'delivery_accept',
+  'delivery_update',
+] as const;
+export type ActionTokenPurpose = (typeof actionTokenPurposes)[number];
+export const actionTokenPurposeSchema = z.enum(actionTokenPurposes);
+
+export const searchChannels = ['web', 'whatsapp', 'sms'] as const;
+export type SearchChannel = (typeof searchChannels)[number];
+export const searchChannelSchema = z.enum(searchChannels);
