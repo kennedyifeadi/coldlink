@@ -1262,7 +1262,7 @@ select pg_temp.expect_check_violation(
 )
 from (
   values
-    ('partner_id = null', 'delivery_requests_partner_id_status'),
+    ('partner_id = null, assigned_at = null', 'delivery_requests_partner_id_status'),
     ('assigned_at = null', 'delivery_requests_assigned_at_partner_id'),
     ($$status = 'picked_up'$$, 'delivery_requests_picked_up_at_status'),
     ($$status = 'delivered', picked_up_at = now()$$, 'delivery_requests_delivered_at_status')
