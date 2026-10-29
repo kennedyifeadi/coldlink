@@ -90,6 +90,24 @@ export const deliveryContextTypes = [
 export type DeliveryContextType = (typeof deliveryContextTypes)[number];
 export const deliveryContextTypeSchema = z.enum(deliveryContextTypes);
 
+export const listingStatuses = ['draft', 'active', 'sold_out', 'expired', 'cancelled'] as const;
+export type ListingStatus = (typeof listingStatuses)[number];
+export const listingStatusSchema = z.enum(listingStatuses);
+
+// Reserved for the phase-2 marketplace (PRD 15); nothing creates a reservation yet.
+// payment_pending: holding quantity until the deposit is paid. confirmed: deposit paid.
+// completed: collected at the facility with the pickup code. expired: deposit not paid, or produce
+// not collected, in time. cancelled: called off by the buyer, farmer or an admin.
+export const listingReservationStatuses = [
+  'payment_pending',
+  'confirmed',
+  'completed',
+  'expired',
+  'cancelled',
+] as const;
+export type ListingReservationStatus = (typeof listingReservationStatuses)[number];
+export const listingReservationStatusSchema = z.enum(listingReservationStatuses);
+
 export const bookingEventActorTypes = [
   'farmer',
   'provider',
