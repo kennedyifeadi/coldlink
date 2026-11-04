@@ -5,6 +5,11 @@ import {
   PostgresAdapter,
   PostgresIntrospector,
   PostgresQueryCompiler,
+  SelectQueryNode,
+  TableNode,
+  type CompiledQuery,
+  type DatabaseConnection,
+  type QueryResult,
 } from 'kysely';
 import { createApp } from '../app.js';
 import type { Config } from '../config.js';
@@ -24,12 +29,44 @@ export const testConfig: Config = {
   databaseSslRootCert: undefined,
 };
 
-/** A database that answers every query with no rows, for tests that need no real data. */
-export function stubDatabase(): Database {
+export type StubRows = Partial<Record<keyof DB, object[]>>;
+
+function selectedTable({ query }: CompiledQuery): string | undefined {
+  if (!SelectQueryNode.is(query)) return undefined;
+  const from = query.from?.froms[0];
+  return from !== undefined && TableNode.is(from) ? from.table.identifier.name : undefined;
+}
+
+// Answers a select with the rows given for the table it selects from, whatever its columns, joins
+// or filters.
+class StubDriver extends DummyDriver {
+  constructor(private readonly rows: Record<string, object[] | undefined>) {
+    super();
+  }
+
+  override acquireConnection(): Promise<DatabaseConnection> {
+    return Promise.resolve({
+      executeQuery: <R>(query: CompiledQuery): Promise<QueryResult<R>> => {
+        const table = selectedTable(query);
+        const rows = table === undefined ? [] : (this.rows[table] ?? []);
+        return Promise.resolve({ rows: rows as R[] });
+      },
+      streamQuery: () => {
+        throw new Error('The stub database does not stream');
+      },
+    });
+  }
+}
+
+/**
+ * A database that answers each select with the rows given for its table, and every other query with
+ * no rows, for tests that need no real database.
+ */
+export function stubDatabase(rows: StubRows = {}): Database {
   return new Kysely<DB>({
     dialect: {
       createAdapter: () => new PostgresAdapter(),
-      createDriver: () => new DummyDriver(),
+      createDriver: () => new StubDriver(rows),
       createIntrospector: (db) => new PostgresIntrospector(db),
       createQueryCompiler: () => new PostgresQueryCompiler(),
     },
