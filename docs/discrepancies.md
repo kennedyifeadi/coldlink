@@ -231,14 +231,14 @@ Entries are numbered by area (for example `ID-1`) so the owner questions and lat
 
 - **App:** nine produce tiles plus "Other" (`src/data/mockData.js:1-11`, `src/pages/Produce.jsx:9`; CS 9.1). The list mixes crops (Tomatoes, Peppers, Onions, Yams / Tubers) with categories (Leafy Vegetables, Fruits, Meat & Poultry, Fish & Seafood, Dairy Products).
 - **PRD:** seven categories (vegetables, fruits, tubers, fish, meat_poultry, dairy, other) and a `crops` table with local names, e.g. tatashe, rodo, shombo, ugu, efo (PRD 5.4, 13). Bookings reference a `crop_id` (PRD 5.5).
-- **Resolution:** #12 (schema), #16 (seed), #21 (`GET /crops`), #32 (picker).
+- **Resolution:** #12 (schema), #16 (seed, with onions added; decision 40), #21 (`GET /crops`), #32 (picker).
 - **Proposal:** (1) Keep the app's tile grid of common crops as the first thing farmers see; it is faster than a list for low-literacy users. Add search across `name` and `local_names` for the rest, and show the local name on each tile. (2) The PRD seed list (PRD 13) has no onions, which the app and the old spec both include and which are a major stored crop in Oyo State. Add onion to the seed in #16.
 
 ### DU-2. "Other" produce
 
 - **App:** an "Other" tile with no further input (`src/pages/Produce.jsx:9`).
 - **PRD:** an `other` category exists, but every booking needs a `crop_id` (PRD 5.4, 5.5), and the PRD does not say how a farmer books produce that is not in the crop list.
-- **Resolution:** Owner question ([OQ-5](#11-owner-questions)).
+- **Resolution:** Owner question ([OQ-5](#11-owner-questions)). #16 seeds the proposal below as the default (decision 40).
 - **Proposal:** seed one generic crop per category ("Other vegetables", "Other fruits", …), matched by category like any other crop, with an optional free-text note on the booking (`notes`, PRD 5.5).
 
 ### DU-3. Capacity units

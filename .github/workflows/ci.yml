@@ -84,3 +84,24 @@ jobs:
 
       - name: Check schema
         run: psql "$DATABASE_URL" --no-psqlrc --file supabase/checks/schema.sql
+
+      # The dev seed runs here only against this job's throwaway database: the job has no secrets.
+      # It must refuse outside development and outside the seed script, and load cleanly twice.
+      - name: Check the dev seed refuses to run elsewhere
+        run: |
+          if NODE_ENV=production node scripts/db-seed-dev.mjs; then exit 1; fi
+          if psql "$DATABASE_URL" --no-psqlrc -v ON_ERROR_STOP=1 --file supabase/seeds/dev.sql; then
+            exit 1
+          fi
+
+      - name: Load the dev seed twice
+        env:
+          NODE_ENV: development
+        run: |
+          node scripts/db-seed-dev.mjs | tee first-run.txt
+          grep --quiet '^Seeded 9 new dev providers; 9 sample providers in total.$' first-run.txt
+          node scripts/db-seed-dev.mjs | tee second-run.txt
+          grep --quiet '^Seeded 0 new dev providers; 9 sample providers in total.$' second-run.txt
+
+      - name: Check the dev seed
+        run: psql "$DATABASE_URL" --no-psqlrc --file supabase/checks/dev_seed.sql

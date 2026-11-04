@@ -2,17 +2,10 @@
 // loads DATABASE_URL from apps/api/.env. Extra arguments pass through, e.g. `pnpm db:push --dry-run`.
 import { spawn } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
+import { readDatabaseUrl, secretMasker } from './database-url.mjs';
 
-const databaseUrl = process.env.DATABASE_URL;
-if (!databaseUrl) {
-  console.error('DATABASE_URL is not set. Add it to apps/api/.env.');
-  process.exit(1);
-}
-
-// The CLI should never print the URL, but mask it and its password in case an error message does.
-const { password } = new URL(databaseUrl);
-const secrets = [databaseUrl, password, decodeURIComponent(password)].filter(Boolean);
-const mask = (text) => secrets.reduce((masked, secret) => masked.replaceAll(secret, '***'), text);
+const databaseUrl = readDatabaseUrl();
+const mask = secretMasker(databaseUrl);
 
 const cli = fileURLToPath(import.meta.resolve('supabase/dist/supabase.js'));
 const child = spawn(
