@@ -22,6 +22,13 @@ No step here needs Docker. Migrations are applied straight to a hosted Supabase 
   alter table public.<table> enable row level security;
   ```
 
+- **Functions:** `security invoker` (the default), `set search_path = ''`, every object qualified (PostGIS in `extensions`), and the right volatility (`stable` if it reads tables or `now()`). Default privileges stop `anon` and `authenticated` getting EXECUTE, but `PUBLIC` still gets it, so revoke it and grant to the API's role in the same migration (decision 37):
+
+  ```sql
+  revoke execute on function public.<name>(<args>) from public, anon, authenticated;
+  grant execute on function public.<name>(<args>) to service_role;
+  ```
+
 - **Constraints:** name check constraints `<table>_<column>_<rule>` (`users_phone_format`) so API errors can map them. Enum-like values match `packages/shared/src/enums.ts` exactly.
 - **Money** is integer kobo in `bigint` (decision 16). A table that stores a pricing snapshot checks it against the pricing rules (decision 17), as `bookings` does. **Extensions** go in the `extensions` schema (`postgis` is there).
 - **Forward-only:** never edit or delete a migration that has run anywhere (dev, staging or production). To change something, add a new migration.
@@ -62,6 +69,10 @@ The `Migrations` job in `.github/workflows/ci.yml` starts a `supabase/postgres` 
 - a valid delivery partner, delivery request, draft listing or reservation fails to insert, or a check accepts a bad status, vehicle type, context type, phone, fee split, handover code, available quantity or reservation deposit, or a delivery request whose partner, `assigned_at`, `picked_up_at` or `delivered_at` disagrees with its status
 - a `delivery_fee` payment can point to a delivery request that does not exist, or a paid delivery, a listing with reservations or a partner's user can be deleted
 - `v_listing_price_observations` lacks `security_invoker`, or does not return the listing's crop, Lagos week, price and unit
+- `provider_available_quantity` gets any scenario wrong: overlapping bookings add up, back-to-back bookings do not stack, the peak can fall mid-range, an unexpired `payment_pending` hold counts and an expired one does not, `rejected`, `expired`, `cancelled`, `completed` and `no_show` never count, a 1-day range, an over-booked provider floored at 0, and the errors for a bad range or an unknown provider
+- `providers_within_radius` returns the wrong providers, order or distance in km, gets the radius boundary wrong, or accepts a bad latitude, longitude or radius
+- either function does not use its index (`bookings_provider_capacity_idx`, `providers_location_idx`), counted with `enable_seqscan` off since `EXPLAIN` cannot see inside a function
+- `anon` or `authenticated` can execute any non-trigger function in `public`, a new function gets a client grant by default, or the two functions are not `stable`, `security invoker` with an empty `search_path`
 - `anon` or `authenticated` can read or write a table or the view, or RLS shows rows when privileges are granted back, including listings through the view
 
 The checks run in one transaction that is rolled back. The job has no secrets and never connects to a Supabase project.
