@@ -26,9 +26,16 @@ pnpm --filter web dev
 pnpm --filter @coldlink/api dev
 ```
 
-The web app runs at http://localhost:5173 and the API at http://localhost:3000/api/v1 (try `/health`). The API reads `apps/api/.env` if it exists; copy `apps/api/.env.example` to change the defaults.
+The web app runs at http://localhost:5173 and the API at http://localhost:3000/api/v1 (try `/health`). The API reads `apps/api/.env`; copy `apps/api/.env.example` and set `DATABASE_URL` to the dev project's session pooler URL.
 
 `apps/api` imports `@coldlink/shared` from its built `dist`. The root `lint`, `typecheck` and `test` scripts and the API `dev` script build it first; after changing shared while the API dev server runs, run `pnpm build:shared`.
+
+`pnpm test` needs no database. The API's integration tests write and delete rows, so they never use `DATABASE_URL`: they run only against `TEST_DATABASE_URL`, which must be a throwaway database on localhost with the migrations applied, and they skip with a message when it is unset. CI's `API integration` job runs them against its own Postgres, and also regenerates `apps/api/src/db/schema.ts` there and fails if it differs from the committed file.
+
+```bash
+TEST_DATABASE_URL=postgresql://postgres:postgres@localhost:5432/postgres?sslmode=disable pnpm --filter @coldlink/api test:integration
+TEST_DATABASE_URL=postgresql://postgres:postgres@localhost:5432/postgres?sslmode=disable pnpm --filter @coldlink/api db:types
+```
 
 Scripts at the root run across every workspace:
 
