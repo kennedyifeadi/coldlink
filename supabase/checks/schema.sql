@@ -350,14 +350,18 @@ values ('+2348012345678', '4820193', '2000-01-01', '2000-01-01');
 insert into public.otp_codes (phone, code_hash, expires_at, created_at, updated_at)
 values ('+2348012345678', 'hash', now() + interval '10 minutes', '2000-01-01', '2000-01-01');
 
+-- Probe rows apart from the reference data, so the defaults and updated_at checks below see rows
+-- created at a known time.
 insert into public.app_config (key, value, created_at, updated_at)
-values ('otp_required', 'true', '2000-01-01', '2000-01-01');
+values ('schema_check_probe', 'true', '2000-01-01', '2000-01-01');
 
 insert into public.crop_categories (slug, name, created_at, updated_at)
-values ('vegetables', 'Vegetables', '2000-01-01', '2000-01-01');
+values ('schema_check', 'Schema check', '2000-01-01', '2000-01-01');
 
 insert into public.crops (category_id, name, created_at, updated_at)
-select id, 'Tomatoes', '2000-01-01', '2000-01-01' from public.crop_categories where slug = 'vegetables';
+select id, 'Schema check crop', '2000-01-01', '2000-01-01'
+from public.crop_categories
+where slug = 'schema_check';
 
 -- ST_MakePoint takes longitude first: Bodija, Ibadan is lat 7.43, lng 3.91.
 insert into public.providers (
@@ -417,7 +421,7 @@ declare
   c public.crops;
   p public.providers;
 begin
-  select * into c from public.crops where name = 'Tomatoes';
+  select * into c from public.crops where name = 'Schema check crop';
   if c.id is null or c.local_names <> '{}' then
     raise exception 'crops defaults are wrong: %', row_to_json(c);
   end if;
@@ -448,9 +452,9 @@ $$;
 
 update public.users set full_name = 'Adebayo Ogunleye' where phone = '+2348012345678';
 update public.otp_codes set attempts = 1 where phone = '+2348012345678';
-update public.app_config set value = 'false' where key = 'otp_required';
-update public.crop_categories set name = 'Fresh vegetables' where slug = 'vegetables';
-update public.crops set local_names = '{tomato}' where name = 'Tomatoes';
+update public.app_config set value = 'false' where key = 'schema_check_probe';
+update public.crop_categories set name = 'Schema check renamed' where slug = 'schema_check';
+update public.crops set local_names = '{probe}' where name = 'Schema check crop';
 update public.providers set landmark = 'Opposite the market gate'
 where display_name = 'Bodija Cold Room';
 update public.provider_crop_support set category_id = category_id;
@@ -465,11 +469,13 @@ begin
     union all
     select 'otp_codes', created_at, updated_at from public.otp_codes where phone = '+2348012345678'
     union all
-    select 'app_config', created_at, updated_at from public.app_config where key = 'otp_required'
+    select 'app_config', created_at, updated_at from public.app_config
+    where key = 'schema_check_probe'
     union all
     select 'crop_categories', created_at, updated_at from public.crop_categories
+    where slug = 'schema_check'
     union all
-    select 'crops', created_at, updated_at from public.crops
+    select 'crops', created_at, updated_at from public.crops where name = 'Schema check crop'
     union all
     select 'providers', created_at, updated_at from public.providers
     union all
