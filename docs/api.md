@@ -32,11 +32,14 @@ paths:
   /health:
     get:
       operationId: getHealth
-      summary: Liveness check
+      summary: Health check
+      description: >-
+        Reports whether the API is running and can reach the database, checked with a trivial
+        query that gives up after 2 seconds. Never fails with a 500 because the database is down.
       tags: [System]
       responses:
         '200':
-          description: The API is running.
+          description: The API is running and the database answered.
           headers:
             X-Request-Id:
               $ref: '#/components/headers/XRequestId'
@@ -44,6 +47,17 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Health'
+              example: { status: ok, version: 0.0.0, database: up }
+        '503':
+          description: The API is running but the database did not answer in time or failed.
+          headers:
+            X-Request-Id:
+              $ref: '#/components/headers/XRequestId'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Health'
+              example: { status: degraded, version: 0.0.0, database: down }
 components:
   headers:
     XRequestId:
@@ -63,13 +77,18 @@ components:
   schemas:
     Health:
       type: object
-      required: [status, version]
+      required: [status, version, database]
       properties:
         status:
-          const: ok
+          type: string
+          enum: [ok, degraded]
+          description: degraded when any dependency is down.
         version:
           type: string
           examples: ['0.0.0']
+        database:
+          type: string
+          enum: [up, down]
     ErrorCode:
       type: string
       enum: [bad_request, validation_failed, not_found, payload_too_large, rate_limited, internal]

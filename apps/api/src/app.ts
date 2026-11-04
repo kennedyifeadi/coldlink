@@ -3,6 +3,7 @@ import express, { type Express, type Router } from 'express';
 import helmet from 'helmet';
 import type { Logger } from 'pino';
 import type { Config } from './config.js';
+import type { Database } from './db/client.js';
 import { createLogger } from './logger.js';
 import { errorHandler, notFound } from './middleware/errorHandler.js';
 import { requestId } from './middleware/requestId.js';
@@ -13,13 +14,14 @@ export const API_BASE_PATH = '/api/v1';
 const JSON_BODY_LIMIT = '100kb';
 
 export interface AppOptions {
+  db: Database;
   logger?: Logger;
   routes?: Router;
 }
 
 export function createApp(
   config: Config,
-  { logger = createLogger(config.logLevel), routes = apiRoutes() }: AppOptions = {},
+  { db, logger = createLogger(config.logLevel), routes = apiRoutes({ db }) }: AppOptions,
 ): Express {
   const app = express();
   app.use(requestId);

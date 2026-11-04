@@ -1,15 +1,33 @@
 import { errorResponseSchema } from '@coldlink/shared';
 import request from 'supertest';
 import { describe, expect, it } from 'vitest';
-import { ALLOWED_ORIGIN, testApp } from './test/helpers.js';
+import { createDatabase } from './db/client.js';
+import { ALLOWED_ORIGIN, captureLogs, testApp, testConfig } from './test/helpers.js';
 import { version } from './version.js';
 
 describe('GET /api/v1/health', () => {
-  it('returns ok with the app version', async () => {
+  it('returns ok with the app version when the database answers', async () => {
     const { app } = testApp();
     const response = await request(app).get('/api/v1/health');
     expect(response.status).toBe(200);
-    expect(response.body).toEqual({ status: 'ok', version });
+    expect(response.body).toEqual({ status: 'ok', version, database: 'up' });
+  });
+
+  it('returns 503 degraded, without leaking the database URL, when the database is unreachable', async () => {
+    // Nothing listens on port 1, so the connection is refused.
+    const password = 'hunter2-not-real';
+    const databaseUrl = `postgresql://coldlink:${password}@127.0.0.1:1/coldlink?sslmode=disable`;
+    const db = createDatabase({ ...testConfig, databaseUrl }, captureLogs().logger);
+    const { app, logs } = testApp(undefined, db);
+    try {
+      const response = await request(app).get('/api/v1/health');
+      expect(response.status).toBe(503);
+      expect(response.body).toEqual({ status: 'degraded', version, database: 'down' });
+      expect(logs.output()).toContain('Database check failed');
+      expect(logs.output()).not.toContain(password);
+    } finally {
+      await db.destroy();
+    }
   });
 });
 

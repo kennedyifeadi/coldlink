@@ -1,5 +1,13 @@
 import { describe, expect, it } from 'vitest';
-import { maskPhoneNumbers, redact, redactUrl, REDACTED, REDACTED_PHONE } from './redact.js';
+import {
+  maskDatabaseUrls,
+  maskPhoneNumbers,
+  redact,
+  redactUrl,
+  REDACTED,
+  REDACTED_DATABASE_URL,
+  REDACTED_PHONE,
+} from './redact.js';
 
 describe('maskPhoneNumbers', () => {
   it.each([
@@ -36,7 +44,29 @@ describe('maskPhoneNumbers', () => {
   );
 });
 
+describe('maskDatabaseUrls', () => {
+  it.each([
+    'postgresql://postgres.abcd:s3cret@aws-0-eu-west-1.pooler.supabase.com:5432/postgres',
+    'postgres://postgres:s3cret@localhost:5432/postgres?sslmode=disable',
+    'POSTGRESQL://user:s3cret@host/db',
+  ])('masks %s', (url) => {
+    expect(maskDatabaseUrls(`connect to "${url}" failed`)).toBe(
+      `connect to "${REDACTED_DATABASE_URL}" failed`,
+    );
+  });
+});
+
 describe('redact', () => {
+  it('masks database URLs and connection-string keys', () => {
+    expect(
+      redact({
+        input: 'postgresql://postgres:s3cret@localhost/postgres',
+        connectionString: 'anything',
+        DATABASE_URL: 'anything',
+      }),
+    ).toEqual({ input: REDACTED_DATABASE_URL, connectionString: REDACTED, DATABASE_URL: REDACTED });
+  });
+
   it('replaces sensitive keys at any depth, whatever their case or separators', () => {
     expect(
       redact({

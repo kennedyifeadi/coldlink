@@ -9,7 +9,7 @@ const BASIS_POINTS = 10_000;
 
 const fitsScale = (scale: number) => (value: number) => toScaledInteger(value, scale) !== undefined;
 
-const rateSchema = z
+export const rateSchema = z
   .number()
   .min(0, 'Must be 0 or more')
   .max(1, 'Must be 1 or less')

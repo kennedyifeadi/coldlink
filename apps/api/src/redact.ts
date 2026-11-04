@@ -1,9 +1,14 @@
 export const REDACTED = '[Redacted]';
 export const REDACTED_PHONE = '[Redacted phone]';
+export const REDACTED_DATABASE_URL = '[Redacted database URL]';
 
 // Matched against the key with case and separators removed, so `X-Api-Key`, `refresh_token`
 // and `phoneNumber` all count.
-const SENSITIVE_KEY = /phone|msisdn|otp|token|cookie|authorization|password|secret|apikey/;
+const SENSITIVE_KEY =
+  /phone|msisdn|otp|token|cookie|authorization|password|secret|apikey|connectionstring|databaseurl/;
+
+// A connection string carries the database password, and errors such as an invalid URL echo it.
+const DATABASE_URL = /postgres(?:ql)?:\/\/[^\s'"]+/gi;
 
 // Nigerian mobile numbers: an optional 0 or +234/234, then 70x, 80x, 81x, 90x or 91x and eight
 // more digits, optionally separated by spaces or hyphens.
@@ -19,6 +24,10 @@ export function maskPhoneNumbers(text: string): string {
   return text.replace(NIGERIAN_PHONE, REDACTED_PHONE);
 }
 
+export function maskDatabaseUrls(text: string): string {
+  return text.replace(DATABASE_URL, REDACTED_DATABASE_URL);
+}
+
 function isPlainObject(value: unknown): value is Record<string, unknown> {
   if (typeof value !== 'object' || value === null) return false;
   const prototype: unknown = Object.getPrototypeOf(value);
@@ -26,12 +35,13 @@ function isPlainObject(value: unknown): value is Record<string, unknown> {
 }
 
 /**
- * Returns a copy with sensitive keys replaced and phone numbers masked in every string.
+ * Returns a copy with sensitive keys replaced, and phone numbers and database URLs masked in every
+ * string.
  * Only plain objects and arrays are walked; other objects (requests, errors) are left to
  * their log serializers.
  */
 export function redact(value: unknown): unknown {
-  if (typeof value === 'string') return maskPhoneNumbers(value);
+  if (typeof value === 'string') return maskPhoneNumbers(maskDatabaseUrls(value));
   if (Array.isArray(value)) return value.map(redact);
   if (!isPlainObject(value)) return value;
   return Object.fromEntries(

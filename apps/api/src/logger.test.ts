@@ -23,6 +23,21 @@ describe('logger', () => {
     expect(text).toContain('[Redacted phone]');
   });
 
+  it('keeps database URLs and passwords out of logged errors', () => {
+    const { logger, output } = captureLogs();
+    const url = 'postgresql://postgres.abcd:s3cret-pw@aws-0-eu-west-1.pooler.supabase.com:5432/db';
+    // Node's URL error carries the rejected text in `input`.
+    const invalidUrl = Object.assign(new TypeError('Invalid URL'), { input: url });
+    logger.error({ err: invalidUrl }, 'Database URL rejected');
+    logger.error({ err: new Error(`could not connect to ${url}`) }, 'Database connection failed');
+    logger.info({ config: { connectionString: url, password: 's3cret-pw' } }, 'Pool created');
+
+    const text = output();
+    expect(text).not.toContain('s3cret-pw');
+    expect(text).not.toContain('pooler.supabase.com');
+    expect(text).toContain('[Redacted database URL]');
+  });
+
   it('keeps phone numbers, tokens and bodies out of request logs', async () => {
     const { app, logs } = testApp();
     await request(app)
