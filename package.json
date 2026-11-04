@@ -16,9 +16,11 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "db:new": "supabase migration new",
-    "db:push": "node --env-file=apps/api/.env scripts/db-push.mjs"
+    "db:push": "node --env-file=apps/api/.env scripts/db-push.mjs",
+    "db:seed:dev": "node --env-file=apps/api/.env scripts/db-seed-dev.mjs"
   },
   "devDependencies": {
+    "pg": "^8.23.1",
     "prettier": "^3.9.10",
     "supabase": "^2.122.0"
   }
