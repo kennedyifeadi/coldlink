@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { appConfigKeys, appConfigSchema } from './appConfig.js';
+import {
+  appConfigKeys,
+  appConfigSchema,
+  publicConfigKeys,
+  publicConfigSchema,
+  toPublicConfig,
+} from './appConfig.js';
 
 // PRD 5.15 placeholders.
 const placeholders = {
@@ -57,5 +63,33 @@ describe('appConfigSchema', () => {
     ['a string boolean', { otp_required: 'true' }, 'otp_required'],
   ])('rejects %s', (_name, override, path) => {
     expect(issuePaths({ ...placeholders, ...override })).toEqual([path]);
+  });
+});
+
+describe('toPublicConfig', () => {
+  it('keeps only the allowlisted keys', () => {
+    expect(toPublicConfig(appConfigSchema.parse(placeholders))).toEqual({
+      search_default_radius_km: 25,
+      search_max_radius_km: 100,
+      service_fee_kobo: 0,
+      deposit_percent: 0.3,
+      farmer_free_cancel_hours: 24,
+    });
+  });
+
+  it('drops keys that are not in the allowlist, even ones the schema does not know', () => {
+    const config = { ...appConfigSchema.parse(placeholders), new_secret_key: 1 };
+    expect(Object.keys(toPublicConfig(config)).toSorted()).toEqual(publicConfigKeys.toSorted());
+  });
+});
+
+describe('publicConfigSchema', () => {
+  it('only allows keys that app_config has', () => {
+    expect(appConfigKeys).toEqual(expect.arrayContaining(publicConfigKeys));
+  });
+
+  it('rejects a body with a private key', () => {
+    const body = { ...toPublicConfig(appConfigSchema.parse(placeholders)), commission_rate: 0.075 };
+    expect(publicConfigSchema.safeParse(body).success).toBe(false);
   });
 });
