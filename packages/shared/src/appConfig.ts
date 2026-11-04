@@ -39,3 +39,22 @@ export type AppConfig = z.infer<typeof appConfigSchema>;
 export type AppConfigKey = keyof AppConfig;
 
 export const appConfigKeys = Object.keys(appConfigSchema.shape) as AppConfigKey[];
+
+// The keys GET /config/public returns. A key not listed here is private, so a new app_config key
+// never reaches clients unless it is added on purpose (decision 48).
+const { shape } = appConfigSchema;
+export const publicConfigSchema = z.strictObject({
+  search_default_radius_km: shape.search_default_radius_km,
+  search_max_radius_km: shape.search_max_radius_km,
+  service_fee_kobo: shape.service_fee_kobo,
+  deposit_percent: shape.deposit_percent,
+  farmer_free_cancel_hours: shape.farmer_free_cancel_hours,
+});
+
+export type PublicConfig = z.infer<typeof publicConfigSchema>;
+
+export const publicConfigKeys = Object.keys(publicConfigSchema.shape) as (keyof PublicConfig)[];
+
+export function toPublicConfig(config: AppConfig): PublicConfig {
+  return Object.fromEntries(publicConfigKeys.map((key) => [key, config[key]])) as PublicConfig;
+}
