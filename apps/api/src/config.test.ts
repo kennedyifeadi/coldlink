@@ -13,6 +13,14 @@ function configError(env: NodeJS.ProcessEnv): ConfigError {
 
 const DATABASE_URL = 'postgresql://coldlink:s3cret@db.example.test:5432/postgres';
 const required = { DATABASE_URL };
+const termii = {
+  SMS_PROVIDER: 'termii',
+  TERMII_API_KEY: 'termii-key-123',
+  TERMII_SENDER_ID: 'ColdLink',
+  TERMII_BASE_URL: 'https://v3.api.termii.com',
+};
+const productionSms =
+  'SMS_PROVIDER: Must be termii in production, where the console provider sends nothing';
 
 describe('loadConfig', () => {
   it('reads and converts valid variables', () => {
@@ -24,6 +32,7 @@ describe('loadConfig', () => {
         CORS_ORIGINS: 'https://coldlink.ng, https://admin.coldlink.ng',
         DATABASE_URL,
         DATABASE_SSL_ROOT_CERT: 'certs/supabase-ca.crt',
+        ...termii,
       }),
     ).toEqual({
       nodeEnv: 'production',
@@ -32,6 +41,15 @@ describe('loadConfig', () => {
       corsOrigins: ['https://coldlink.ng', 'https://admin.coldlink.ng'],
       databaseUrl: DATABASE_URL,
       databaseSslRootCert: 'certs/supabase-ca.crt',
+      sms: {
+        provider: 'termii',
+        termii: {
+          apiKey: 'termii-key-123',
+          senderId: 'ColdLink',
+          baseUrl: 'https://v3.api.termii.com',
+          channel: 'dnd',
+        },
+      },
     });
   });
 
@@ -43,6 +61,7 @@ describe('loadConfig', () => {
       corsOrigins: ['http://localhost:5173'],
       databaseUrl: DATABASE_URL,
       databaseSslRootCert: undefined,
+      sms: { provider: 'console' },
     });
   });
 
@@ -67,12 +86,18 @@ describe('loadConfig', () => {
     expect(configError({ ...required, NODE_ENV: 'production' }).issues).toEqual([
       'CORS_ORIGINS: Required in production',
       'DATABASE_SSL_ROOT_CERT: Required in production',
+      productionSms,
     ]);
   });
 
   it('reports a missing production CORS_ORIGINS alongside other invalid variables', () => {
     expect(
-      configError({ NODE_ENV: 'production', PORT: 'abc', DATABASE_SSL_ROOT_CERT: 'ca.crt' }).issues,
+      configError({
+        NODE_ENV: 'production',
+        PORT: 'abc',
+        DATABASE_SSL_ROOT_CERT: 'ca.crt',
+        ...termii,
+      }).issues,
     ).toEqual([
       expect.stringMatching(/^PORT: /),
       expect.stringMatching(/^DATABASE_URL: /),
@@ -116,5 +141,33 @@ describe('loadConfig', () => {
     const error = configError({ DATABASE_URL: url });
     expect(error.issues).toEqual([`DATABASE_URL: ${message}`]);
     expect(error.message).not.toContain('s3cret');
+  });
+
+  it('accepts the generic Termii channel', () => {
+    const { sms } = loadConfig({ ...required, ...termii, TERMII_CHANNEL: 'generic' });
+    expect(sms.provider === 'termii' && sms.termii.channel).toBe('generic');
+  });
+
+  it('requires every Termii setting when SMS_PROVIDER is termii', () => {
+    expect(configError({ ...required, SMS_PROVIDER: 'termii' }).issues).toEqual([
+      'TERMII_API_KEY: Required when SMS_PROVIDER is termii',
+      'TERMII_SENDER_ID: Required when SMS_PROVIDER is termii',
+      'TERMII_BASE_URL: Required when SMS_PROVIDER is termii',
+    ]);
+  });
+
+  it.each([
+    ['SMS_PROVIDER', 'twilio'],
+    ['TERMII_SENDER_ID', 'CL'],
+    ['TERMII_SENDER_ID', 'ColdLinkNigeria'],
+    ['TERMII_SENDER_ID', 'Cold-Link'],
+    ['TERMII_BASE_URL', 'http://v3.api.termii.com'],
+    ['TERMII_BASE_URL', 'https://v3.api.termii.com/api'],
+    ['TERMII_CHANNEL', 'whatsapp'],
+    ['TERMII_API_KEY', ''],
+  ])('rejects %s=%j', (name, value) => {
+    expect(configError({ ...required, ...termii, [name]: value }).issues).toEqual([
+      expect.stringMatching(new RegExp(`^${name}: `)),
+    ]);
   });
 });

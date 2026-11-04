@@ -28,6 +28,10 @@ const originSchema = z
     message: 'Must be an origin such as https://coldlink.ng, with no path or trailing slash',
   });
 
+export const smsProviders = ['console', 'termii'] as const;
+// dnd reaches Nigerian numbers on Do-Not-Disturb; generic does not (Termii's SMS API docs).
+export const termiiChannels = ['dnd', 'generic'] as const;
+
 const envSchema = z.object({
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
   PORT: z.coerce.number().int().min(1).max(65_535).default(3000),
@@ -44,7 +48,27 @@ const envSchema = z.object({
     .pipe(z.array(originSchema).min(1, 'List at least one origin').optional()),
   DATABASE_URL: databaseUrlSchema,
   DATABASE_SSL_ROOT_CERT: z.string().min(1).optional(),
+  SMS_PROVIDER: z.enum(smsProviders).default('console'),
+  TERMII_API_KEY: z.string().min(1).optional(),
+  TERMII_SENDER_ID: z
+    .string()
+    .regex(/^[A-Za-z0-9]{3,11}$/, 'Must be 3 to 11 letters or digits')
+    .optional(),
+  // Each Termii account has its own base URL, shown on its dashboard.
+  TERMII_BASE_URL: originSchema
+    .refine((value) => value.startsWith('https://'), { message: 'Must use https' })
+    .optional(),
+  TERMII_CHANNEL: z.enum(termiiChannels).default('dnd'),
 });
+
+export interface TermiiConfig {
+  apiKey: string;
+  senderId: string;
+  baseUrl: string;
+  channel: (typeof termiiChannels)[number];
+}
+
+export type SmsConfig = { provider: 'console' } | { provider: 'termii'; termii: TermiiConfig };
 
 export interface Config {
   nodeEnv: 'development' | 'test' | 'production';
@@ -54,6 +78,7 @@ export interface Config {
   databaseUrl: string;
   /** Path to the CA certificate that signs the database server's certificate. */
   databaseSslRootCert: string | undefined;
+  sms: SmsConfig;
 }
 
 export class ConfigError extends Error {
@@ -78,6 +103,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
   if (env['NODE_ENV'] === 'production' && env['DATABASE_SSL_ROOT_CERT'] === undefined) {
     issues.push('DATABASE_SSL_ROOT_CERT: Required in production');
   }
+  issues.push(...smsIssues(env));
   if (!result.success || issues.length > 0) {
     throw new ConfigError(issues);
   }
@@ -91,5 +117,39 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
     corsOrigins: CORS_ORIGINS ?? [DEV_WEB_ORIGIN],
     databaseUrl: DATABASE_URL,
     databaseSslRootCert: DATABASE_SSL_ROOT_CERT,
+    sms: smsConfig(result.data),
+  };
+}
+
+function smsIssues(env: NodeJS.ProcessEnv): string[] {
+  const provider = env['SMS_PROVIDER'] ?? 'console';
+  if (env['NODE_ENV'] === 'production' && provider === 'console') {
+    return ['SMS_PROVIDER: Must be termii in production, where the console provider sends nothing'];
+  }
+  if (provider !== 'termii') return [];
+  return (['TERMII_API_KEY', 'TERMII_SENDER_ID', 'TERMII_BASE_URL'] as const)
+    .filter((name) => env[name] === undefined)
+    .map((name) => `${name}: Required when SMS_PROVIDER is termii`);
+}
+
+function smsConfig(env: z.infer<typeof envSchema>): SmsConfig {
+  const { SMS_PROVIDER, TERMII_API_KEY, TERMII_SENDER_ID, TERMII_BASE_URL, TERMII_CHANNEL } = env;
+  if (SMS_PROVIDER === 'console') return { provider: 'console' };
+  // smsIssues has already rejected a termii config with any of these missing.
+  if (
+    TERMII_API_KEY === undefined ||
+    TERMII_SENDER_ID === undefined ||
+    TERMII_BASE_URL === undefined
+  ) {
+    throw new ConfigError(['SMS_PROVIDER: termii is missing its settings']);
+  }
+  return {
+    provider: 'termii',
+    termii: {
+      apiKey: TERMII_API_KEY,
+      senderId: TERMII_SENDER_ID,
+      baseUrl: TERMII_BASE_URL,
+      channel: TERMII_CHANNEL,
+    },
   };
 }
