@@ -3,6 +3,7 @@ import { Kysely, PostgresDialect } from 'kysely';
 import pg from 'pg';
 import type { Logger } from 'pino';
 import type { Config } from '../config.js';
+import { typeParsers } from './parsers.js';
 import type { DB } from './schema.js';
 
 export type Database = Kysely<DB>;
@@ -41,6 +42,7 @@ export function createDatabase(config: DatabaseConfig, logger: Logger): Database
     max: POOL_MAX,
     connectionTimeoutMillis: CONNECTION_TIMEOUT_MS,
     idleTimeoutMillis: IDLE_TIMEOUT_MS,
+    types: typeParsers,
   });
   // An idle client that loses its connection emits here; unhandled, it would crash the process.
   pool.on('error', (err) => {
