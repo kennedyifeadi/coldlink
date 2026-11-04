@@ -105,3 +105,50 @@ jobs:
 
       - name: Check the dev seed
         run: psql "$DATABASE_URL" --no-psqlrc --file supabase/checks/dev_seed.sql
+
+  api-integration:
+    name: API integration
+    runs-on: ubuntu-latest
+    # The same throwaway database as the Migrations job. No secrets; never touches a Supabase project.
+    services:
+      postgres:
+        image: supabase/postgres:17.11.0.006
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -h localhost"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 30
+    env:
+      # The only database the integration tests and type generation accept (localhost only).
+      TEST_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/postgres?sslmode=disable
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: pnpm/action-setup@v6
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+
+      - name: Install
+        run: pnpm install --frozen-lockfile
+
+      - name: Apply migrations
+        run: pnpm exec supabase db push --db-url "$TEST_DATABASE_URL" --yes
+
+      - name: Build shared
+        run: pnpm build:shared
+
+      # Fails, and prints the difference, if the migrations changed without regenerating the types.
+      - name: Check database types
+        run: |
+          pnpm --filter @coldlink/api db:types
+          git diff --exit-code -- apps/api/src/db/schema.ts
+
+      - name: Integration tests
+        run: pnpm --filter @coldlink/api test:integration
