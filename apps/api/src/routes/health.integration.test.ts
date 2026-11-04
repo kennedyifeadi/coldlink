@@ -20,7 +20,9 @@ describe.skipIf(noTestDatabase)('GET /api/v1/health against Postgres', () => {
   });
 
   it.each([
-    ['nothing listens on the port', { port: '1' }],
+    // Each case uses its own password: the test database's is "postgres", which the log's stack
+    // paths contain anyway.
+    ['nothing listens on the port', { port: '1', password: 'unused-pw-9c3d' }],
     ['the credentials are wrong', { username: 'no_such_role', password: 'wrong-pw-1f2e' }],
   ])('reports degraded, without leaking credentials, when %s', async (_case, change) => {
     const url = brokenUrl(change);
