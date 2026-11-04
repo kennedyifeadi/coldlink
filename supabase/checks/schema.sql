@@ -344,6 +344,200 @@ $$;
 
 drop function public.default_privileges_probe();
 
+-- Reference data from the seed_reference_data migration (PRD 5.4, 5.15, 13; decision 40).
+do $$
+declare
+  diff text;
+begin
+  select string_agg(coalesce(e.slug, a.slug), ', ') into diff
+  from (
+    values
+      ('vegetables', 'Vegetables'),
+      ('fruits', 'Fruits'),
+      ('tubers', 'Tubers'),
+      ('fish', 'Fish'),
+      ('meat_poultry', 'Meat and poultry'),
+      ('dairy', 'Dairy'),
+      ('other', 'Other')
+  ) as e(slug, name)
+  full join public.crop_categories a on a.slug = e.slug and a.name = e.name
+  where e.slug is null or a.slug is null;
+
+  if diff is not null then
+    raise exception 'crop categories differ from PRD 13: %', diff;
+  end if;
+end;
+$$;
+
+-- The PRD 13 crops, onions (DU-1) and one generic crop per category (DU-2, OQ-5).
+do $$
+declare
+  diff text;
+begin
+  select string_agg(coalesce(e.slug || '/' || e.name, a.slug || '/' || a.name), ', ') into diff
+  from (
+    values
+      ('vegetables', 'Tomatoes'),
+      ('vegetables', 'Peppers'),
+      ('vegetables', 'Leafy vegetables'),
+      ('vegetables', 'Okra'),
+      ('vegetables', 'Onions'),
+      ('vegetables', 'Cabbage'),
+      ('vegetables', 'Carrots'),
+      ('vegetables', 'Other vegetables'),
+      ('fruits', 'Oranges'),
+      ('fruits', 'Pineapples'),
+      ('fruits', 'Watermelon'),
+      ('fruits', 'Plantains'),
+      ('fruits', 'Other fruits'),
+      ('tubers', 'Yam'),
+      ('tubers', 'Cassava'),
+      ('tubers', 'Other tubers'),
+      ('fish', 'Fresh fish'),
+      ('fish', 'Other fish'),
+      ('meat_poultry', 'Chicken'),
+      ('meat_poultry', 'Other meat and poultry'),
+      ('dairy', 'Other dairy'),
+      ('other', 'Other produce')
+  ) as e(slug, name)
+  full join (
+    select c.slug, r.name
+    from public.crops r
+    join public.crop_categories c on c.id = r.category_id
+  ) as a on a.slug = e.slug and a.name = e.name
+  where e.slug is null or a.slug is null;
+
+  if diff is not null then
+    raise exception 'crops differ from the reference list: %', diff;
+  end if;
+
+  if (select local_names from public.crops where name = 'Peppers') <> '{tatashe,rodo,shombo}'
+    or (select local_names from public.crops where name = 'Leafy vegetables') <> '{ugu,efo,amaranth}'
+  then
+    raise exception 'pepper or leafy vegetable local names differ from PRD 13';
+  end if;
+
+  if exists (
+    select
+    from public.crops
+    where shelf_life_days_ambient is not null
+      or recommended_temp_min_c is not null
+      or recommended_temp_max_c is not null
+  ) then
+    raise exception 'a crop has a shelf life or temperature with no source for it';
+  end if;
+end;
+$$;
+
+-- Every PRD 5.15 key with exactly its placeholder and JSON type, flagged as unconfirmed where the
+-- owner has not decided it (decision 40). Money is whole kobo.
+do $$
+declare
+  diff text;
+begin
+  select string_agg(coalesce(e.key, a.key), ', ') into diff
+  from (
+    values
+      ('commission_rate', '0.075', 'number', false),
+      ('service_fee_kobo', '0', 'number', true),
+      ('deposit_percent', '0.30', 'number', true),
+      ('provider_response_minutes', '120', 'number', true),
+      ('payment_hold_minutes', '15', 'number', false),
+      ('search_default_radius_km', '25', 'number', false),
+      ('search_max_radius_km', '100', 'number', false),
+      ('delivery_base_fee_kobo', '100000', 'number', true),
+      ('delivery_per_km_kobo', '10000', 'number', true),
+      ('delivery_min_fee_kobo', '100000', 'number', true),
+      ('delivery_partner_share', '0.80', 'number', true),
+      ('road_distance_factor', '1.3', 'number', false),
+      ('require_provider_approval', 'true', 'boolean', true),
+      ('otp_required', 'true', 'boolean', true),
+      ('farmer_free_cancel_hours', '24', 'number', true)
+  ) as e(key, value, json_type, unconfirmed)
+  full join public.app_config a
+    on a.key = e.key
+    and a.value = e.value::jsonb
+    and jsonb_typeof(a.value) = e.json_type
+    and a.description is not null
+    and (a.description like '%Unconfirmed placeholder (PRD 5.15).%') = e.unconfirmed
+  where e.key is null or a.key is null;
+
+  if diff is not null then
+    raise exception 'app_config differs from the PRD 5.15 placeholders: %', diff;
+  end if;
+
+  if exists (
+    select
+    from public.app_config
+    where key like '%\_kobo' and (value #>> '{}')::numeric <> trunc((value #>> '{}')::numeric)
+  ) then
+    raise exception 'a kobo amount in app_config is not a whole number';
+  end if;
+end;
+$$;
+
+-- PRD 6.1: the deposit must exceed the commission, or ColdLink could owe a provider more than it
+-- holds. The default search radius cannot exceed the maximum.
+do $$
+declare
+  config jsonb;
+begin
+  select jsonb_object_agg(key, value) into config from public.app_config;
+
+  if not (config ->> 'deposit_percent')::numeric > (config ->> 'commission_rate')::numeric then
+    raise exception 'deposit_percent (%) must be greater than commission_rate (%)',
+      config -> 'deposit_percent', config -> 'commission_rate';
+  end if;
+
+  if not (config ->> 'search_default_radius_km')::numeric
+    <= (config ->> 'search_max_radius_km')::numeric
+  then
+    raise exception 'search_default_radius_km (%) must not exceed search_max_radius_km (%)',
+      config -> 'search_default_radius_km', config -> 'search_max_radius_km';
+  end if;
+end;
+$$;
+
+-- Running the migration again changes nothing, and keeps values an admin has changed since.
+savepoint reference_rerun;
+
+update public.app_config set value = '0.08' where key = 'commission_rate';
+update public.crop_categories set name = 'Fish and seafood' where slug = 'fish';
+
+create temporary table reference_snapshot as
+select 'crop_categories' as source, to_jsonb(c) as row from public.crop_categories c
+union all
+select 'crops', to_jsonb(r) from public.crops r
+union all
+select 'app_config', to_jsonb(a) from public.app_config a;
+
+\ir ../migrations/20261104110611_seed_reference_data.sql
+
+do $$
+declare
+  changed bigint;
+begin
+  select count(*) into changed
+  from (
+    (
+      select 'crop_categories' as source, to_jsonb(c) as row from public.crop_categories c
+      union all
+      select 'crops', to_jsonb(r) from public.crops r
+      union all
+      select 'app_config', to_jsonb(a) from public.app_config a
+    )
+    except all
+    select source, row from reference_snapshot
+  ) as added_or_changed;
+
+  if changed <> 0 then
+    raise exception 'running the reference data migration again added or changed % rows', changed;
+  end if;
+end;
+$$;
+
+rollback to savepoint reference_rerun;
+
 insert into public.users (phone, coldlink_id, created_at, updated_at)
 values ('+2348012345678', '4820193', '2000-01-01', '2000-01-01');
 
