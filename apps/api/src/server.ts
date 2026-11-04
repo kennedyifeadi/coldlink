@@ -1,5 +1,6 @@
 import { createApp } from './app.js';
 import { ConfigError, loadConfig, type Config } from './config.js';
+import { createDatabase } from './db/client.js';
 import { createLogger } from './logger.js';
 
 const SHUTDOWN_TIMEOUT_MS = 10_000;
@@ -18,6 +19,7 @@ function readConfig(): Config {
 
 const config = readConfig();
 const logger = createLogger(config.logLevel);
+const db = createDatabase(config, logger);
 
 const server = createApp(config, { logger }).listen(config.port, (error) => {
   if (error) {
@@ -34,7 +36,13 @@ function shutdown(signal: NodeJS.Signals): void {
       logger.error({ err: error }, 'Shutdown failed');
       process.exit(1);
     }
-    process.exit(0);
+    db.destroy().then(
+      () => process.exit(0),
+      (err: unknown) => {
+        logger.error({ err }, 'Closing the database pool failed');
+        process.exit(1);
+      },
+    );
   });
   server.closeIdleConnections();
   setTimeout(() => {

@@ -10,6 +10,8 @@ export const testConfig: Config = {
   port: 0,
   logLevel: 'silent',
   corsOrigins: [ALLOWED_ORIGIN],
+  databaseUrl: 'postgresql://coldlink:unused@127.0.0.1:1/coldlink?sslmode=disable',
+  databaseSslRootCert: undefined,
 };
 
 export function captureLogs() {
