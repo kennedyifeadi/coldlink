@@ -21,7 +21,7 @@ const config = readConfig();
 const logger = createLogger(config.logLevel);
 const db = createDatabase(config, logger);
 
-const server = createApp(config, { logger }).listen(config.port, (error) => {
+const server = createApp(config, { db, logger }).listen(config.port, (error) => {
   if (error) {
     logger.fatal({ err: error }, 'API failed to start');
     process.exit(1);
