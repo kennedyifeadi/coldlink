@@ -62,6 +62,28 @@ exception
 end;
 $$;
 
+create function pg_temp.expect_error(statement text, expected_sqlstate text)
+returns void
+language plpgsql
+as $$
+declare
+  actual_sqlstate text;
+begin
+  begin
+    execute statement;
+  exception
+    when others then
+      get stacked diagnostics actual_sqlstate = returned_sqlstate;
+      if actual_sqlstate <> expected_sqlstate then
+        raise exception 'expected error % from (%), got %',
+          expected_sqlstate, statement, actual_sqlstate;
+      end if;
+      return;
+  end;
+  raise exception 'expected error % from: %', expected_sqlstate, statement;
+end;
+$$;
+
 create function pg_temp.expect_denied(role_name text, statement text)
 returns void
 language plpgsql
@@ -255,6 +277,72 @@ begin
   end if;
 end;
 $$;
+
+-- Every function in public, so later functions are held to it too. Trigger functions are left out:
+-- they can only run as triggers, and the Data API does not expose them.
+do $$
+declare
+  offenders text;
+begin
+  select string_agg(r.role_name || ' on ' || p.oid::regprocedure::text, ', ') into offenders
+  from pg_proc p
+  join pg_namespace n on n.oid = p.pronamespace
+  cross join (values ('anon'), ('authenticated')) as r(role_name)
+  where n.nspname = 'public'
+    and p.prorettype <> 'trigger'::regtype
+    and has_function_privilege(r.role_name, p.oid, 'execute');
+
+  if offenders is not null then
+    raise exception 'client roles can execute: %', offenders;
+  end if;
+
+  if not has_function_privilege(
+      'service_role', 'public.provider_available_quantity(uuid, date, date)', 'execute'
+    )
+    or not has_function_privilege(
+      'service_role',
+      'public.providers_within_radius(double precision, double precision, numeric)',
+      'execute'
+    )
+  then
+    raise exception 'service_role cannot execute the availability and radius functions';
+  end if;
+
+  if exists (
+    select
+    from pg_proc p
+    where p.proname in ('provider_available_quantity', 'providers_within_radius')
+      and p.pronamespace = 'public'::regnamespace
+      and (
+        p.provolatile <> 's'
+        or p.prosecdef
+        or p.proconfig is distinct from array['search_path=""']
+      )
+  ) then
+    raise exception 'availability and radius functions must be stable, invoker, empty search_path';
+  end if;
+end;
+$$;
+
+-- A new function created by postgres gets no grant for anon or authenticated by default. PUBLIC
+-- still gets EXECUTE, which each function revokes itself (see the migration).
+create function public.default_privileges_probe() returns integer language sql as 'select 1';
+
+do $$
+begin
+  if exists (
+    select
+    from pg_proc p
+    cross join aclexplode(p.proacl) as acl
+    where p.oid = 'public.default_privileges_probe()'::regprocedure
+      and acl.grantee in ('anon'::regrole::oid, 'authenticated'::regrole::oid)
+  ) then
+    raise exception 'default privileges grant EXECUTE on new functions to anon or authenticated';
+  end if;
+end;
+$$;
+
+drop function public.default_privileges_probe();
 
 insert into public.users (phone, coldlink_id, created_at, updated_at)
 values ('+2348012345678', '4820193', '2000-01-01', '2000-01-01');
@@ -1344,6 +1432,269 @@ update public.listing_reservations set total_kobo = 15000003, deposit_kobo = 300
 
 -- A deposit of the whole total is allowed.
 update public.listing_reservations set deposit_percent = 1, deposit_kobo = total_kobo;
+
+-- Availability (PRD 6.2). Akobo Cold Store holds 20 crates. Its bookings, all in January 2027:
+--   A confirmed         5  [1, 11)
+--   B pending_provider  4  [5, 8)    overlaps A
+--   C in_storage        3  [6, 7)
+--   D confirmed         6  [11, 15)  starts the day A ends
+--   E payment_pending   2  [6, 8)    hold expires in 15 minutes
+--   F payment_pending   7  [6, 7)    hold expired a minute ago
+--   rejected, expired, cancelled, completed and no_show, 8 each over [1, 20)
+-- so the daily occupancy is 5 on the 1st to 4th, 9 on the 5th, 14 on the 6th, 11 on the 7th, 5 on
+-- the 8th to 10th, 6 on the 11th to 14th and 0 from the 15th.
+insert into public.providers (
+  owner_user_id, display_name, facility_type, phone, address_text, location, capacity_total,
+  capacity_unit, price_per_unit_per_day_kobo
+)
+select
+  id,
+  'Akobo Cold Store',
+  'cold_room',
+  '+2348012345678',
+  'Akobo, Ibadan',
+  extensions.st_setsrid(extensions.st_makepoint(3.93, 7.45), 4326)::extensions.geography,
+  20,
+  'crates',
+  100
+from public.users
+where phone = '+2348012345678';
+
+insert into public.bookings (
+  code, farmer_id, provider_id, crop_id, quantity, capacity_unit, start_date, duration_days,
+  end_date, status, unit_price_kobo, storage_subtotal_kobo, commission_rate, commission_kobo,
+  service_fee_kobo, deposit_percent, deposit_kobo, balance_due_kobo, total_charged_online_kobo,
+  payment_expires_at, cancelled_by
+)
+select v.code, u.id, p.id, c.id, v.quantity, 'crates', v.start_date, v.end_date - v.start_date,
+  v.end_date, v.status, 100, s.subtotal, 0.075, round(0.075 * s.subtotal), 0, 0.30,
+  round(0.30 * s.subtotal), s.subtotal - round(0.30 * s.subtotal), round(0.30 * s.subtotal),
+  v.payment_expires_at, v.cancelled_by
+from (
+  values
+    ('CL-AVKA2', 5, '2027-01-01'::date, '2027-01-11'::date, 'confirmed', null::timestamptz,
+      null::text),
+    ('CL-AVKB2', 4, '2027-01-05', '2027-01-08', 'pending_provider', null, null),
+    ('CL-AVKC2', 3, '2027-01-06', '2027-01-07', 'in_storage', null, null),
+    ('CL-AVKD2', 6, '2027-01-11', '2027-01-15', 'confirmed', null, null),
+    ('CL-AVKE2', 2, '2027-01-06', '2027-01-08', 'payment_pending', now() + interval '15 minutes',
+      null),
+    ('CL-AVKF2', 7, '2027-01-06', '2027-01-07', 'payment_pending', now() - interval '1 minute',
+      null),
+    ('CL-AVKG2', 8, '2027-01-01', '2027-01-20', 'rejected', null, null),
+    ('CL-AVKH2', 8, '2027-01-01', '2027-01-20', 'expired', null, null),
+    ('CL-AVKJ2', 8, '2027-01-01', '2027-01-20', 'cancelled', null, 'farmer'),
+    ('CL-AVKK2', 8, '2027-01-01', '2027-01-20', 'completed', null, null),
+    ('CL-AVKL2', 8, '2027-01-01', '2027-01-20', 'no_show', null, null)
+) as v(code, quantity, start_date, end_date, status, payment_expires_at, cancelled_by)
+cross join lateral (select v.quantity * (v.end_date - v.start_date) * 100 as subtotal) as s
+cross join public.users u
+cross join public.providers p
+cross join public.crops c
+where u.phone = '+2348098765432' and p.display_name = 'Akobo Cold Store' and c.name = 'Tomatoes';
+
+-- Nearby providers (PRD 6.8). The origin is at lat 7.30, lng 3.95 in Ibadan, and these three are
+-- due south of it on the same meridian, 0.01°, 0.05° and 0.10° of latitude away: 1.106, 5.530 and
+-- 11.059 km on the WGS84 spheroid. Every other provider here is more than 14 km from the origin.
+insert into public.providers (
+  owner_user_id, display_name, facility_type, phone, address_text, location, capacity_total,
+  capacity_unit, price_per_unit_per_day_kobo
+)
+select
+  u.id,
+  v.display_name,
+  'cold_room',
+  '+2348012345678',
+  v.display_name || ', Ibadan',
+  extensions.st_setsrid(extensions.st_makepoint(3.95, v.lat), 4326)::extensions.geography,
+  10,
+  'crates',
+  100
+from (
+  values ('Challenge Cold Room', 7.29), ('Odo-Ona Cold Room', 7.25), ('Apata Cold Room', 7.20)
+) as v(display_name, lat)
+cross join public.users u
+where u.phone = '+2348012345678';
+
+-- Index use comes first: a plpgsql function caches its plans, so a plan made before
+-- enable_seqscan is turned off could be reused. EXPLAIN cannot see inside a function, so the checks
+-- count the scans of each index this transaction makes during a call. With this few rows the
+-- planner would pick a sequential scan, hence enable_seqscan off.
+set local enable_seqscan = off;
+
+do $$
+declare
+  scans_before bigint;
+begin
+  scans_before := pg_stat_get_xact_numscans('public.bookings_provider_capacity_idx'::regclass);
+  perform public.provider_available_quantity(id, '2027-01-01', '2027-01-20')
+  from public.providers
+  where display_name = 'Akobo Cold Store';
+
+  if pg_stat_get_xact_numscans('public.bookings_provider_capacity_idx'::regclass) = scans_before
+  then
+    raise exception 'provider_available_quantity did not use bookings_provider_capacity_idx';
+  end if;
+
+  scans_before := pg_stat_get_xact_numscans('public.providers_location_idx'::regclass);
+  perform public.providers_within_radius(7.30, 3.95, 12);
+
+  if pg_stat_get_xact_numscans('public.providers_location_idx'::regclass) = scans_before then
+    raise exception 'providers_within_radius did not use providers_location_idx';
+  end if;
+end;
+$$;
+
+set local enable_seqscan = on;
+
+create function pg_temp.expect_available(
+  p_start_date date,
+  p_end_date date,
+  expected numeric,
+  scenario text
+)
+returns void
+language plpgsql
+as $$
+declare
+  actual numeric;
+begin
+  select public.provider_available_quantity(id, p_start_date, p_end_date) into actual
+  from public.providers
+  where display_name = 'Akobo Cold Store';
+
+  if actual is distinct from expected then
+    raise exception '%: expected % available over [%, %), got %',
+      scenario, expected, p_start_date, p_end_date, actual;
+  end if;
+end;
+$$;
+
+select pg_temp.expect_available(
+  '2027-01-01', '2027-01-05', 15, 'bookings that hold no capacity are not counted'
+);
+select pg_temp.expect_available(
+  '2027-01-05', '2027-01-06', 11, 'overlapping bookings add up over a 1-day range'
+);
+select pg_temp.expect_available('2027-01-04', '2027-01-09', 6, 'the peak is in the middle');
+select pg_temp.expect_available(
+  '2027-01-06', '2027-01-07', 6, 'an unexpired hold counts and an expired one does not'
+);
+select pg_temp.expect_available(
+  '2027-01-10', '2027-01-12', 14, 'back-to-back bookings do not stack'
+);
+select pg_temp.expect_available('2027-01-15', '2027-01-20', 20, 'end dates are exclusive');
+select pg_temp.expect_available('2026-12-01', '2027-03-01', 6, 'the whole span');
+
+-- Once E's hold expires, the 6th drops from 14 to 12.
+update public.bookings set payment_expires_at = now() - interval '1 second' where code = 'CL-AVKE2';
+select pg_temp.expect_available('2027-01-06', '2027-01-07', 8, 'a hold stops counting at expiry');
+
+-- Lowering capacity under existing bookings over-books the provider: the peak of 12 on the 6th is
+-- over the new 10, and the result is floored at 0.
+update public.providers set capacity_total = 10 where display_name = 'Akobo Cold Store';
+select pg_temp.expect_available('2027-01-04', '2027-01-09', 0, 'an over-booked provider');
+select pg_temp.expect_available('2027-01-01', '2027-01-05', 5, 'outside the over-booked days');
+
+select pg_temp.expect_error(s.statement, s.sqlstate)
+from (
+  values
+    ($$select public.provider_available_quantity(id, '2027-01-02', '2027-01-02')
+       from public.providers where display_name = 'Akobo Cold Store'$$, '22023'),
+    ($$select public.provider_available_quantity(id, '2027-01-02', '2027-01-01')
+       from public.providers where display_name = 'Akobo Cold Store'$$, '22023'),
+    ($$select public.provider_available_quantity(id, '2027-01-02', null)
+       from public.providers where display_name = 'Akobo Cold Store'$$, '22023'),
+    ($$select public.provider_available_quantity(gen_random_uuid(), '2027-01-01', '2027-01-02')$$,
+      'P0002'),
+    ('select * from public.providers_within_radius(90.1, 3.95, 10)', '22023'),
+    ('select * from public.providers_within_radius(-90.1, 3.95, 10)', '22023'),
+    ('select * from public.providers_within_radius(null, 3.95, 10)', '22023'),
+    ('select * from public.providers_within_radius(7.30, 180.1, 10)', '22023'),
+    ('select * from public.providers_within_radius(7.30, -180.1, 10)', '22023'),
+    ('select * from public.providers_within_radius(7.30, null, 10)', '22023'),
+    ('select * from public.providers_within_radius(7.30, 3.95, 0)', '22023'),
+    ('select * from public.providers_within_radius(7.30, 3.95, -1)', '22023'),
+    ($$select * from public.providers_within_radius(7.30, 3.95, 'NaN')$$, '22023'),
+    ('select * from public.providers_within_radius(7.30, 3.95, null)', '22023')
+) as s(statement, sqlstate);
+
+do $$
+declare
+  found_names text[];
+  found_km double precision[];
+  boundary_km double precision;
+begin
+  select
+    array_agg(p.display_name order by r.distance_km),
+    array_agg(r.distance_km order by r.distance_km)
+  into found_names, found_km
+  from public.providers_within_radius(7.30, 3.95, 12) r
+  join public.providers p on p.id = r.provider_id;
+
+  if found_names is distinct from
+    array['Challenge Cold Room', 'Odo-Ona Cold Room', 'Apata Cold Room']
+  then
+    raise exception 'providers within 12 km, nearest first, are wrong: %', found_names;
+  end if;
+
+  if abs(found_km[1] - 1.106) > 0.005
+    or abs(found_km[2] - 5.530) > 0.005
+    or abs(found_km[3] - 11.059) > 0.005
+  then
+    raise exception 'distances in km are wrong: %', found_km;
+  end if;
+
+  if (select count(*) from public.providers_within_radius(7.30, 3.95, 10)) <> 2 then
+    raise exception 'Apata Cold Room, 11 km away, is within a 10 km radius';
+  end if;
+
+  -- A metre either side of Odo-Ona Cold Room's distance.
+  boundary_km := found_km[2];
+  if (
+      select count(*)
+      from public.providers_within_radius(7.30, 3.95, (boundary_km - 0.001)::numeric)
+    ) <> 1
+    or (
+      select count(*)
+      from public.providers_within_radius(7.30, 3.95, (boundary_km + 0.001)::numeric)
+    ) <> 2
+  then
+    raise exception 'the radius boundary at % km is wrong', boundary_km;
+  end if;
+end;
+$$;
+
+-- Clients cannot call either function. Both run as the caller, so a client allowed to call one
+-- would still be refused by the tables; the message shows it is the function that refuses.
+do $$
+declare
+  role_name text;
+  statement text;
+  message text;
+begin
+  foreach role_name in array array['anon', 'authenticated'] loop
+    foreach statement in array array[
+      $q$select public.provider_available_quantity(gen_random_uuid(), '2027-01-01', '2027-01-02')
+      $q$,
+      'select * from public.providers_within_radius(7.30, 3.95, 10)'
+    ] loop
+      begin
+        execute format('set local role %I', role_name);
+        execute statement;
+        raise exception '% was allowed to run: %', role_name, statement;
+      exception
+        when insufficient_privilege then
+          get stacked diagnostics message = message_text;
+          if message not like 'permission denied for function %' then
+            raise exception '% was refused (%) for another reason: %',
+              role_name, statement, message;
+          end if;
+      end;
+    end loop;
+  end loop;
+end;
+$$;
 
 select pg_temp.expect_denied(r.role_name, s.statement)
 from (values ('anon'), ('authenticated')) as r(role_name)
