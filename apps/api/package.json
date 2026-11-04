@@ -9,7 +9,9 @@
     "start": "node --env-file-if-exists=.env dist/server.js",
     "lint": "oxlint --type-aware",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run"
+    "test": "vitest run",
+    "test:integration": "vitest run --config vitest.integration.config.ts",
+    "db:types": "tsx src/test/generateDbTypes.ts && prettier --write src/db/schema.ts"
   },
   "devDependencies": {
     "@types/cors": "^2.8.19",
