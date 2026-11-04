@@ -27,6 +27,7 @@ export const testConfig: Config = {
   // Unit tests never connect: they get stubDatabase() unless a test builds its own.
   databaseUrl: 'postgresql://coldlink:unused@127.0.0.1:1/coldlink?sslmode=disable',
   databaseSslRootCert: undefined,
+  sms: { provider: 'console' },
 };
 
 export type StubRows = Partial<Record<keyof DB, object[]>>;
