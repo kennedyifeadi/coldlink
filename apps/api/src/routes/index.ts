@@ -12,6 +12,7 @@ import { createSmsProvider } from '../sms/createSmsProvider.js';
 import type { SmsProvider } from '../sms/provider.js';
 import { version } from '../version.js';
 import { authRoutes, defaultAuthIpLimits, type AuthIpLimits } from './auth.js';
+import { meRoutes } from './me.js';
 import { referenceDataRoutes } from './referenceData.js';
 
 export interface RouteDependencies {
@@ -56,5 +57,6 @@ export function apiRoutes({
       ipLimits: authIpLimits,
     }),
   );
+  router.use(meRoutes({ db, tokens }));
   return router;
 }
