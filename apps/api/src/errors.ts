@@ -4,6 +4,7 @@ const statusByCode: Record<ErrorCode, number> = {
   bad_request: 400,
   validation_failed: 400,
   not_found: 404,
+  conflict: 409,
   payload_too_large: 413,
   rate_limited: 429,
   internal: 500,
