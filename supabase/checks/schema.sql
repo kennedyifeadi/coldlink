@@ -121,6 +121,7 @@ begin
     'public.otp_codes',
     'public.app_config',
     'public.otp_codes_phone_unconsumed_idx',
+    'public.otp_codes_phone_created_at_idx',
     'public.refresh_tokens',
     'public.refresh_tokens_token_hash_key',
     'public.refresh_tokens_rotated_from_id_key',
