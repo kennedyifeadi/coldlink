@@ -6,8 +6,11 @@ import {
   type BookingStatus,
 } from '@coldlink/shared';
 import { sql, type Transaction, type UpdateObject } from 'kysely';
+import type { Logger } from 'pino';
+import type { Database } from '../db/client.js';
 import type { DB, JsonObject } from '../db/schema.js';
 import { AppError } from '../errors.js';
+import type { AfterCommitHook, TransitionHooks } from './hooks.js';
 
 /** Who made a change. Only the system acts without an id (PRD 5.6). */
 export type BookingActor =
@@ -89,13 +92,7 @@ function statusFields({ to, actor, reason }: TransitionRequest): UpdateObject<DB
   }
 }
 
-/**
- * Moves a booking to `request.to` inside the caller's transaction: locks the booking row, refuses
- * a move or actor the state machine does not allow, updates the status and the fields it owns, and
- * writes the `booking_events` row. Throws `BookingNotFoundError` or `BookingTransitionError` and
- * changes nothing when it refuses.
- */
-export async function transitionBooking(
+async function writeTransition(
   trx: Transaction<DB>,
   request: TransitionRequest,
 ): Promise<BookingTransition> {
@@ -132,4 +129,68 @@ export async function transitionBooking(
     .returning('id')
     .executeTakeFirstOrThrow();
   return { bookingId, from, to, actor, eventId, metadata };
+}
+
+export interface TransitionResult {
+  transition: BookingTransition;
+  /** Run with `runAfterCommitHooks` once the transaction has committed. */
+  afterCommit: readonly AfterCommitHook[];
+}
+
+/**
+ * Moves a booking to `request.to` inside the caller's transaction: locks the booking row, refuses
+ * a move or actor the state machine does not allow, updates the status and the fields it owns,
+ * writes the `booking_events` row and runs the in-transaction hooks. Throws `BookingNotFoundError`
+ * or `BookingTransitionError` when it refuses; any error must roll the caller's transaction back.
+ * Prefer `runBookingTransition` unless the change must share a transaction with other writes.
+ */
+export async function transitionBooking(
+  trx: Transaction<DB>,
+  hooks: TransitionHooks,
+  request: TransitionRequest,
+): Promise<TransitionResult> {
+  const transition = await writeTransition(trx, request);
+  for (const hook of hooks.inTransactionFor(transition)) {
+    await hook.run(trx, transition);
+  }
+  return { transition, afterCommit: hooks.afterCommitFor(transition) };
+}
+
+/** Runs each after-commit hook in turn. A failure is logged and never thrown. */
+export async function runAfterCommitHooks(
+  logger: Logger,
+  { transition, afterCommit }: TransitionResult,
+): Promise<void> {
+  for (const hook of afterCommit) {
+    try {
+      await hook.run(transition);
+    } catch (err) {
+      logger.error(
+        {
+          err,
+          hook: hook.name,
+          bookingId: transition.bookingId,
+          from: transition.from,
+          to: transition.to,
+        },
+        'Booking after-commit hook failed',
+      );
+    }
+  }
+}
+
+export interface TransitionDeps {
+  db: Database;
+  hooks: TransitionHooks;
+  logger: Logger;
+}
+
+/** Makes a transition in its own transaction, then runs its after-commit hooks. */
+export async function runBookingTransition(
+  { db, hooks, logger }: TransitionDeps,
+  request: TransitionRequest,
+): Promise<BookingTransition> {
+  const result = await db.transaction().execute((trx) => transitionBooking(trx, hooks, request));
+  await runAfterCommitHooks(logger, result);
+  return result.transition;
 }
