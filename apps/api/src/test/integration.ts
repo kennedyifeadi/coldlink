@@ -14,7 +14,7 @@ export const noTestDatabase = integrationDatabaseUrl === undefined;
  * Gives each test its own transaction on the test database, rolled back afterwards, so tests
  * see none of each other's rows and leave none behind. Call inside an integration suite.
  */
-export function useTestTransaction(): () => Database {
+export function useTestTransaction(): () => ControlledTransaction<DB> {
   let pool: Database | undefined;
   let transaction: ControlledTransaction<DB> | undefined;
 
