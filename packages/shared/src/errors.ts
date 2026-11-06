@@ -6,6 +6,7 @@ export const errorCodes = [
   'bad_request',
   'validation_failed',
   'not_found',
+  'conflict',
   'payload_too_large',
   'rate_limited',
   'internal',
