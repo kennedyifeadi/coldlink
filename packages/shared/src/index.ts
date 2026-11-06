@@ -1,4 +1,5 @@
 export * from './appConfig.js';
+export * from './auth.js';
 export * from './bookingStateMachine.js';
 export * from './enums.js';
 export * from './errors.js';
