@@ -121,6 +121,12 @@ begin
     'public.otp_codes',
     'public.app_config',
     'public.otp_codes_phone_unconsumed_idx',
+    'public.otp_codes_phone_created_at_idx',
+    'public.refresh_tokens',
+    'public.refresh_tokens_token_hash_key',
+    'public.refresh_tokens_rotated_from_id_key',
+    'public.refresh_tokens_family_id_idx',
+    'public.refresh_tokens_user_id_idx',
     'public.crop_categories',
     'public.crops',
     'public.crops_category_id_name_key',
@@ -544,6 +550,17 @@ values ('+2348012345678', '4820193', '2000-01-01', '2000-01-01');
 insert into public.otp_codes (phone, code_hash, expires_at, created_at, updated_at)
 values ('+2348012345678', 'hash', now() + interval '10 minutes', '2000-01-01', '2000-01-01');
 
+insert into public.refresh_tokens (user_id, family_id, token_hash, expires_at, created_at, updated_at)
+select
+  id,
+  '0b5e7f0a-5a43-4c55-9d3c-6f1f3d1a0001',
+  repeat('a', 64),
+  now() + interval '30 days',
+  '2000-01-01',
+  '2000-01-01'
+from public.users
+where phone = '+2348012345678';
+
 -- Probe rows apart from the reference data, so the defaults and updated_at checks below see rows
 -- created at a known time.
 insert into public.app_config (key, value, created_at, updated_at)
@@ -597,6 +614,7 @@ do $$
 declare
   u public.users;
   o public.otp_codes;
+  r public.refresh_tokens;
 begin
   select * into u from public.users where phone = '+2348012345678';
   if u.id is null or u.roles <> '{farmer}' or u.preferred_channel <> 'web' or not u.is_active then
@@ -606,6 +624,11 @@ begin
   select * into o from public.otp_codes where phone = '+2348012345678';
   if o.id is null or o.attempts <> 0 or o.consumed_at is not null then
     raise exception 'otp_codes defaults are wrong: %', row_to_json(o);
+  end if;
+
+  select * into r from public.refresh_tokens where token_hash = repeat('a', 64);
+  if r.id is null or r.rotated_from_id is not null or r.revoked_at is not null then
+    raise exception 'refresh_tokens defaults are wrong: %', row_to_json(r);
   end if;
 end;
 $$;
@@ -646,6 +669,7 @@ $$;
 
 update public.users set full_name = 'Adebayo Ogunleye' where phone = '+2348012345678';
 update public.otp_codes set attempts = 1 where phone = '+2348012345678';
+update public.refresh_tokens set revoked_at = now() where token_hash = repeat('a', 64);
 update public.app_config set value = 'false' where key = 'schema_check_probe';
 update public.crop_categories set name = 'Schema check renamed' where slug = 'schema_check';
 update public.crops set local_names = '{probe}' where name = 'Schema check crop';
@@ -662,6 +686,9 @@ begin
     select 'users' as name, created_at, updated_at from public.users where phone = '+2348012345678'
     union all
     select 'otp_codes', created_at, updated_at from public.otp_codes where phone = '+2348012345678'
+    union all
+    select 'refresh_tokens', created_at, updated_at from public.refresh_tokens
+    where token_hash = repeat('a', 64)
     union all
     select 'app_config', created_at, updated_at from public.app_config
     where key = 'schema_check_probe'
@@ -745,6 +772,57 @@ select pg_temp.expect_check_violation(
   $$update public.otp_codes set attempts = -1 where phone = '+2348012345678'$$,
   'otp_codes_attempts_range'
 );
+-- Refresh tokens store only a hex SHA-256, expire after they are created, rotate at most once and
+-- go with their user.
+select pg_temp.expect_check_violation(
+  $$insert into public.refresh_tokens (user_id, family_id, token_hash, expires_at)
+    select id, gen_random_uuid(), 'plain-token', now() + interval '1 day' from public.users
+    where phone = '+2348012345678'$$,
+  'refresh_tokens_token_hash_format'
+);
+select pg_temp.expect_check_violation(
+  $$insert into public.refresh_tokens (user_id, family_id, token_hash, expires_at)
+    select id, gen_random_uuid(), repeat('b', 64), now() - interval '1 second' from public.users
+    where phone = '+2348012345678'$$,
+  'refresh_tokens_expires_after_created'
+);
+select pg_temp.expect_unique_violation(
+  $$insert into public.refresh_tokens (user_id, family_id, token_hash, expires_at)
+    select id, gen_random_uuid(), repeat('a', 64), now() + interval '1 day' from public.users
+    where phone = '+2348012345678'$$,
+  'refresh_tokens_token_hash_key'
+);
+
+insert into public.refresh_tokens (user_id, family_id, rotated_from_id, token_hash, expires_at)
+select u.id, r.family_id, r.id, repeat('c', 64), now() + interval '30 days'
+from public.users u
+cross join public.refresh_tokens r
+where u.phone = '+2348012345678' and r.token_hash = repeat('a', 64);
+
+select pg_temp.expect_unique_violation(
+  $$insert into public.refresh_tokens (user_id, family_id, rotated_from_id, token_hash, expires_at)
+    select u.id, r.family_id, r.id, repeat('d', 64), now() + interval '30 days'
+    from public.users u
+    cross join public.refresh_tokens r
+    where u.phone = '+2348012345678' and r.token_hash = repeat('a', 64)$$,
+  'refresh_tokens_rotated_from_id_key'
+);
+
+insert into public.users (phone, coldlink_id) values ('+2348000000099', '7000099');
+insert into public.refresh_tokens (user_id, family_id, token_hash, expires_at)
+select id, gen_random_uuid(), repeat('e', 64), now() + interval '30 days'
+from public.users
+where phone = '+2348000000099';
+delete from public.users where phone = '+2348000000099';
+
+do $$
+begin
+  if exists (select from public.refresh_tokens where token_hash = repeat('e', 64)) then
+    raise exception 'deleting a user left its refresh tokens behind';
+  end if;
+end;
+$$;
+
 select pg_temp.expect_check_violation(
   $$insert into public.app_config (key, value) values ('Commission Rate', '0.075')$$,
   'app_config_key_format'
@@ -1932,7 +2010,8 @@ cross join (
 
 -- Privileges alone already deny clients. Grant them back to show RLS, with no policies, still hides
 -- every row and blocks writes.
-grant select, insert on public.users, public.otp_codes, public.app_config to anon;
+grant select, insert on public.users, public.otp_codes, public.app_config, public.refresh_tokens
+  to anon;
 
 do $$
 declare
@@ -1943,6 +2022,7 @@ begin
   select (select count(*) from public.users)
     + (select count(*) from public.otp_codes)
     + (select count(*) from public.app_config)
+    + (select count(*) from public.refresh_tokens)
   into visible;
 
   if visible <> 0 then
