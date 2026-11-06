@@ -10,8 +10,23 @@ The API contract, written as an OpenAPI 3.1 document in the YAML block below. Ea
 - **Lists:** a list response is `{ data: [...] }`, so a cursor can sit next to `data` later without changing the shape.
 - **Pagination:** paginated lists take `limit` and `cursor` (PRD 8). The reference lists (`/crops`, `/crop-categories`) are not paginated: they are small, admin-managed reference data (22 crops, 7 categories) that a client loads whole.
 - **Caching:** the public reference endpoints send `Cache-Control: public` with a short `max-age` (5 minutes for crops and categories, 60 seconds for config). Other responses, and every error, send none.
-- **Rate limits:** limited routes send `RateLimit` and `RateLimit-Policy` headers, and `Retry-After` with a 429. The reference endpoints are not limited yet: they are cheap, cacheable reads.
-- **Response schemas:** the Zod schemas for response bodies live in `packages/shared` (`cropCategoriesResponseSchema`, `cropsResponseSchema`, `publicConfigSchema`), for the web app to parse responses with.
+- **Rate limits:** limited routes send `RateLimit` and `RateLimit-Policy` headers, and `Retry-After` with a 429. The reference endpoints are not limited yet: they are cheap, cacheable reads. The auth routes are limited per IP (decision 54); `POST /auth/otp/request` is also limited per phone number, and its 429 adds `details.retry_after_seconds`.
+- **Response schemas:** the Zod schemas for request and response bodies live in `packages/shared` (`cropCategoriesResponseSchema`, `cropsResponseSchema`, `publicConfigSchema`, `otpRequestBodySchema`, `otpRequestResponseSchema`, `otpVerifyBodySchema`, `sessionResponseSchema`, `userProfileSchema`, `updateProfileBodySchema`), for the web app to validate forms and parse responses with.
+- **Phone numbers:** send them as people type them: `08031234567`, `8031234567`, `2348031234567` or `+2348031234567`, with or without spaces or hyphens. The API stores `+234` and ten digits, and accepts only mobile numbers (70x, 80x, 81x, 90x, 91x). `normalisePhone` and `phoneSchema` in `packages/shared` do the same in the browser. Responses never contain a full phone number; a profile has `phone_masked` (`+234803***4567`).
+
+## Authentication
+
+Sign-in is by phone and a 6-digit code sent by SMS (PRD 7.1; decisions 52 to 59).
+
+1. `POST /auth/otp/request` with the phone number. The answer is the same whether or not the number has an account. The code expires in 10 minutes; a new request makes the previous code unusable.
+2. `POST /auth/otp/verify` with the phone number and the code. The first verification of a number creates the account and needs `consent: true` (the privacy notice; PRD 10). The response holds an access token and the user's profile, and sets the refresh cookie.
+3. Send the access token as `Authorization: Bearer <token>`. It lasts 15 minutes. Keep it in memory, never in `localStorage`.
+4. When it expires (a 401 `unauthorized`), `POST /auth/refresh` with the cookie for a new access token. Each refresh replaces the refresh token; send one refresh at a time, because presenting a replaced token signs out every copy of the session.
+5. `POST /auth/logout` ends the session and clears the cookie.
+
+**Refresh cookie:** `coldlink_refresh`, `HttpOnly`, `Secure`, `Path=/api/v1/auth`, `Max-Age` 30 days (renewed on each refresh), and `SameSite` from `AUTH_COOKIE_SAME_SITE` (`Strict` by default). The browser sends it only to the auth routes. Cross-origin calls need `credentials: 'include'`; the API allows credentials for the origins in `CORS_ORIGINS` and refuses refresh and logout from any other origin.
+
+**Development only:** with `NODE_ENV=development` and `SMS_PROVIDER=console`, `POST /auth/otp/request` also returns the code as `dev_code`, since the console provider sends no SMS. It is never returned in any other setup (decision 55).
 
 | Code | Status | When |
 |---|---|---|
@@ -19,7 +34,12 @@ The API contract, written as an OpenAPI 3.1 document in the YAML block below. Ea
 | `validation_failed` | 400 | Params, query or body fail validation. `details` lists every issue as `{ location, path, message }`. |
 | `not_found` | 404 | No such route, or no such resource. |
 | `payload_too_large` | 413 | The JSON body is over 100 kB. |
-| `rate_limited` | 429 | Too many requests from this client; retry after `Retry-After` seconds. |
+| `rate_limited` | 429 | Too many requests from this client, or too many codes for this phone number; retry after `Retry-After` seconds. |
+| `unauthorized` | 401 | No access token, or it is invalid or expired, or its user is gone or inactive; or the refresh cookie is missing, expired, revoked or reused. Sign in or refresh. Access-token routes add `WWW-Authenticate: Bearer`. |
+| `forbidden` | 403 | Signed in, but without a role the route needs; or a refresh or logout from an origin outside `CORS_ORIGINS`. |
+| `otp_invalid` | 400 | The code is wrong, expired, used, out of attempts, or there is none. Always the same message, so the cases cannot be told apart. |
+| `consent_required` | 400 | The code was right, but creating the account (or using an account with no consent on record) needs `consent: true`. Send it again with consent and the same code. |
+| `account_disabled` | 403 | The code was right, but the account has been deactivated. Refresh returns it too. |
 | `internal` | 500 | An unexpected error. The message is always generic; details are only in the server log, under the request ID. |
 
 ## OpenAPI
@@ -195,8 +215,278 @@ paths:
                 farmer_free_cancel_hours: 24
         '500':
           $ref: '#/components/responses/Internal'
+  /auth/otp/request:
+    post:
+      operationId: requestOtp
+      summary: Send a sign-in code
+      description: >-
+        Sends a 6-digit code by SMS to the number, valid for 10 minutes, and makes any earlier code
+        for it unusable. The response is the same whether or not the number has an account. The SMS
+        is sent after the response, so a 200 means the code was issued, not that the SMS arrived.
+        Limited per IP (30 per 15 minutes) and per number (one every 60 seconds, 5 an hour, 10 a
+        day).
+      tags: [Auth]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OtpRequest'
+            example: { phone: 0803 123 4567 }
+      responses:
+        '200':
+          description: The code was issued.
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/NoStore'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OtpRequestResponse'
+              example: { expires_in_seconds: 600, resend_after_seconds: 60 }
+        '400':
+          description: '`phone` is not a Nigerian mobile number.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error:
+                  code: validation_failed
+                  message: Some fields are missing or invalid
+                  details:
+                    - location: body
+                      path: phone
+                      message: Enter a Nigerian mobile number, like 0803 123 4567
+        '429':
+          description: Too many requests from this IP, or too many codes for this number.
+          headers:
+            Retry-After:
+              schema:
+                type: integer
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error:
+                  code: rate_limited
+                  message: Too many codes for this number. Wait a little, then try again.
+                  details: { retry_after_seconds: 42 }
+        '500':
+          $ref: '#/components/responses/Internal'
+  /auth/otp/verify:
+    post:
+      operationId: verifyOtp
+      summary: Sign in with a code
+      description: >-
+        Checks the code against the latest live code for the number. A wrong code counts against
+        it; after 5 it is dead. On success the code is used up, the account is created if this is
+        the number's first sign-in (with a random 7-digit ColdLink ID and the farmer role), the
+        login is recorded, and the refresh cookie is set. While app_config otp_required is off, a
+        number with no account may leave out `code` (decision 56); an existing account always needs
+        it. Limited per IP (60 per 15 minutes).
+      tags: [Auth]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OtpVerify'
+            example: { phone: '08031234567', code: '482913', consent: true }
+      responses:
+        '200':
+          description: Signed in.
+          headers:
+            Set-Cookie:
+              $ref: '#/components/headers/RefreshCookie'
+            Cache-Control:
+              $ref: '#/components/headers/NoStore'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Session'
+        '400':
+          description: >-
+            `otp_invalid` for a wrong, expired, used, exhausted or missing code (one message for
+            all), `consent_required` when the account would be created without consent, or
+            `validation_failed`.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                otpInvalid:
+                  value:
+                    error:
+                      code: otp_invalid
+                      message: That code is wrong or has expired. Check the SMS or ask for a new code.
+                consentRequired:
+                  value:
+                    error:
+                      code: consent_required
+                      message: To create your account, agree to the ColdLink privacy notice.
+        '403':
+          description: The account is deactivated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error:
+                  code: account_disabled
+                  message: This account is turned off. Contact ColdLink support.
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/Internal'
+  /auth/refresh:
+    post:
+      operationId: refreshSession
+      summary: Get a new access token
+      description: >-
+        Swaps the refresh cookie for a new one (another 30 days) and returns a new access token.
+        A refresh token that was already swapped is a copy: the whole session is revoked and every
+        holder must sign in again. Refused from an origin outside CORS_ORIGINS. Limited per IP (120
+        per 15 minutes, shared with logout).
+      tags: [Auth]
+      security:
+        - refreshCookie: []
+      responses:
+        '200':
+          description: A new session; `is_new_user` is always false.
+          headers:
+            Set-Cookie:
+              $ref: '#/components/headers/RefreshCookie'
+            Cache-Control:
+              $ref: '#/components/headers/NoStore'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Session'
+        '401':
+          description: No cookie, or an unknown, expired, revoked or reused token. The cookie is cleared.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error:
+                  code: unauthorized
+                  message: Your session has ended. Sign in again.
+        '403':
+          description: '`account_disabled`, or `forbidden` for an origin outside CORS_ORIGINS.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/Internal'
+  /auth/logout:
+    post:
+      operationId: logout
+      summary: Sign out
+      description: >-
+        Revokes the session the refresh cookie belongs to, on every copy, and clears the cookie.
+        Succeeds with no cookie too. Refused from an origin outside CORS_ORIGINS.
+      tags: [Auth]
+      security:
+        - refreshCookie: []
+      responses:
+        '204':
+          description: Signed out; the cookie is cleared.
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/Internal'
+  /me:
+    get:
+      operationId: getMe
+      summary: The signed-in user's profile
+      tags: [Profile]
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: The profile.
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/NoStore'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserProfile'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/Internal'
+    patch:
+      operationId: updateMe
+      summary: Update the signed-in user's profile
+      description: >-
+        Changes any of the listed fields; send null to clear one. home_lat and home_lng go
+        together. Any other field, such as phone or roles, is a 400.
+      tags: [Profile]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProfileUpdate'
+            example:
+              full_name: Adebayo Ogunleye
+              preferred_channel: whatsapp
+              home_lga: Ibadan North
+              home_lat: 7.4352
+              home_lng: 3.9133
+      responses:
+        '200':
+          description: The updated profile.
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/NoStore'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserProfile'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/Internal'
 components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: >-
+        The access token from /auth/otp/verify or /auth/refresh: HS256, 15 minutes, with claims
+        sub (user id), roles and cid (ColdLink ID). Roles and the active flag are checked against
+        the database on every request, not taken from the token.
+    refreshCookie:
+      type: apiKey
+      in: cookie
+      name: coldlink_refresh
+      description: HttpOnly, Secure, Path=/api/v1/auth, 30 days, SameSite per AUTH_COOKIE_SAME_SITE.
   headers:
+    NoStore:
+      description: Always `no-store`.
+      schema:
+        type: string
+    RefreshCookie:
+      description: >-
+        `coldlink_refresh=<token>; Max-Age=2592000; Path=/api/v1/auth; HttpOnly; Secure;
+        SameSite=Strict`
+      schema:
+        type: string
     ReferenceCacheControl:
       description: Always `public, max-age=300`.
       schema:
@@ -299,9 +589,153 @@ components:
           type: integer
           minimum: 0
           description: Hours before the start date until which a cancelling farmer gets the deposit back.
+    OtpRequest:
+      type: object
+      required: [phone]
+      additionalProperties: false
+      properties:
+        phone:
+          type: string
+          description: A Nigerian mobile number as typed; see Phone numbers above.
+          examples: ['0803 123 4567', '+2348031234567']
+    OtpRequestResponse:
+      type: object
+      required: [expires_in_seconds, resend_after_seconds]
+      additionalProperties: false
+      properties:
+        expires_in_seconds:
+          type: integer
+          examples: [600]
+        resend_after_seconds:
+          type: integer
+          description: How long to wait before offering to resend.
+          examples: [60]
+        dev_code:
+          type: string
+          pattern: '^[0-9]{6}$'
+          description: Development with the console SMS provider only (decision 55).
+    OtpVerify:
+      type: object
+      required: [phone]
+      additionalProperties: false
+      properties:
+        phone:
+          type: string
+        code:
+          type: string
+          pattern: '^[0-9]{6}$'
+          description: Required unless app_config otp_required is off and the number has no account.
+        consent:
+          type: boolean
+          description: Data-protection consent; must be true to create an account.
+    Session:
+      type: object
+      required: [access_token, token_type, expires_in, is_new_user, user]
+      additionalProperties: false
+      properties:
+        access_token:
+          type: string
+        token_type:
+          type: string
+          enum: [Bearer]
+        expires_in:
+          type: integer
+          description: Seconds until the access token expires.
+          examples: [900]
+        is_new_user:
+          type: boolean
+          description: True only on the sign-in that created the account, to show the new ColdLink ID.
+        user:
+          $ref: '#/components/schemas/UserProfile'
+    UserProfile:
+      type: object
+      required:
+        - id
+        - coldlink_id
+        - phone_masked
+        - full_name
+        - roles
+        - preferred_channel
+        - home_lga
+        - home_lat
+        - home_lng
+        - consented_at
+        - created_at
+      additionalProperties: false
+      properties:
+        id:
+          type: string
+          format: uuid
+        coldlink_id:
+          type: string
+          pattern: '^[0-9]{7}$'
+          examples: ['4820193']
+        phone_masked:
+          type: string
+          examples: ['+234803***4567']
+        full_name:
+          type: [string, 'null']
+        roles:
+          type: array
+          minItems: 1
+          items:
+            type: string
+            enum: [farmer, provider, delivery_partner, admin]
+        preferred_channel:
+          type: string
+          enum: [web, whatsapp, sms]
+        home_lga:
+          type: [string, 'null']
+        home_lat:
+          type: [number, 'null']
+        home_lng:
+          type: [number, 'null']
+        consented_at:
+          type: [string, 'null']
+          format: date-time
+        created_at:
+          type: string
+          format: date-time
+    ProfileUpdate:
+      type: object
+      minProperties: 1
+      additionalProperties: false
+      properties:
+        full_name:
+          type: [string, 'null']
+          minLength: 1
+          maxLength: 100
+          description: Trimmed.
+        preferred_channel:
+          type: string
+          enum: [web, whatsapp, sms]
+        home_lga:
+          type: [string, 'null']
+          minLength: 1
+          maxLength: 60
+        home_lat:
+          type: [number, 'null']
+          minimum: -90
+          maximum: 90
+          description: Send with home_lng; both null clears the saved location.
+        home_lng:
+          type: [number, 'null']
+          minimum: -180
+          maximum: 180
     ErrorCode:
       type: string
-      enum: [bad_request, validation_failed, not_found, payload_too_large, rate_limited, internal]
+      enum:
+        - bad_request
+        - validation_failed
+        - not_found
+        - payload_too_large
+        - rate_limited
+        - internal
+        - unauthorized
+        - forbidden
+        - otp_invalid
+        - consent_required
+        - account_disabled
     ValidationIssue:
       type: object
       required: [location, path, message]
@@ -358,6 +792,31 @@ components:
         application/json:
           schema:
             $ref: '#/components/schemas/Error'
+    Unauthorized:
+      description: No valid access token.
+      headers:
+        WWW-Authenticate:
+          schema:
+            type: string
+            enum: [Bearer]
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error:
+              code: unauthorized
+              message: Sign in to continue.
+    Forbidden:
+      description: A role the route needs is missing, or the origin is outside CORS_ORIGINS.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error:
+              code: forbidden
+              message: You don't have access to this.
     Internal:
       description: An unexpected error. The message is generic.
       content:
