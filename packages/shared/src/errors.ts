@@ -1,6 +1,6 @@
 import * as z from 'zod';
 
-// Every API error response has this shape (PRD 8). Auth issues add their own codes.
+// Every API error response has this shape (PRD 8).
 
 export const errorCodes = [
   'bad_request',
@@ -10,6 +10,11 @@ export const errorCodes = [
   'payload_too_large',
   'rate_limited',
   'internal',
+  'unauthorized',
+  'forbidden',
+  'otp_invalid',
+  'consent_required',
+  'account_disabled',
 ] as const;
 export type ErrorCode = (typeof errorCodes)[number];
 export const errorCodeSchema = z.enum(errorCodes);

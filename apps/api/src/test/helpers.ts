@@ -28,6 +28,13 @@ export const testConfig: Config = {
   databaseUrl: 'postgresql://coldlink:unused@127.0.0.1:1/coldlink?sslmode=disable',
   databaseSslRootCert: undefined,
   sms: { provider: 'console' },
+  auth: {
+    jwtSecret: 'test-jwt-secret-0123456789abcdefghijklmnop',
+    otpPepper: 'test-otp-pepper-0123456789abcdefghijklmnop',
+    cookieSameSite: 'strict',
+    devOtp: false,
+  },
+  trustProxyHops: 0,
 };
 
 export type StubRows = Partial<Record<keyof DB, object[]>>;
