@@ -17,7 +17,8 @@
     "typescript/restrict-template-expressions": "error",
     "typescript/unbound-method": "error",
     "typescript/only-throw-error": "error",
-    "typescript/no-unnecessary-type-assertion": "error"
+    "typescript/no-unnecessary-type-assertion": "error",
+    "vitest/expect-expect": ["error", { "assertFunctionNames": ["expect", "expect*"] }]
   },
   "ignorePatterns": ["dist"]
 }
