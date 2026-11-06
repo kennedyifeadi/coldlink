@@ -18,6 +18,7 @@ The API contract, written as an OpenAPI 3.1 document in the YAML block below. Ea
 | `bad_request` | 400 | The body is not valid JSON or cannot be read. |
 | `validation_failed` | 400 | Params, query or body fail validation. `details` lists every issue as `{ location, path, message }`. |
 | `not_found` | 404 | No such route, or no such resource. |
+| `conflict` | 409 | The request clashes with the resource's current state, such as a booking status change the state machine does not allow from its current status or for this actor. `details` names the booking, `from`, `to` and `actor_type`. |
 | `payload_too_large` | 413 | The JSON body is over 100 kB. |
 | `rate_limited` | 429 | Too many requests from this client; retry after `Retry-After` seconds. |
 | `internal` | 500 | An unexpected error. The message is always generic; details are only in the server log, under the request ID. |
@@ -301,7 +302,7 @@ components:
           description: Hours before the start date until which a cancelling farmer gets the deposit back.
     ErrorCode:
       type: string
-      enum: [bad_request, validation_failed, not_found, payload_too_large, rate_limited, internal]
+      enum: [bad_request, validation_failed, not_found, conflict, payload_too_large, rate_limited, internal]
     ValidationIssue:
       type: object
       required: [location, path, message]
