@@ -6,6 +6,10 @@ export const userRoles = ['farmer', 'provider', 'delivery_partner', 'admin'] as 
 export type UserRole = (typeof userRoles)[number];
 export const userRoleSchema = z.enum(userRoles);
 
+export const preferredChannels = ['web', 'whatsapp', 'sms'] as const;
+export type PreferredChannel = (typeof preferredChannels)[number];
+export const preferredChannelSchema = z.enum(preferredChannels);
+
 export const bookingStatuses = [
   'payment_pending',
   'pending_provider',

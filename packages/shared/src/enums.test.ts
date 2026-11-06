@@ -11,12 +11,19 @@ import {
   notificationStatusSchema,
   paymentPurposeSchema,
   payoutStatusSchema,
+  preferredChannelSchema,
   searchChannelSchema,
   vehicleTypeSchema,
 } from './enums.js';
 
 // Database check constraints repeat these values, so a change here needs a migration too.
 describe.each([
+  {
+    name: 'preferred channel',
+    schema: preferredChannelSchema,
+    values: ['web', 'whatsapp', 'sms'],
+    rejected: ['email'],
+  },
   {
     name: 'payment purpose',
     schema: paymentPurposeSchema,
