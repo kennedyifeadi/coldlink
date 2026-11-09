@@ -4,7 +4,7 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
+    "dev": "pnpm --filter @coldlink/shared build && vite",
     "build": "vite build",
     "lint": "oxlint && eslint . && node scripts/check-hex-colours.js",
     "typecheck": "tsc --noEmit",
@@ -12,16 +12,19 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@coldlink/shared": "workspace:*",
     "@fontsource-variable/fraunces": "^5.3.0",
     "@fontsource-variable/nunito": "^5.3.0",
     "@tailwindcss/vite": "^4.3.3",
+    "@tanstack/react-query": "^5.107.1",
     "i18next": "^26.5.4",
     "lucide-react": "^1.31.0",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
     "react-i18next": "^17.1.0",
     "react-router-dom": "^7.18.2",
-    "tailwindcss": "^4.3.3"
+    "tailwindcss": "^4.3.3",
+    "zod": "^4.6.7"
   },
   "devDependencies": {
     "@testing-library/dom": "^10.4.2",
