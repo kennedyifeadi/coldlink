@@ -9,9 +9,9 @@ The API contract, written as an OpenAPI 3.1 document in the YAML block below. Ea
 - **Correlation ID:** send `X-Request-Id` to tag a request (1 to 128 characters from `A-Z a-z 0-9 . _ : -`). Anything else, or no header, gets a generated UUID. The response always echoes the ID in `X-Request-Id`, and every log line for the request carries it, so quote it when reporting a problem.
 - **Lists:** a list response is `{ data: [...] }`, so a cursor can sit next to `data` later without changing the shape.
 - **Pagination:** paginated lists take `limit` and `cursor` (PRD 8). The reference lists (`/crops`, `/crop-categories`) are not paginated: they are small, admin-managed reference data (22 crops, 7 categories) that a client loads whole.
-- **Caching:** the public reference endpoints send `Cache-Control: public` with a short `max-age` (5 minutes for crops and categories, 60 seconds for config). Other responses, and every error, send none.
+- **Caching:** the public reference endpoints send `Cache-Control: public` with a short `max-age` (5 minutes for crops and categories, 60 seconds for config). Responses for the signed-in user (`/me`, the owner's provider views) send `no-store`. Other responses, and every error, send none.
 - **Rate limits:** limited routes send `RateLimit` and `RateLimit-Policy` headers, and `Retry-After` with a 429. The reference endpoints are not limited yet: they are cheap, cacheable reads. The auth routes are limited per IP (decision 56); `POST /auth/otp/request` is also limited per phone number, and its 429 adds `details.retry_after_seconds`.
-- **Response schemas:** the Zod schemas for request and response bodies live in `packages/shared` (`cropCategoriesResponseSchema`, `cropsResponseSchema`, `publicConfigSchema`, `otpRequestBodySchema`, `otpRequestResponseSchema`, `otpVerifyBodySchema`, `sessionResponseSchema`, `userProfileSchema`, `updateProfileBodySchema`), for the web app to validate forms and parse responses with.
+- **Response schemas:** the Zod schemas for request and response bodies live in `packages/shared` (`cropCategoriesResponseSchema`, `cropsResponseSchema`, `publicConfigSchema`, `otpRequestBodySchema`, `otpRequestResponseSchema`, `otpVerifyBodySchema`, `sessionResponseSchema`, `userProfileSchema`, `updateProfileBodySchema`, `createProviderBodySchema`, `updateProviderBodySchema`, `publicProviderSchema`, `ownProviderSchema`, `ownProvidersResponseSchema`), for the web app to validate forms and parse responses with.
 - **Phone numbers:** send them as people type them: `08031234567`, `8031234567`, `2348031234567` or `+2348031234567`, with or without spaces or hyphens. The API stores `+234` and ten digits, and accepts only mobile numbers (70x, 80x, 81x, 90x, 91x). `normalisePhone` and `phoneSchema` in `packages/shared` do the same in the browser. Responses never contain a full phone number; a profile has `phone_masked` (`+234803***4567`).
 
 ## Authentication
@@ -30,18 +30,27 @@ Sign-in is by phone and a 6-digit code sent by SMS (PRD 7.1; decisions 54 to 61)
 
 | Code | Status | When |
 |---|---|---|
-| `bad_request` | 400 | The body is not valid JSON or cannot be read. |
+| `bad_request` | 400 | The body is not valid JSON or cannot be read; or a photo upload is empty, not JPEG, PNG or WebP, or not the type its `Content-Type` claims. |
 | `validation_failed` | 400 | Params, query or body fail validation. `details` lists every issue as `{ location, path, message }`. |
 | `not_found` | 404 | No such route, or no such resource. |
-| `conflict` | 409 | The request clashes with the resource's current state, such as a booking status change the state machine does not allow from its current status or for this actor. `details` names the booking, `from`, `to` and `actor_type`. |
-| `payload_too_large` | 413 | The JSON body is over 100 kB. |
+| `conflict` | 409 | The request clashes with the resource's current state: a booking status change the state machine does not allow from its current status or for this actor (`details` names the booking, `from`, `to` and `actor_type`), or a fifth photo for a facility. |
+| `payload_too_large` | 413 | The JSON body is over 100 kB, or a photo is over 5 MB. |
 | `rate_limited` | 429 | Too many requests from this client, or too many codes for this phone number; retry after `Retry-After` seconds. |
 | `unauthorized` | 401 | No access token, or it is invalid or expired, or its user is gone or inactive; or the refresh cookie is missing, expired, revoked or reused. Sign in or refresh. Access-token routes add `WWW-Authenticate: Bearer`. |
-| `forbidden` | 403 | Signed in, but without a role the route needs; or a refresh or logout from an origin outside `CORS_ORIGINS`. |
+| `forbidden` | 403 | Signed in, but without a role the route needs, or changing a facility you neither own nor administer; or a refresh or logout from an origin outside `CORS_ORIGINS`. |
 | `otp_invalid` | 400 | The code is wrong, expired, used, out of attempts, or there is none. Always the same message, so the cases cannot be told apart. |
 | `consent_required` | 400 | The code was right, but creating the account (or using an account with no consent on record) needs `consent: true`. Send it again with consent and the same code. |
 | `account_disabled` | 403 | The code was right, but the account has been deactivated. Refresh returns it too. |
 | `internal` | 500 | An unexpected error. The message is always generic; details are only in the server log, under the request ID. |
+
+## Providers
+
+A provider is a storage facility (PRD 5.3, 7.2; decisions 62 to 66).
+
+- **Onboarding:** any signed-in user can `POST /providers`; the user gets the `provider` role. The facility starts `pending` and appears to farmers once an admin approves it, or at once when the platform does not require approval. The response's `verification_status` says which.
+- **Two views:** `GET /providers/:id` is public and only finds `approved` facilities. It never shows a phone number or the owner. The owner's view, returned by every signed-in provider route, adds the masked notification numbers and the approval status.
+- **Editing:** only the owner or an admin can `PATCH` a facility or change its photos; another provider gets 403. A price change applies to new bookings only: a booking keeps the prices it was made with.
+- **Photos:** up to 4 per facility. Send one photo per `POST /providers/:id/photos` as the raw request body with its `Content-Type` (`image/jpeg`, `image/png` or `image/webp`), at most 5 MB; the file must really be that type. Remove one with `DELETE /providers/:id/photos/:photoId`. Each photo is `{ id, url }`, and the URL loads without a token.
 
 ## OpenAPI
 
@@ -462,6 +471,234 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '500':
           $ref: '#/components/responses/Internal'
+  /providers:
+    post:
+      operationId: createProvider
+      summary: Onboard a storage facility
+      description: >-
+        Creates a facility owned by the signed-in user and gives them the provider role. It starts
+        pending, or approved when app_config require_provider_approval is false. phone, where
+        booking SMS go, defaults to the owner's own number.
+      tags: [Providers]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProviderCreate'
+            example:
+              display_name: Bodija Cold Room
+              facility_type: cold_room
+              address_text: 12 Bodija Market Road
+              landmark: Opposite the new market gate
+              lga: Ibadan North
+              lat: 7.4352
+              lng: 3.9133
+              capacity_total: 40
+              capacity_unit: sqm
+              price_per_unit_per_day_kobo: 225800
+              has_backup_power: solar
+              category_ids: [0b8f6a3e-2d4c-4b1a-9e7f-3c5d2a1b0e9f]
+      responses:
+        '201':
+          description: The new facility, in the owner's view.
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/NoStore'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OwnProvider'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/Internal'
+  /providers/mine:
+    get:
+      operationId: listMyProviders
+      summary: The signed-in user's facilities
+      description: Every facility the user owns, in any status, oldest first. Not paginated.
+      tags: [Providers]
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: The facilities, in the owner's view.
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/NoStore'
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                additionalProperties: false
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/OwnProvider'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/Internal'
+  /providers/{id}:
+    parameters:
+      - $ref: '#/components/parameters/ProviderId'
+    get:
+      operationId: getProvider
+      summary: A facility, as farmers see it
+      description: >-
+        Approved facilities only; any other status is a 404, the same as an unknown id. No phone
+        numbers or owner fields.
+      tags: [Providers]
+      responses:
+        '200':
+          description: The facility.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PublicProvider'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/Internal'
+    patch:
+      operationId: updateProvider
+      summary: Edit a facility
+      description: >-
+        The owner or an admin only. Changes any of the listed fields; send null to clear an
+        optional one. lat and lng go together, and category_ids replaces the whole set. A price
+        change applies to new bookings only. Approval status, ratings, the owner and photos cannot
+        be changed here.
+      tags: [Providers]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProviderUpdate'
+            example:
+              price_per_unit_per_day_kobo: 250000
+              is_accepting_bookings: false
+      responses:
+        '200':
+          description: The updated facility, in the owner's view.
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/NoStore'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OwnProvider'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/Internal'
+  /providers/{id}/photos:
+    parameters:
+      - $ref: '#/components/parameters/ProviderId'
+    post:
+      operationId: addProviderPhoto
+      summary: Add a facility photo
+      description: >-
+        The owner or an admin only. One photo as the raw body, at most 5 MB; the file must be the
+        type its Content-Type names. At most 4 photos per facility.
+      tags: [Providers]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          image/jpeg:
+            schema:
+              type: string
+              format: binary
+          image/png:
+            schema:
+              type: string
+              format: binary
+          image/webp:
+            schema:
+              type: string
+              format: binary
+      responses:
+        '201':
+          description: The facility with the new photo last.
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/NoStore'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OwnProvider'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '413':
+          $ref: '#/components/responses/PayloadTooLarge'
+        '500':
+          $ref: '#/components/responses/Internal'
+  /providers/{id}/photos/{photoId}:
+    parameters:
+      - $ref: '#/components/parameters/ProviderId'
+      - name: photoId
+        in: path
+        required: true
+        description: The photo's id from the facility's photos.
+        schema:
+          type: string
+          pattern: '^[0-9a-f-]{36}\.(jpg|png|webp)$'
+    delete:
+      operationId: removeProviderPhoto
+      summary: Remove a facility photo
+      description: The owner or an admin only.
+      tags: [Providers]
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: The facility without the photo.
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/NoStore'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OwnProvider'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/Internal'
 components:
   securitySchemes:
     bearerAuth:
@@ -498,6 +735,13 @@ components:
         type: string
         pattern: '^[A-Za-z0-9._:-]{1,128}$'
   parameters:
+    ProviderId:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
     XRequestId:
       name: X-Request-Id
       in: header
@@ -723,6 +967,238 @@ components:
           type: [number, 'null']
           minimum: -180
           maximum: 180
+    ProviderFields:
+      type: object
+      description: Fields shared by ProviderCreate and ProviderUpdate. Text is trimmed.
+      properties:
+        business_name:
+          type: [string, 'null']
+          minLength: 1
+          maxLength: 120
+          description: Registered business name; null for an individual.
+        display_name:
+          type: string
+          minLength: 1
+          maxLength: 80
+          description: The name farmers see.
+        facility_type:
+          type: string
+          enum: [cold_room, chest_freezer, fridge, fridge_fleet, other]
+        description:
+          type: [string, 'null']
+          minLength: 1
+          maxLength: 1000
+        phone:
+          type: string
+          description: Where booking SMS go, as typed; see Phone numbers above.
+        whatsapp:
+          type: [string, 'null']
+        address_text:
+          type: string
+          minLength: 1
+          maxLength: 200
+        landmark:
+          type: [string, 'null']
+          minLength: 1
+          maxLength: 120
+        lga:
+          type: [string, 'null']
+          minLength: 1
+          maxLength: 60
+        lat:
+          type: number
+          minimum: -90
+          maximum: 90
+        lng:
+          type: number
+          minimum: -180
+          maximum: 180
+        capacity_total:
+          type: number
+          exclusiveMinimum: 0
+          description: In capacity_unit, at most 3 decimal places.
+        capacity_unit:
+          type: string
+          enum: [sqm, crates, kg]
+        price_per_unit_per_day_kobo:
+          type: integer
+          minimum: 1
+          description: Price per capacity unit per day, in kobo.
+        min_storage_days:
+          type: integer
+          minimum: 1
+          maximum: 365
+          description: Defaults to 1.
+        temp_min_c:
+          type: [number, 'null']
+          minimum: -40
+          maximum: 40
+        temp_max_c:
+          type: [number, 'null']
+          minimum: -40
+          maximum: 40
+          description: Not below temp_min_c.
+        has_backup_power:
+          type: string
+          enum: [generator, solar, none, unknown]
+          description: Defaults to unknown.
+        category_ids:
+          type: array
+          minItems: 1
+          uniqueItems: true
+          items:
+            type: string
+            format: uuid
+          description: Crop categories the facility can store, from /crop-categories.
+    ProviderCreate:
+      allOf:
+        - $ref: '#/components/schemas/ProviderFields'
+        - type: object
+          required:
+            - display_name
+            - facility_type
+            - address_text
+            - lat
+            - lng
+            - capacity_total
+            - capacity_unit
+            - price_per_unit_per_day_kobo
+            - category_ids
+      unevaluatedProperties: false
+    ProviderUpdate:
+      allOf:
+        - $ref: '#/components/schemas/ProviderFields'
+        - type: object
+          minProperties: 1
+          properties:
+            is_accepting_bookings:
+              type: boolean
+              description: false pauses new bookings.
+      unevaluatedProperties: false
+    ProviderPhoto:
+      type: object
+      required: [id, url]
+      additionalProperties: false
+      properties:
+        id:
+          type: string
+          examples: [6f1c1a8e-0c4b-4f5e-9a3d-2b7e8c9d0a1f.jpg]
+        url:
+          type: string
+          format: uri
+    PublicProvider:
+      type: object
+      required:
+        - id
+        - display_name
+        - business_name
+        - facility_type
+        - description
+        - address_text
+        - landmark
+        - lga
+        - lat
+        - lng
+        - capacity_total
+        - capacity_unit
+        - price_per_unit_per_day_kobo
+        - min_storage_days
+        - temp_min_c
+        - temp_max_c
+        - has_backup_power
+        - is_accepting_bookings
+        - avg_rating
+        - rating_count
+        - photos
+        - categories
+      properties:
+        id:
+          type: string
+          format: uuid
+        display_name:
+          type: string
+        business_name:
+          type: [string, 'null']
+        facility_type:
+          type: string
+          enum: [cold_room, chest_freezer, fridge, fridge_fleet, other]
+        description:
+          type: [string, 'null']
+        address_text:
+          type: string
+        landmark:
+          type: [string, 'null']
+        lga:
+          type: [string, 'null']
+        lat:
+          type: number
+        lng:
+          type: number
+        capacity_total:
+          type: number
+        capacity_unit:
+          type: string
+          enum: [sqm, crates, kg]
+        price_per_unit_per_day_kobo:
+          type: integer
+        min_storage_days:
+          type: integer
+        temp_min_c:
+          type: [number, 'null']
+        temp_max_c:
+          type: [number, 'null']
+        has_backup_power:
+          type: string
+          enum: [generator, solar, none, unknown]
+        is_accepting_bookings:
+          type: boolean
+        avg_rating:
+          type: number
+          minimum: 0
+          maximum: 5
+        rating_count:
+          type: integer
+        photos:
+          type: array
+          maxItems: 4
+          items:
+            $ref: '#/components/schemas/ProviderPhoto'
+        categories:
+          type: array
+          items:
+            $ref: '#/components/schemas/CropCategory'
+    OwnProvider:
+      allOf:
+        - $ref: '#/components/schemas/PublicProvider'
+        - type: object
+          required:
+            - phone_masked
+            - whatsapp_masked
+            - verification_status
+            - verified_at
+            - created_at
+            - updated_at
+          properties:
+            phone_masked:
+              type: string
+              examples: ['+234803***4567']
+            whatsapp_masked:
+              type: [string, 'null']
+            verification_status:
+              type: string
+              enum: [pending, approved, suspended, rejected]
+              description: Farmers see the facility only while approved.
+            verified_at:
+              type: [string, 'null']
+              format: date-time
+              description: When an admin approved it; null if it went live without approval.
+            created_at:
+              type: string
+              format: date-time
+            updated_at:
+              type: string
+              format: date-time
+      unevaluatedProperties: false
     ErrorCode:
       type: string
       enum:
@@ -778,8 +1254,14 @@ components:
         application/json:
           schema:
             $ref: '#/components/schemas/Error'
+    Conflict:
+      description: The request clashes with the resource's current state.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
     PayloadTooLarge:
-      description: The JSON body is over 100 kB.
+      description: The JSON body is over 100 kB, or a photo is over 5 MB.
       content:
         application/json:
           schema:
