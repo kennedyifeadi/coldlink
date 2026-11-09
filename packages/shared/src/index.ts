@@ -6,4 +6,5 @@ export * from './errors.js';
 export * from './money.js';
 export * from './phone.js';
 export * from './pricing.js';
+export * from './providers.js';
 export * from './referenceData.js';
