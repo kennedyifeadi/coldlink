@@ -9,7 +9,7 @@ export function generateOtp(): string {
 }
 
 /**
- * HMAC-SHA256 keyed with the pepper, over the phone and the code (decision 52). Binding the phone
+ * HMAC-SHA256 keyed with the pepper, over the phone and the code (decision 54). Binding the phone
  * means a hash copied to another number's row matches nothing. A slow hash such as bcrypt would
  * not help: a million codes are cheap to try even at bcrypt speed, so what stops an offline guess
  * is the pepper, which is not in the database.

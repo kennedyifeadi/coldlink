@@ -1,4 +1,4 @@
-// Per-phone limits on sending codes (decision 54). They are counted from otp_codes, so they hold
+// Per-phone limits on sending codes (decision 56). They are counted from otp_codes, so they hold
 // across API instances and restarts, unlike the in-memory per-IP limit.
 
 /** A real SMS can take a minute to arrive on a busy network; a resend before then is a double tap. */

@@ -39,7 +39,7 @@ export function createApp(
   app.use(requestId);
   app.use(requestLogger(logger));
   app.use(helmet());
-  // credentials lets the allowlisted web app send the refresh cookie (decision 58).
+  // credentials lets the allowlisted web app send the refresh cookie (decision 60).
   app.use(cors({ origin: config.corsOrigins, credentials: true }));
   app.use(express.json({ limit: JSON_BODY_LIMIT }));
   app.use(API_BASE_PATH, routes);

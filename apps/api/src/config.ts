@@ -67,7 +67,7 @@ const envSchema = z.object({
   JWT_SECRET: secretSchema,
   OTP_PEPPER: secretSchema,
   // strict when the web app and the API share a site (localhost, or api.coldlink.ng beside
-  // coldlink.ng); none only when they are on different sites (decision 58).
+  // coldlink.ng); none only when they are on different sites (decision 60).
   AUTH_COOKIE_SAME_SITE: z.enum(sameSiteValues).default('strict'),
   // Proxies in front of the API whose X-Forwarded-For is trusted for the client IP: 1 on Render or
   // Railway, 0 when clients connect directly.
@@ -89,7 +89,7 @@ export interface AuthConfig {
   /** Key for the HMAC that otp_codes stores in place of each code. */
   otpPepper: string;
   cookieSameSite: (typeof sameSiteValues)[number];
-  /** Returns each OTP in the request response; only in local development (decision 55). */
+  /** Returns each OTP in the request response; only in local development (decision 57). */
   devOtp: boolean;
 }
 

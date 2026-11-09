@@ -12,7 +12,7 @@ export type OtpRequestBody = z.input<typeof otpRequestBodySchema>;
 export const otpRequestResponseSchema = z.strictObject({
   expires_in_seconds: z.int().positive(),
   resend_after_seconds: z.int().positive(),
-  /** Only in local development with the console SMS provider (decision 55). */
+  /** Only in local development with the console SMS provider (decision 57). */
   dev_code: otpCodeSchema.optional(),
 });
 export type OtpRequestResponse = z.infer<typeof otpRequestResponseSchema>;

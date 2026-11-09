@@ -10,7 +10,7 @@ export interface SignInRequest {
   code: string | undefined;
   consent: boolean;
   otpPepper: string;
-  /** app_config `otp_required` (decision 56). */
+  /** app_config `otp_required` (decision 58). */
   otpRequired: boolean;
 }
 

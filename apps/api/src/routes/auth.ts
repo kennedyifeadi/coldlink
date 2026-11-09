@@ -49,7 +49,7 @@ export interface AuthIpLimits {
 const FIFTEEN_MINUTES_MS = 15 * 60_000;
 
 // Generous, because carrier-grade NAT puts many farmers on one mobile IP; the per-phone limits
-// are the tight ones (decision 54).
+// are the tight ones (decision 56).
 export const defaultAuthIpLimits: AuthIpLimits = {
   request: { windowMs: FIFTEEN_MINUTES_MS, limit: 30 },
   verify: { windowMs: FIFTEEN_MINUTES_MS, limit: 60 },
@@ -144,7 +144,7 @@ export function authRoutes(deps: AuthRouteDependencies): Router {
           { retry_after_seconds: result.retryAfterSeconds },
         );
       }
-      // Termii can take up to 10 s, so the SMS goes after the response (decision 53). The user is
+      // Termii can take up to 10 s, so the SMS goes after the response (decision 55). The user is
       // never looked up here, so the work and the answer are the same for any number (PRD 7.1).
       tasks.run(req.log, 'Sending the sign-in code failed', () =>
         sendNotification(deps.notifications, {
