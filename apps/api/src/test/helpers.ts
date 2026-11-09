@@ -35,6 +35,7 @@ export const testConfig: Config = {
     devOtp: false,
   },
   trustProxyHops: 0,
+  storage: undefined,
 };
 
 export type StubRows = Partial<Record<keyof DB, object[]>>;
