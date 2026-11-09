@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "pnpm --filter @coldlink/shared build && vite",
-    "build": "vite build",
+    "build": "pnpm --filter @coldlink/shared build && vite build",
     "lint": "oxlint && eslint . && node scripts/check-hex-colours.js",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",

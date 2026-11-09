@@ -28,7 +28,7 @@ pnpm --filter @coldlink/api dev
 
 The web app runs at http://localhost:5173 and the API at http://localhost:3000/api/v1 (try `/health`). The API reads `apps/api/.env`; copy `apps/api/.env.example` and set `DATABASE_URL` to the dev project's session pooler URL. The web dev server proxies `/api` to the API, so the browser sees one origin and the refresh cookie works as it will in production (decision 62); `apps/web/.env.example` lists the one web setting, `VITE_API_URL`, whose default needs no `.env`. With `SMS_PROVIDER=console` the code screen shows the sign-in code, since no SMS is sent (decision 57); a production build leaves that out.
 
-`apps/api` and `apps/web` import `@coldlink/shared` from its built `dist`. The root `lint`, `typecheck` and `test` scripts and both `dev` scripts build it first; after changing shared while a dev server runs, run `pnpm build:shared`.
+`apps/api` and `apps/web` import `@coldlink/shared` from its built `dist`. The root `lint`, `typecheck` and `test` scripts, both `dev` scripts and the web `build` script build it first; after changing shared while a dev server runs, run `pnpm build:shared`.
 
 `pnpm test` needs no database. The API's integration tests write and delete rows, so they never use `DATABASE_URL`: they run only against `TEST_DATABASE_URL`, which must be a throwaway database on localhost with the migrations applied, and they skip with a message when it is unset. CI's `API integration` job runs them against its own Postgres, and also regenerates `apps/api/src/db/schema.ts` there and fails if it differs from the committed file.
 
