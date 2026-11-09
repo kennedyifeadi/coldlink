@@ -4,7 +4,24 @@
     "logoShortAlt": "ColdLink",
     "loading": "Loading...",
     "goBack": "Go back",
-    "continue": "Continue"
+    "continue": "Continue",
+    "tryAgain": "Try again",
+    "wait": {
+      "seconds_one": "{{count}} second",
+      "seconds_other": "{{count}} seconds",
+      "minutes_one": "{{count}} minute",
+      "minutes_other": "{{count}} minutes"
+    },
+    "apiErrors": {
+      "network": "No network connection. Check your data or Wi-Fi, then try again.",
+      "otpInvalid": "That code is wrong or has expired. Check the SMS or send a new code.",
+      "rateLimited": "Too many tries. Wait a little, then try again.",
+      "rateLimitedWait": "Too many tries. Try again in {{wait}}.",
+      "consentRequired": "To create your ColdLink ID, agree to the privacy notice.",
+      "accountDisabled": "This account is turned off. Contact ColdLink support to turn it back on.",
+      "sessionEnded": "You've been signed out. Sign in again to continue.",
+      "unexpected": "Something went wrong on our side. Try again in a moment."
+    }
   },
   "nav": {
     "label": "Main",
@@ -23,7 +40,34 @@
       "intro": "Keep your harvest fresh by finding available cold storage nearby.",
       "phoneLabel": "Phone number",
       "phonePlaceholder": "800 000 0000",
-      "footer": "Your phone number creates your ColdLink ID. No password required."
+      "footer": "Your phone number creates your ColdLink ID. No password required.",
+      "invalidPhone": "Enter a Nigerian mobile number, like 0803 123 4567.",
+      "sending": "Sending code...",
+      "privacyLink": "How we use your number"
+    },
+    "otp": {
+      "title": "Enter your code",
+      "intro": "We sent a 6-digit code by SMS to {{phone}}.",
+      "changeNumber": "Change number",
+      "codeLabel": "6-digit code",
+      "checking": "Checking code...",
+      "resend": "Send a new code",
+      "resendIn": "Send a new code in {{time}}",
+      "resent": "We sent a new code to {{phone}}."
+    },
+    "consent": {
+      "title": "Before we create your ColdLink ID",
+      "intro": "We keep only what we need to find you cold storage.",
+      "points": {
+        "phone": "We use your phone number to sign you in and to send you SMS about your bookings.",
+        "bookings": "We keep your bookings and payments, so you and the cold room can check them.",
+        "rights": "We never sell your details. You can ask us to show, correct or delete them."
+      },
+      "readNotice": "Read the full privacy notice",
+      "agree": "I agree to the ColdLink privacy notice.",
+      "submit": "Create my ColdLink ID",
+      "creating": "Creating your ID...",
+      "getNewCode": "Get a new code"
     },
     "userId": {
       "navTitle": "ColdLink ID",
@@ -32,7 +76,57 @@
       "copy": "Copy ID",
       "copied": "Copied!",
       "channels": "This ID works across ColdLink Web, WhatsApp and USSD.",
-      "findStorage": "Find storage"
+      "findStorage": "Find storage",
+      "copyFailed": "Couldn't copy the ID. Write it down instead.",
+      "signOut": "Sign out"
+    }
+  },
+  "privacy": {
+    "navTitle": "Privacy",
+    "title": "Privacy notice",
+    "intro": "ColdLink connects farmers with cold storage near them. This is what we do with your details, in plain words.",
+    "sections": {
+      "collect": {
+        "title": "What we keep",
+        "items": [
+          "Your phone number.",
+          "Your name and home area, if you add them.",
+          "Your bookings, payments and ratings.",
+          "The place you search from, to find cold rooms near you."
+        ]
+      },
+      "why": {
+        "title": "Why we keep it",
+        "items": [
+          "To sign you in with a code sent by SMS.",
+          "To find cold rooms near you.",
+          "To run your bookings and payments.",
+          "To send you SMS about your bookings."
+        ]
+      },
+      "share": {
+        "title": "Who sees it",
+        "items": [
+          "The cold room you book sees your booking and how to reach you.",
+          "If you ask for delivery, the delivery partner sees where to collect and who to call.",
+          "Our payment and SMS partners get only what they need to take a payment or send a message.",
+          "We never sell your details."
+        ]
+      },
+      "rights": {
+        "title": "Your choices",
+        "items": [
+          "You agree to this notice when you create your ColdLink ID.",
+          "You can ask us to show you, correct or delete your details.",
+          "Only ColdLink staff who need your phone number can see it."
+        ]
+      }
+    },
+    "law": "This notice follows the Nigeria Data Protection Act 2023. To ask about your details, contact ColdLink support."
+  },
+  "session": {
+    "unavailable": {
+      "title": "Can't reach ColdLink"
     }
   },
   "search": {

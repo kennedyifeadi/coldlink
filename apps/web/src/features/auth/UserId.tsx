@@ -1,27 +1,55 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { CheckCircle2, Copy } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import TopNavBar from '../../components/TopNavBar';
 import BottomNav from '../../components/BottomNav';
 import PrimaryButton from '../../components/ui/PrimaryButton';
+import TextButton from '../../components/ui/TextButton';
+import ErrorMessage from '../../components/ui/ErrorMessage';
+import { describeApiError } from '../../api/describeError';
+import { useSession, useSessionStore } from '../../session/sessionContext';
+import { SIGN_IN_PATH } from '../../session/routes';
+
+type CopyState = 'idle' | 'copied' | 'failed';
+
+// 4820193 as 482 0193: easier to read out on a support call.
+const groupColdLinkId = (id: string) => `${id.slice(0, 3)} ${id.slice(3)}`;
 
 const UserId = () => {
   const navigate = useNavigate();
   const { t } = useTranslation();
-  const [copied, setCopied] = useState(false);
+  const session = useSession();
+  const store = useSessionStore();
+  const queryClient = useQueryClient();
+  const [copyState, setCopyState] = useState<CopyState>('idle');
 
-  // Hardcoded for now since no DB is used, but we could generate it randomly
-  const userId = 'CL-482731';
+  const signOut = useMutation({
+    mutationFn: store.signOut,
+    onSuccess: () => {
+      queryClient.clear();
+      void navigate(SIGN_IN_PATH, { replace: true });
+    },
+  });
 
-  const handleCopy = () => {
-    void navigator.clipboard.writeText(userId);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  };
+  useEffect(() => {
+    if (copyState !== 'copied') return;
+    const timer = setTimeout(() => setCopyState('idle'), 2000);
+    return () => clearTimeout(timer);
+  }, [copyState]);
 
-  const handleFindStorage = () => {
-    void navigate('/location');
+  // The route guard only renders this screen with a session.
+  if (session.status !== 'signedIn') return null;
+  const coldLinkId = session.user.coldlink_id;
+
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(coldLinkId);
+      setCopyState('copied');
+    } catch {
+      setCopyState('failed');
+    }
   };
 
   return (
@@ -45,18 +73,23 @@ const UserId = () => {
           <p className="text-copy-muted text-caption font-medium tracking-widest uppercase mb-4">
             {t('auth.userId.idLabel')}
           </p>
-          <div className="bg-primary-muted text-ink font-bold text-display tracking-widest py-3 px-6 rounded-lg mb-6 inline-block">
-            {userId}
+          <div className="bg-primary-muted text-ink font-bold text-display tracking-widest tabular-nums py-3 px-6 rounded-lg mb-6 inline-block">
+            {groupColdLinkId(coldLinkId)}
           </div>
           <div>
             <button
-              onClick={handleCopy}
+              onClick={() => void handleCopy()}
               className="inline-flex items-center gap-2 bg-accent-faint hover:bg-accent-soft text-accent-ink px-5 py-2 rounded-full font-medium text-label transition-colors"
             >
               <Copy size={16} />
-              {copied ? t('auth.userId.copied') : t('auth.userId.copy')}
+              {copyState === 'copied' ? t('auth.userId.copied') : t('auth.userId.copy')}
             </button>
           </div>
+          {copyState === 'failed' && (
+            <p role="status" className="mt-4 text-body text-copy-muted">
+              {t('auth.userId.copyFailed')}
+            </p>
+          )}
         </div>
 
         {/* Info Text */}
@@ -67,7 +100,19 @@ const UserId = () => {
 
       {/* Action Button */}
       <div className="px-6 mb-6">
-        <PrimaryButton onClick={handleFindStorage}>{t('auth.userId.findStorage')}</PrimaryButton>
+        <PrimaryButton onClick={() => void navigate('/location')}>
+          {t('auth.userId.findStorage')}
+        </PrimaryButton>
+        <div className="mt-2">
+          <TextButton onClick={() => signOut.mutate()} disabled={signOut.isPending}>
+            {t('auth.userId.signOut')}
+          </TextButton>
+        </div>
+        {signOut.isError && (
+          <div className="mt-2">
+            <ErrorMessage>{describeApiError(signOut.error, t)}</ErrorMessage>
+          </div>
+        )}
       </div>
 
       {/* Bottom Navigation */}
