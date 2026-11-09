@@ -8,6 +8,11 @@ const statusByCode: Record<ErrorCode, number> = {
   payload_too_large: 413,
   rate_limited: 429,
   internal: 500,
+  unauthorized: 401,
+  forbidden: 403,
+  otp_invalid: 400,
+  consent_required: 400,
+  account_disabled: 403,
 };
 
 export class AppError extends Error {

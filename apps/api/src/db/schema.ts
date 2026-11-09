@@ -297,6 +297,18 @@ export interface Ratings {
   updated_at: Generated<Timestamp>;
 }
 
+export interface RefreshTokens {
+  created_at: Generated<Timestamp>;
+  expires_at: Timestamp;
+  family_id: string;
+  id: Generated<string>;
+  revoked_at: Timestamp | null;
+  rotated_from_id: string | null;
+  token_hash: string;
+  updated_at: Generated<Timestamp>;
+  user_id: string;
+}
+
 export interface SearchLogs {
   channel: string;
   created_at: Generated<Timestamp>;
@@ -355,6 +367,7 @@ export interface DB {
   provider_crop_support: ProviderCropSupport;
   providers: Providers;
   ratings: Ratings;
+  refresh_tokens: RefreshTokens;
   search_logs: SearchLogs;
   users: Users;
   v_listing_price_observations: VListingPriceObservations;

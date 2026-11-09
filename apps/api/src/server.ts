@@ -1,4 +1,5 @@
 import { createApp } from './app.js';
+import { createBackgroundTasks } from './backgroundTasks.js';
 import { ConfigError, loadConfig, type Config } from './config.js';
 import { createDatabase } from './db/client.js';
 import { createLogger } from './logger.js';
@@ -20,8 +21,9 @@ function readConfig(): Config {
 const config = readConfig();
 const logger = createLogger(config.logLevel);
 const db = createDatabase(config, logger);
+const tasks = createBackgroundTasks();
 
-const server = createApp(config, { db, logger }).listen(config.port, (error) => {
+const server = createApp(config, { db, logger, tasks }).listen(config.port, (error) => {
   if (error) {
     logger.fatal({ err: error }, 'API failed to start');
     process.exit(1);
@@ -36,13 +38,17 @@ function shutdown(signal: NodeJS.Signals): void {
       logger.error({ err: error }, 'Shutdown failed');
       process.exit(1);
     }
-    db.destroy().then(
-      () => process.exit(0),
-      (err: unknown) => {
-        logger.error({ err }, 'Closing the database pool failed');
-        process.exit(1);
-      },
-    );
+    // In-flight SMS sends finish before the pool they write to closes.
+    tasks
+      .drain()
+      .then(() => db.destroy())
+      .then(
+        () => process.exit(0),
+        (err: unknown) => {
+          logger.error({ err }, 'Closing the database pool failed');
+          process.exit(1);
+        },
+      );
   });
   server.closeIdleConnections();
   setTimeout(() => {

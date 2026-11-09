@@ -28,6 +28,11 @@ const originSchema = z
     message: 'Must be an origin such as https://coldlink.ng, with no path or trailing slash',
   });
 
+// 32 random bytes, as base64url: node -e "console.log(crypto.randomBytes(32).toString('base64url'))"
+const secretSchema = z.string().min(32, 'Must be at least 32 characters of random data');
+
+export const sameSiteValues = ['strict', 'lax', 'none'] as const;
+
 export const smsProviders = ['console', 'termii'] as const;
 // dnd reaches Nigerian numbers on Do-Not-Disturb; generic does not (Termii's SMS API docs).
 export const termiiChannels = ['dnd', 'generic'] as const;
@@ -59,6 +64,14 @@ const envSchema = z.object({
     .refine((value) => value.startsWith('https://'), { message: 'Must use https' })
     .optional(),
   TERMII_CHANNEL: z.enum(termiiChannels).default('dnd'),
+  JWT_SECRET: secretSchema,
+  OTP_PEPPER: secretSchema,
+  // strict when the web app and the API share a site (localhost, or api.coldlink.ng beside
+  // coldlink.ng); none only when they are on different sites (decision 60).
+  AUTH_COOKIE_SAME_SITE: z.enum(sameSiteValues).default('strict'),
+  // Proxies in front of the API whose X-Forwarded-For is trusted for the client IP: 1 on Render or
+  // Railway, 0 when clients connect directly.
+  TRUST_PROXY_HOPS: z.coerce.number().int().min(0).max(5).default(0),
 });
 
 export interface TermiiConfig {
@@ -70,6 +83,16 @@ export interface TermiiConfig {
 
 export type SmsConfig = { provider: 'console' } | { provider: 'termii'; termii: TermiiConfig };
 
+export interface AuthConfig {
+  /** Signs access tokens (HS256). */
+  jwtSecret: string;
+  /** Key for the HMAC that otp_codes stores in place of each code. */
+  otpPepper: string;
+  cookieSameSite: (typeof sameSiteValues)[number];
+  /** Returns each OTP in the request response; only in local development (decision 57). */
+  devOtp: boolean;
+}
+
 export interface Config {
   nodeEnv: 'development' | 'test' | 'production';
   port: number;
@@ -79,6 +102,8 @@ export interface Config {
   /** Path to the CA certificate that signs the database server's certificate. */
   databaseSslRootCert: string | undefined;
   sms: SmsConfig;
+  auth: AuthConfig;
+  trustProxyHops: number;
 }
 
 export class ConfigError extends Error {
@@ -104,11 +129,15 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
     issues.push('DATABASE_SSL_ROOT_CERT: Required in production');
   }
   issues.push(...smsIssues(env));
+  if (env['JWT_SECRET'] !== undefined && env['JWT_SECRET'] === env['OTP_PEPPER']) {
+    issues.push('OTP_PEPPER: Must differ from JWT_SECRET');
+  }
   if (!result.success || issues.length > 0) {
     throw new ConfigError(issues);
   }
   const { NODE_ENV, PORT, LOG_LEVEL, CORS_ORIGINS, DATABASE_URL, DATABASE_SSL_ROOT_CERT } =
     result.data;
+  const sms = smsConfig(result.data);
   return {
     nodeEnv: NODE_ENV,
     port: PORT,
@@ -117,8 +146,23 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
     corsOrigins: CORS_ORIGINS ?? [DEV_WEB_ORIGIN],
     databaseUrl: DATABASE_URL,
     databaseSslRootCert: DATABASE_SSL_ROOT_CERT,
-    sms: smsConfig(result.data),
+    sms,
+    auth: {
+      jwtSecret: result.data.JWT_SECRET,
+      otpPepper: result.data.OTP_PEPPER,
+      cookieSameSite: result.data.AUTH_COOKIE_SAME_SITE,
+      devOtp: isDevOtpAllowed(NODE_ENV, sms),
+    },
+    trustProxyHops: result.data.TRUST_PROXY_HOPS,
   };
+}
+
+/**
+ * The dev OTP needs both: development, so it is never on in production or tests, and the console
+ * provider, so it is never on while real SMS go out.
+ */
+export function isDevOtpAllowed(nodeEnv: Config['nodeEnv'], sms: SmsConfig): boolean {
+  return nodeEnv === 'development' && sms.provider === 'console';
 }
 
 function smsIssues(env: NodeJS.ProcessEnv): string[] {

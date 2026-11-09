@@ -77,6 +77,7 @@ The `Migrations` job in `.github/workflows/ci.yml` starts a `supabase/postgres` 
 - the crop categories, crops (with onions and a generic crop per category) or `app_config` keys, values and JSON types differ from the reference list, `deposit_percent` is not above `commission_rate`, the default search radius exceeds the maximum, or running the reference data migration again adds or changes a row
 - a check constraint accepts a bad value (phone, `coldlink_id`, role, channel, location, OTP attempts, config key, category slug, crop shelf life and temperatures, and every provider enum, phone, capacity, price, temperature, rating, photo and verification rule)
 - a user who owns a provider can be deleted
+- a refresh token can be stored unhashed, expire before it was created, share a hash with another token or be rotated twice, or outlives its deleted user
 - a valid booking built from the PRD 6.1 worked example fails to insert, or a booking check accepts a bad status, code, unit, date range, rate or inconsistent amount, or `cancelled_by` without `cancelled`
 - a `booking_events` row can be updated, deleted or truncated, even by `postgres`, or a booking with events can be deleted
 - a payment, payout, rating, notification, action token, search log or reminder check accepts a bad value, or a unique key (booking code, Paystack reference, one payout and one rating per booking, token hash, one reminder of each kind per booking) accepts a duplicate
