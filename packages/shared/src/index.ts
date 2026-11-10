@@ -1,6 +1,7 @@
 export * from './appConfig.js';
 export * from './auth.js';
 export * from './bookingStateMachine.js';
+export * from './dates.js';
 export * from './enums.js';
 export * from './errors.js';
 export * from './money.js';
@@ -8,3 +9,4 @@ export * from './phone.js';
 export * from './pricing.js';
 export * from './providers.js';
 export * from './referenceData.js';
+export * from './search.js';
