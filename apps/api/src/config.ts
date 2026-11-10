@@ -72,6 +72,9 @@ const envSchema = z.object({
   // Proxies in front of the API whose X-Forwarded-For is trusted for the client IP: 1 on Render or
   // Railway, 0 when clients connect directly.
   TRUST_PROXY_HOPS: z.coerce.number().int().min(0).max(5).default(0),
+  // Facility photos (PRD 10). The service-role key bypasses RLS, so it stays on the server.
+  SUPABASE_URL: originSchema.optional(),
+  SUPABASE_SERVICE_ROLE_KEY: z.string().min(1).optional(),
 });
 
 export interface TermiiConfig {
@@ -82,6 +85,11 @@ export interface TermiiConfig {
 }
 
 export type SmsConfig = { provider: 'console' } | { provider: 'termii'; termii: TermiiConfig };
+
+export interface StorageConfig {
+  supabaseUrl: string;
+  serviceRoleKey: string;
+}
 
 export interface AuthConfig {
   /** Signs access tokens (HS256). */
@@ -104,6 +112,8 @@ export interface Config {
   sms: SmsConfig;
   auth: AuthConfig;
   trustProxyHops: number;
+  /** Unset outside production when the Supabase settings are, as in CI. */
+  storage: StorageConfig | undefined;
 }
 
 export class ConfigError extends Error {
@@ -128,7 +138,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
   if (env['NODE_ENV'] === 'production' && env['DATABASE_SSL_ROOT_CERT'] === undefined) {
     issues.push('DATABASE_SSL_ROOT_CERT: Required in production');
   }
-  issues.push(...smsIssues(env));
+  issues.push(...smsIssues(env), ...storageIssues(env));
   if (env['JWT_SECRET'] !== undefined && env['JWT_SECRET'] === env['OTP_PEPPER']) {
     issues.push('OTP_PEPPER: Must differ from JWT_SECRET');
   }
@@ -154,6 +164,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
       devOtp: isDevOtpAllowed(NODE_ENV, sms),
     },
     trustProxyHops: result.data.TRUST_PROXY_HOPS,
+    storage: storageConfig(result.data),
   };
 }
 
@@ -174,6 +185,26 @@ function smsIssues(env: NodeJS.ProcessEnv): string[] {
   return (['TERMII_API_KEY', 'TERMII_SENDER_ID', 'TERMII_BASE_URL'] as const)
     .filter((name) => env[name] === undefined)
     .map((name) => `${name}: Required when SMS_PROVIDER is termii`);
+}
+
+const storageVariables = ['SUPABASE_URL', 'SUPABASE_SERVICE_ROLE_KEY'] as const;
+
+function storageIssues(env: NodeJS.ProcessEnv): string[] {
+  const missing = storageVariables.filter((name) => env[name] === undefined);
+  if (env['NODE_ENV'] === 'production') {
+    return missing.map((name) => `${name}: Required in production`);
+  }
+  if (missing.length === 1) {
+    const set = storageVariables.find((name) => !missing.includes(name));
+    return [`${missing[0]}: Required when ${set} is set`];
+  }
+  return [];
+}
+
+function storageConfig(env: z.infer<typeof envSchema>): StorageConfig | undefined {
+  const { SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY } = env;
+  if (SUPABASE_URL === undefined || SUPABASE_SERVICE_ROLE_KEY === undefined) return undefined;
+  return { supabaseUrl: SUPABASE_URL, serviceRoleKey: SUPABASE_SERVICE_ROLE_KEY };
 }
 
 function smsConfig(env: z.infer<typeof envSchema>): SmsConfig {

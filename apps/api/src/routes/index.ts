@@ -10,9 +10,12 @@ import { createNotificationStore, type NotificationStore } from '../notification
 import { smsTemplates } from '../notifications/templates.js';
 import { createSmsProvider } from '../sms/createSmsProvider.js';
 import type { SmsProvider } from '../sms/provider.js';
+import { createPhotoStorage } from '../storage/createPhotoStorage.js';
+import type { PhotoStorage } from '../storage/photoStorage.js';
 import { version } from '../version.js';
 import { authRoutes, defaultAuthIpLimits, type AuthIpLimits } from './auth.js';
 import { meRoutes } from './me.js';
+import { providerRoutes } from './providers.js';
 import { referenceDataRoutes } from './referenceData.js';
 
 export interface RouteDependencies {
@@ -25,6 +28,7 @@ export interface RouteDependencies {
   tasks?: BackgroundTasks;
   tokens?: AccessTokens;
   authIpLimits?: AuthIpLimits;
+  storage?: PhotoStorage;
 }
 
 export function apiRoutes({
@@ -37,6 +41,7 @@ export function apiRoutes({
   tasks = createBackgroundTasks(),
   tokens = createAccessTokens(config.auth.jwtSecret),
   authIpLimits = defaultAuthIpLimits,
+  storage = createPhotoStorage(config.storage),
 }: RouteDependencies): Router {
   const router = Router();
   router.get('/health', async (req, res) => {
@@ -58,5 +63,6 @@ export function apiRoutes({
     }),
   );
   router.use(meRoutes({ db, tokens }));
+  router.use(providerRoutes({ db, tokens, appConfig, storage }));
   return router;
 }

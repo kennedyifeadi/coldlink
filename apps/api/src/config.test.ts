@@ -21,6 +21,10 @@ const termii = {
   TERMII_SENDER_ID: 'ColdLink',
   TERMII_BASE_URL: 'https://v3.api.termii.com',
 };
+const supabase = {
+  SUPABASE_URL: 'https://abcdefghij.supabase.co',
+  SUPABASE_SERVICE_ROLE_KEY: 'service-role-key-123',
+};
 const productionSms =
   'SMS_PROVIDER: Must be termii in production, where the console provider sends nothing';
 
@@ -39,6 +43,7 @@ describe('loadConfig', () => {
         AUTH_COOKIE_SAME_SITE: 'none',
         TRUST_PROXY_HOPS: '1',
         ...termii,
+        ...supabase,
       }),
     ).toEqual({
       nodeEnv: 'production',
@@ -58,6 +63,10 @@ describe('loadConfig', () => {
       },
       auth: { jwtSecret: JWT_SECRET, otpPepper: OTP_PEPPER, cookieSameSite: 'none', devOtp: false },
       trustProxyHops: 1,
+      storage: {
+        supabaseUrl: 'https://abcdefghij.supabase.co',
+        serviceRoleKey: 'service-role-key-123',
+      },
     });
   });
 
@@ -77,6 +86,7 @@ describe('loadConfig', () => {
         devOtp: true,
       },
       trustProxyHops: 0,
+      storage: undefined,
     });
   });
 
@@ -104,6 +114,8 @@ describe('loadConfig', () => {
       'CORS_ORIGINS: Required in production',
       'DATABASE_SSL_ROOT_CERT: Required in production',
       productionSms,
+      'SUPABASE_URL: Required in production',
+      'SUPABASE_SERVICE_ROLE_KEY: Required in production',
     ]);
   });
 
@@ -114,6 +126,7 @@ describe('loadConfig', () => {
         PORT: 'abc',
         DATABASE_SSL_ROOT_CERT: 'ca.crt',
         ...termii,
+        ...supabase,
       }).issues,
     ).toEqual([
       expect.stringMatching(/^PORT: /),
@@ -218,6 +231,31 @@ describe('loadConfig', () => {
   });
 });
 
+describe('photo storage settings', () => {
+  it('are optional outside production', () => {
+    expect(loadConfig({ ...required, NODE_ENV: 'test' }).storage).toBeUndefined();
+  });
+
+  it('must be set together', () => {
+    expect(configError({ ...required, SUPABASE_URL: supabase.SUPABASE_URL }).issues).toEqual([
+      'SUPABASE_SERVICE_ROLE_KEY: Required when SUPABASE_URL is set',
+    ]);
+    expect(configError({ ...required, SUPABASE_SERVICE_ROLE_KEY: 'key' }).issues).toEqual([
+      'SUPABASE_URL: Required when SUPABASE_SERVICE_ROLE_KEY is set',
+    ]);
+  });
+
+  it('take SUPABASE_URL as an origin, without echoing the key', () => {
+    const error = configError({
+      ...required,
+      ...supabase,
+      SUPABASE_URL: 'https://abcdefghij.supabase.co/',
+    });
+    expect(error.issues).toEqual([expect.stringMatching(/^SUPABASE_URL: /)]);
+    expect(error.message).not.toContain(supabase.SUPABASE_SERVICE_ROLE_KEY);
+  });
+});
+
 describe('dev OTP guard', () => {
   it('is on only in development with the console SMS provider', () => {
     expect(loadConfig({ ...required, NODE_ENV: 'development' }).auth.devOtp).toBe(true);
@@ -229,6 +267,7 @@ describe('dev OTP guard', () => {
     const production = {
       ...required,
       ...termii,
+      ...supabase,
       NODE_ENV: 'production',
       CORS_ORIGINS: 'https://coldlink.ng',
       DATABASE_SSL_ROOT_CERT: 'ca.crt',
