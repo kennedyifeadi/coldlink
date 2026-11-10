@@ -75,7 +75,7 @@
       "idLabel": "Your ColdLink ID",
       "copy": "Copy ID",
       "copied": "Copied!",
-      "channels": "This ID works across ColdLink Web, WhatsApp and USSD.",
+      "channels": "Keep this ID safe. Give it when you contact ColdLink support.",
       "findStorage": "Find storage",
       "copyFailed": "Couldn't copy the ID. Write it down instead.",
       "signOut": "Sign out"

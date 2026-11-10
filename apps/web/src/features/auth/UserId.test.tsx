@@ -25,6 +25,17 @@ describe('ColdLink ID screen', () => {
     expect(await screen.findByText('961 6651', undefined, SCREEN_TIMEOUT)).toBeInTheDocument();
   });
 
+  it('promises no channel that does not exist yet', async () => {
+    mockApi(signedIn);
+    renderApp('/userid');
+    await screen.findByText('961 6651', undefined, SCREEN_TIMEOUT);
+
+    expect(
+      screen.getByText('Keep this ID safe. Give it when you contact ColdLink support.'),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/WhatsApp|USSD/)).not.toBeInTheDocument();
+  });
+
   it('copies the ID without the space and says so', async () => {
     mockApi(signedIn);
     const writeText = vi.fn(() => Promise.resolve());
