@@ -11,11 +11,11 @@ import {
   MAX_PROVIDER_PHOTOS,
   verificationStatusSchema,
 } from '@coldlink/shared';
-import { sql, type Selectable } from 'kysely';
+import { sql, type QueryCreator, type Selectable } from 'kysely';
 import type { Database } from '../db/client.js';
-import type { Providers } from '../db/schema.js';
+import type { DB, Providers } from '../db/schema.js';
 
-type ProviderRow = Omit<Selectable<Providers>, 'location'> & { lat: number; lng: number };
+export type ProviderRow = Omit<Selectable<Providers>, 'location'> & { lat: number; lng: number };
 
 export interface ProviderRecord extends Omit<
   ProviderRow,
@@ -62,7 +62,7 @@ function point(lat: number, lng: number) {
   return sql<string>`extensions.st_setsrid(extensions.st_makepoint(${lng}, ${lat}), 4326)::extensions.geography`;
 }
 
-function selectProviders(db: Database) {
+export function selectProviders(db: QueryCreator<DB>) {
   return db
     .selectFrom('providers')
     .select(providerColumns)
@@ -108,11 +108,23 @@ function toRecord(row: ProviderRow, categories: CropCategory[]): ProviderRecord 
   };
 }
 
+/** Records for rows read with selectProviders, in the same order, with one query for categories. */
+export async function toProviderRecords(
+  db: Database,
+  rows: ProviderRow[],
+): Promise<ProviderRecord[]> {
+  const categories = await categoriesByProvider(
+    db,
+    rows.map((row) => row.id),
+  );
+  return rows.map((row) => toRecord(row, categories.get(row.id) ?? []));
+}
+
 export async function findProvider(db: Database, id: string): Promise<ProviderRecord | undefined> {
   const row = await selectProviders(db).where('id', '=', id).executeTakeFirst();
   if (row === undefined) return undefined;
-  const categories = await categoriesByProvider(db, [row.id]);
-  return toRecord(row, categories.get(row.id) ?? []);
+  const [record] = await toProviderRecords(db, [row]);
+  return record;
 }
 
 /** For a provider the caller has just read or written; a missing one is a bug, not a 404. */
@@ -131,11 +143,7 @@ export async function listOwnedProviders(
     .orderBy('created_at')
     .orderBy('id')
     .execute();
-  const categories = await categoriesByProvider(
-    db,
-    rows.map((row) => row.id),
-  );
-  return rows.map((row) => toRecord(row, categories.get(row.id) ?? []));
+  return toProviderRecords(db, rows);
 }
 
 /** The ids in the list that are not crop categories. */

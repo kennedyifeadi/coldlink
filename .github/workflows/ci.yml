@@ -152,3 +152,8 @@ jobs:
 
       - name: Integration tests
         run: pnpm --filter @coldlink/api test:integration
+
+      # Seeds 500 providers into this job's throwaway database, times POST /search and fails if p95
+      # is 500 ms or more (PRD 7.3). The rows are deleted afterwards.
+      - name: Search benchmark
+        run: pnpm --filter @coldlink/api bench:search

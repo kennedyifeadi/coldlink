@@ -12,11 +12,13 @@ import { createSmsProvider } from '../sms/createSmsProvider.js';
 import type { SmsProvider } from '../sms/provider.js';
 import { createPhotoStorage } from '../storage/createPhotoStorage.js';
 import type { PhotoStorage } from '../storage/photoStorage.js';
+import type { RateLimitOptions } from '../middleware/rateLimit.js';
 import { version } from '../version.js';
 import { authRoutes, defaultAuthIpLimits, type AuthIpLimits } from './auth.js';
 import { meRoutes } from './me.js';
 import { providerRoutes } from './providers.js';
 import { referenceDataRoutes } from './referenceData.js';
+import { defaultSearchIpLimit, searchRoutes } from './search.js';
 
 export interface RouteDependencies {
   db: Database;
@@ -28,7 +30,9 @@ export interface RouteDependencies {
   tasks?: BackgroundTasks;
   tokens?: AccessTokens;
   authIpLimits?: AuthIpLimits;
+  searchIpLimit?: RateLimitOptions;
   storage?: PhotoStorage;
+  now?: () => Date;
 }
 
 export function apiRoutes({
@@ -41,7 +45,9 @@ export function apiRoutes({
   tasks = createBackgroundTasks(),
   tokens = createAccessTokens(config.auth.jwtSecret),
   authIpLimits = defaultAuthIpLimits,
+  searchIpLimit = defaultSearchIpLimit,
   storage = createPhotoStorage(config.storage),
+  now,
 }: RouteDependencies): Router {
   const router = Router();
   router.get('/health', async (req, res) => {
@@ -64,5 +70,15 @@ export function apiRoutes({
   );
   router.use(meRoutes({ db, tokens }));
   router.use(providerRoutes({ db, tokens, appConfig, storage }));
+  router.use(
+    searchRoutes({
+      db,
+      tokens,
+      appConfig,
+      storage,
+      ipLimit: searchIpLimit,
+      ...(now === undefined ? {} : { now }),
+    }),
+  );
   return router;
 }

@@ -10,8 +10,8 @@ The API contract, written as an OpenAPI 3.1 document in the YAML block below. Ea
 - **Lists:** a list response is `{ data: [...] }`, so a cursor can sit next to `data` later without changing the shape.
 - **Pagination:** paginated lists take `limit` and `cursor` (PRD 8). The reference lists (`/crops`, `/crop-categories`) are not paginated: they are small, admin-managed reference data (22 crops, 7 categories) that a client loads whole.
 - **Caching:** the public reference endpoints send `Cache-Control: public` with a short `max-age` (5 minutes for crops and categories, 60 seconds for config). Responses for the signed-in user (`/me`, the owner's provider views) send `no-store`. Other responses, and every error, send none.
-- **Rate limits:** limited routes send `RateLimit` and `RateLimit-Policy` headers, and `Retry-After` with a 429. The reference endpoints are not limited yet: they are cheap, cacheable reads. The auth routes are limited per IP (decision 56); `POST /auth/otp/request` is also limited per phone number, and its 429 adds `details.retry_after_seconds`.
-- **Response schemas:** the Zod schemas for request and response bodies live in `packages/shared` (`cropCategoriesResponseSchema`, `cropsResponseSchema`, `publicConfigSchema`, `otpRequestBodySchema`, `otpRequestResponseSchema`, `otpVerifyBodySchema`, `sessionResponseSchema`, `userProfileSchema`, `updateProfileBodySchema`, `createProviderBodySchema`, `updateProviderBodySchema`, `publicProviderSchema`, `ownProviderSchema`, `ownProvidersResponseSchema`), for the web app to validate forms and parse responses with.
+- **Rate limits:** limited routes send `RateLimit` and `RateLimit-Policy` headers, and `Retry-After` with a 429. The reference endpoints are not limited yet: they are cheap, cacheable reads. The auth routes are limited per IP (decision 56); `POST /auth/otp/request` is also limited per phone number, and its 429 adds `details.retry_after_seconds`. `POST /search` is limited to 300 requests per IP per 15 minutes (decision 74).
+- **Response schemas:** the Zod schemas for request and response bodies live in `packages/shared` (`cropCategoriesResponseSchema`, `cropsResponseSchema`, `publicConfigSchema`, `otpRequestBodySchema`, `otpRequestResponseSchema`, `otpVerifyBodySchema`, `sessionResponseSchema`, `userProfileSchema`, `updateProfileBodySchema`, `createProviderBodySchema`, `updateProviderBodySchema`, `publicProviderSchema`, `ownProviderSchema`, `ownProvidersResponseSchema`, `searchBodySchema`, `searchResponseSchema`), for the web app to validate forms and parse responses with.
 - **Phone numbers:** send them as people type them: `08031234567`, `8031234567`, `2348031234567` or `+2348031234567`, with or without spaces or hyphens. The API stores `+234` and ten digits, and accepts only mobile numbers (70x, 80x, 81x, 90x, 91x). `normalisePhone` and `phoneSchema` in `packages/shared` do the same in the browser. Responses never contain a full phone number; a profile has `phone_masked` (`+234803***4567`).
 
 ## Authentication
@@ -51,6 +51,18 @@ A provider is a storage facility (PRD 5.3, 7.2; decisions 62 to 66).
 - **Two views:** `GET /providers/:id` is public and only finds `approved` facilities. It never shows a phone number or the owner. The owner's view, returned by every signed-in provider route, adds the masked notification numbers and the approval status.
 - **Editing:** only the owner or an admin can `PATCH` a facility or change its photos; another provider gets 403. A price change applies to new bookings only: a booking keeps the prices it was made with.
 - **Photos:** up to 4 per facility. Send one photo per `POST /providers/:id/photos` as the raw request body with its `Content-Type` (`image/jpeg`, `image/png` or `image/webp`), at most 5 MB; the file must really be that type. Remove one with `DELETE /providers/:id/photos/:photoId`. Each photo is `{ id, url }`, and the URL loads without a token.
+
+## Search
+
+`POST /search` finds storage for a crop near a point (PRD 6.8, 7.3; decisions 70 to 74).
+
+- **Signing in is optional.** Anyone can search. Send the access token when there is one: the search is then logged against the user. A token that is sent must be valid; an expired one gets 401, so refresh and search again.
+- **Quantity is in the facility's unit.** Send `capacity_unit` (`crates`, `kg` or `sqm`) with `quantity`; only facilities listed in that unit are returned.
+- **Dates:** `start_date` defaults to today in Lagos, and may not be earlier. The period is `days` days, up to 365; the response gives `start_date` and `end_date` (the day the produce is collected, as on a booking).
+- **What matches:** the facility is approved (or awaiting approval, when the platform does not require it), taking bookings, stores the crop's category, is listed in the unit, has `quantity` free on every day of the period, and is within `search_default_radius_km`. If none is, the search is retried once within `search_max_radius_km` and the response has `expanded_radius: true`. An empty `data` after that means nothing was found; `radius_km` says how far was searched.
+- **Order:** nearest first, by the distance shown (to 0.1 km); facilities at the same distance, the higher rated first.
+- **Prices** are estimates for this quantity and period at today's prices: `total_estimate_kobo` is the storage subtotal plus the service fee, before any delivery, and `deposit_kobo` is what is paid online when booking. `POST /bookings/quote` gives the exact figures.
+- Every search is logged for demand analytics, including those that find nothing.
 
 ## OpenAPI
 
@@ -699,6 +711,48 @@ paths:
           $ref: '#/components/responses/NotFound'
         '500':
           $ref: '#/components/responses/Internal'
+  /search:
+    post:
+      operationId: search
+      summary: Find storage near a point
+      description: >-
+        Open to everyone; with a valid access token the search is logged against the user. Hard
+        filters, order and the expanded-radius retry are described in the Search section. Rate
+        limited per IP.
+      tags: [Search]
+      security:
+        - {}
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SearchRequest'
+            example:
+              lat: 7.3775
+              lng: 3.947
+              crop_id: 0b8f6a3e-2d4c-4b1a-9e7f-3c5d2a1b0e9f
+              quantity: 20
+              capacity_unit: crates
+              days: 14
+      responses:
+        '200':
+          description: >-
+            Matching facilities, nearest first. Empty when nothing matches even at the maximum
+            radius.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SearchResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/Internal'
 components:
   securitySchemes:
     bearerAuth:
@@ -1199,6 +1253,90 @@ components:
               type: string
               format: date-time
       unevaluatedProperties: false
+    SearchRequest:
+      type: object
+      additionalProperties: false
+      required: [lat, lng, crop_id, quantity, capacity_unit, days]
+      properties:
+        lat:
+          type: number
+          minimum: -90
+          maximum: 90
+        lng:
+          type: number
+          minimum: -180
+          maximum: 180
+        crop_id:
+          type: string
+          format: uuid
+          description: An unknown crop is a 400 validation_failed on crop_id.
+        quantity:
+          type: number
+          exclusiveMinimum: 0
+          description: In capacity_unit, at most 3 decimal places.
+        capacity_unit:
+          type: string
+          enum: [sqm, crates, kg]
+        days:
+          type: integer
+          minimum: 1
+          maximum: 365
+        start_date:
+          type: string
+          format: date
+          description: Defaults to today in Africa/Lagos; earlier dates are refused.
+    SearchResult:
+      type: object
+      additionalProperties: false
+      required:
+        - provider
+        - distance_km
+        - available_quantity
+        - storage_subtotal_kobo
+        - service_fee_kobo
+        - total_estimate_kobo
+        - deposit_kobo
+      properties:
+        provider:
+          $ref: '#/components/schemas/PublicProvider'
+        distance_km:
+          type: number
+          description: Straight-line distance, to 0.1 km.
+        available_quantity:
+          type: number
+          description: Free on the busiest day of the period, in the facility's capacity_unit.
+        storage_subtotal_kobo:
+          type: integer
+        service_fee_kobo:
+          type: integer
+        total_estimate_kobo:
+          type: integer
+          description: Storage subtotal plus the service fee, before any delivery.
+        deposit_kobo:
+          type: integer
+          description: Paid online when booking.
+    SearchResponse:
+      type: object
+      additionalProperties: false
+      required: [data, expanded_radius, radius_km, start_date, end_date]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/SearchResult'
+        expanded_radius:
+          type: boolean
+          description: True when nothing was within the default radius and the search was retried.
+        radius_km:
+          type: number
+          description: The radius the results come from.
+        start_date:
+          type: string
+          format: date
+        end_date:
+          type: string
+          format: date
+          description: start_date plus days.
     ErrorCode:
       type: string
       enum:

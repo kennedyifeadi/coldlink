@@ -47,9 +47,30 @@ function unauthorized(message: string): AppError {
  * Verifies the bearer access token and attaches its user, read fresh from the database so that
  * deactivating a user or changing their roles takes effect at once, not when the token expires.
  */
-export function requireAuth({ db, tokens }: AuthDependencies): RequestHandler {
+export function requireAuth(deps: AuthDependencies): RequestHandler {
+  return authenticate(deps, { optional: false });
+}
+
+/**
+ * For routes open to everyone that do more for a signed-in user. With no Authorization header the
+ * request goes through anonymously, but a token that is sent must be valid, so a client whose
+ * session expired gets a 401 and refreshes, rather than being quietly treated as signed out.
+ */
+export function optionalAuth(deps: AuthDependencies): RequestHandler {
+  return authenticate(deps, { optional: true });
+}
+
+function authenticate(
+  { db, tokens }: AuthDependencies,
+  { optional }: { optional: boolean },
+): RequestHandler {
   return async (req, res, next) => {
-    const token = BEARER.exec(req.get('Authorization') ?? '')?.[1];
+    const header = req.get('Authorization');
+    if (optional && header === undefined) {
+      next();
+      return;
+    }
+    const token = BEARER.exec(header ?? '')?.[1];
     const claims = token === undefined ? undefined : await verifyOrUndefined(tokens, token);
     const user = claims === undefined ? undefined : await findUserById(db, claims.sub);
     if (user === undefined || !user.is_active) {
