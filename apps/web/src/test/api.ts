@@ -59,6 +59,26 @@ const urlOf = (input: RequestInfo | URL) =>
 const jsonBody = (body: BodyInit | null | undefined): unknown =>
   typeof body === 'string' ? JSON.parse(body) : undefined;
 
+const NULL_BODY_STATUSES = new Set([101, 204, 205, 304]);
+const replyBodies = new WeakMap<Response, Promise<string>>();
+
+// Node's fetch can mark a cloned Response's original body as used once garbage collection runs,
+// so cloning a Response shared between tests (a module-level route) fails at random. Each reply is
+// read once instead, and every call gets a new Response built from it.
+const copyOf = async (response: Response) => {
+  let body = replyBodies.get(response);
+  if (!body) {
+    body = response.text();
+    replyBodies.set(response, body);
+  }
+  const text = await body;
+  return new Response(NULL_BODY_STATUSES.has(response.status) ? null : text, {
+    status: response.status,
+    statusText: response.statusText,
+    headers: response.headers,
+  });
+};
+
 /**
  * Replaces fetch with routes keyed by "METHOD /path" (relative to /api/v1). A route given an
  * array answers each call with the next reply and repeats the last. Unrouted calls fail the test.
@@ -78,8 +98,7 @@ export const mockApi = (routes: Record<string, Reply | Reply[]>) => {
       headers: new Headers(init.headers),
     };
     const response = typeof reply === 'function' ? await reply(request) : reply;
-    // A Response body can be read once; hand out a copy so a route can answer many calls.
-    return response!.clone();
+    return copyOf(response!);
   });
   vi.stubGlobal('fetch', fetchMock);
   return fetchMock;
