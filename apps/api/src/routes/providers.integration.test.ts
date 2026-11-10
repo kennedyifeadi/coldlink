@@ -281,9 +281,16 @@ describe.skipIf(noTestDatabase)('provider endpoints against Postgres', () => {
     it("lists only the signed-in user's providers, in any status", async () => {
       const { app } = setup();
       const owner = await insertUser(db(), ['farmer']);
-      const first = await createProvider(app, owner);
-      const second = await createProvider(app, owner, { display_name: 'Second room' });
+      const newer = await createProvider(app, owner);
+      const older = await createProvider(app, owner, { display_name: 'Second room' });
       await createProvider(app, await insertUser(db(), ['farmer']));
+      // Every insert in the test transaction gets the same now(), so the order would otherwise
+      // fall to the random ids.
+      await db()
+        .updateTable('providers')
+        .set({ created_at: sql<Date>`created_at - interval '1 minute'` })
+        .where('id', '=', older.id)
+        .execute();
 
       const response = await request(app)
         .get('/api/v1/providers/mine')
@@ -291,7 +298,7 @@ describe.skipIf(noTestDatabase)('provider endpoints against Postgres', () => {
       expect(response.status).toBe(200);
       expect(response.headers['cache-control']).toBe('no-store');
       const { data } = ownProvidersResponseSchema.parse(response.body);
-      expect(data.map((provider) => provider.id)).toEqual([first.id, second.id]);
+      expect(data.map((provider) => provider.id)).toEqual([older.id, newer.id]);
     });
 
     it('refuses a user without the provider role', async () => {
