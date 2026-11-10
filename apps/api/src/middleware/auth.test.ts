@@ -4,7 +4,7 @@ import request from 'supertest';
 import { describe, expect, it } from 'vitest';
 import { createAccessTokens, type AccessTokenClaims } from '../auth/tokens.js';
 import { stubDatabase, testApp, testConfig } from '../test/helpers.js';
-import { requireAuth, requireRole, signedInUser } from './auth.js';
+import { optionalAuth, requireAuth, requireRole, signedInUser } from './auth.js';
 
 const userId = '6f2c1a8e-3b4d-4e5f-8a9b-0c1d2e3f4a5b';
 const user = {
@@ -30,6 +30,9 @@ function app(users: object[] = [user]) {
   const router = Router();
   router.get('/private', requireAuth({ db, tokens }), (req, res) => {
     res.json({ id: signedInUser(req).id });
+  });
+  router.get('/open', optionalAuth({ db, tokens }), (req, res) => {
+    res.json({ id: req.user?.id ?? null });
   });
   router.get('/admin', requireAuth({ db, tokens }), requireRole('admin'), (_req, res) => {
     res.json({ ok: true });
@@ -108,6 +111,42 @@ describe('requireAuth', () => {
       401,
       'unauthorized',
     );
+  });
+});
+
+describe('optionalAuth', () => {
+  it('lets a request with no token through anonymously', async () => {
+    const response = await request(app()).get('/api/v1/open');
+    expect(response.status).toBe(200);
+    expect(response.body).toEqual({ id: null });
+  });
+
+  it('attaches the user when a valid token is sent', async () => {
+    const response = await request(app())
+      .get('/api/v1/open')
+      .set('Authorization', await bearer());
+    expect(response.body).toEqual({ id: userId });
+  });
+
+  it('returns 401 for a token that is sent but no longer valid', async () => {
+    const issuedLongAgo = () => new Date(Date.now() - 16 * 60 * 1000);
+    const expired = await request(app())
+      .get('/api/v1/open')
+      .set('Authorization', await bearer({}, issuedLongAgo));
+    expectError(expired, 401, 'unauthorized');
+    expect(expired.headers['www-authenticate']).toBe('Bearer');
+    expectError(
+      await request(app()).get('/api/v1/open').set('Authorization', 'Bearer not a token'),
+      401,
+      'unauthorized',
+    );
+  });
+
+  it('returns 401 when the token belongs to an inactive user', async () => {
+    const response = await request(app([{ ...user, is_active: false }]))
+      .get('/api/v1/open')
+      .set('Authorization', await bearer());
+    expectError(response, 401, 'unauthorized');
   });
 });
 
