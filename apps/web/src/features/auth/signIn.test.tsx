@@ -213,6 +213,9 @@ describe('resend', () => {
   const useClock = () =>
     vi.useFakeTimers({ toFake: ['setInterval', 'clearInterval', 'Date'], shouldAdvanceTime: true });
   const tick = (ms: number) => act(() => vi.advanceTimersByTime(ms));
+  // The code screen can show its button before the effect that starts the countdown's interval
+  // has run; a tick in that gap moves the clock with nothing listening.
+  const countdownRunning = () => vi.waitFor(() => expect(vi.getTimerCount()).toBeGreaterThan(0));
 
   it('counts down from resend_after_seconds before offering a new code', async () => {
     useClock();
@@ -223,6 +226,7 @@ describe('resend', () => {
     expect(
       await screen.findByRole('button', { name: 'Send a new code in 0:45' }, SCREEN_TIMEOUT),
     ).toBeDisabled();
+    await countdownRunning();
 
     await tick(15_000);
     expect(screen.getByRole('button', { name: 'Send a new code in 0:30' })).toBeDisabled();
@@ -240,6 +244,7 @@ describe('resend', () => {
     const user = renderApp('/onboarding', { advanceTimers: vi.advanceTimersByTime });
     await enterPhone(user);
     await screen.findByRole('button', { name: /^Send a new code in/ }, SCREEN_TIMEOUT);
+    await countdownRunning();
     await tick(60_000);
 
     await user.click(screen.getByRole('button', { name: 'Send a new code' }));
@@ -263,6 +268,7 @@ describe('resend', () => {
     const user = renderApp('/onboarding', { advanceTimers: vi.advanceTimersByTime });
     await enterPhone(user);
     await screen.findByRole('button', { name: /^Send a new code in/ }, SCREEN_TIMEOUT);
+    await countdownRunning();
     await tick(60_000);
 
     await user.click(screen.getByRole('button', { name: 'Send a new code' }));
