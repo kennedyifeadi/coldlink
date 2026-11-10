@@ -1,0 +1,7 @@
+/* Leaflet draws the pin as an SVG path; CSS beats its presentation attributes. */
+.pin-marker {
+  stroke: var(--color-ink);
+  stroke-width: 3;
+  fill: var(--color-accent);
+  fill-opacity: 1;
+}

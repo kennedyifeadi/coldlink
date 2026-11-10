@@ -1,30 +1,15 @@
-import {
-  Apple,
-  Carrot,
-  Cherry,
-  CircleDot,
-  Drumstick,
-  Fish,
-  Flame,
-  Leaf,
-  Milk,
-  Shapes,
-  type LucideIcon,
-} from 'lucide-react';
-import type { ProduceId } from '../../data/mockData';
+import { Carrot, Cherry, Drumstick, Fish, Leaf, Milk, Shapes, type LucideIcon } from 'lucide-react';
 
-export type ProduceChoice = ProduceId | 'other';
-
-// Placeholder icons until the design assets include produce artwork.
-export const produceIcons: Record<ProduceChoice, LucideIcon> = {
-  tomato: Apple,
-  pepper: Flame,
-  onion: CircleDot,
+// Placeholder icons, one per crop category, until the design assets include produce artwork.
+const categoryIcons: Record<string, LucideIcon> = {
   vegetables: Leaf,
   fruits: Cherry,
-  yam: Carrot,
-  meat: Drumstick,
+  tubers: Carrot,
   fish: Fish,
+  meat_poultry: Drumstick,
   dairy: Milk,
-  other: Shapes,
 };
+
+/** A category added after this list gets the generic icon rather than none. */
+export const produceIcon = (categorySlug: string): LucideIcon =>
+  categoryIcons[categorySlug] ?? Shapes;

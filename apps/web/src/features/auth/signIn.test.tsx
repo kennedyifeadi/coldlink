@@ -103,7 +103,7 @@ describe('phone screen', () => {
 });
 
 describe('code screen', () => {
-  it('sends a returning farmer to search after the right code', async () => {
+  it('sends a returning farmer home after the right code', async () => {
     const fetchMock = mockApi({
       ...signedOut,
       'POST /auth/otp/request': codeSent(),
@@ -120,7 +120,7 @@ describe('code screen', () => {
     await enterCode(user, '482913');
 
     expect(
-      await screen.findByRole('heading', { name: 'Where are you storing from?' }, SCREEN_TIMEOUT),
+      await screen.findByRole('heading', { name: 'Keep your harvest fresh.' }, SCREEN_TIMEOUT),
     ).toBeInTheDocument();
     const [verify] = requestsTo(fetchMock, 'POST', '/auth/otp/verify');
     expect(bodyOf(verify!)).toEqual({ phone: '+2348031234567', code: '482913' });

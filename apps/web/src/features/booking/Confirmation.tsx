@@ -74,7 +74,7 @@ const Confirmation = () => {
                 <p className="text-ink text-label mb-0.5">{t('booking.confirmation.produce')}</p>
                 <p className="text-copy-muted text-body">
                   {t('booking.confirmation.produceValue', {
-                    produce: t('mock.produce.tomato'),
+                    produce: t('mock.sampleBooking.produce'),
                     count: 50,
                   })}
                 </p>
