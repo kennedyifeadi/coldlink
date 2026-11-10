@@ -10,7 +10,7 @@ export function displayDistanceKm(distanceKm: number): number {
 }
 
 // PRD 6.8: nearest first, ties broken by rating. A tie is the same distance as shown, so 2.31 km
-// and 2.34 km, both shown as 2.3 km, are ranked by rating (decision 70). The id keeps the order
+// and 2.34 km, both shown as 2.3 km, are ranked by rating (decision 73). The id keeps the order
 // stable between identical searches.
 function compareResults(a: Rankable, b: Rankable): number {
   return (

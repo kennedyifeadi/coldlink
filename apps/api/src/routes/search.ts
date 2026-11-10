@@ -43,7 +43,7 @@ function invalidBody(path: string, message: string): AppError {
   return new AppError('validation_failed', 'Some fields are missing or invalid', [issue]);
 }
 
-// Suspended and rejected providers stay hidden even when approval is not required (decision 69).
+// Suspended and rejected providers stay hidden even when approval is not required (decision 72).
 function visibleStatuses(config: AppConfig): VerificationStatus[] {
   return config.require_provider_approval ? ['approved'] : ['approved', 'pending'];
 }

@@ -14,7 +14,7 @@ export const searchBodySchema = z.strictObject({
   lng: z.number().min(-180).max(180),
   crop_id: z.uuid(),
   // Quantity is in the provider's unit (PRD 5.5), so the farmer says which unit they mean and only
-  // providers listed in it match (decision 68).
+  // providers listed in it match (decision 71).
   quantity: pricingInputSchema.shape.quantity,
   capacity_unit: capacityUnitSchema,
   days: pricingInputSchema.shape.duration_days.max(MAX_SEARCH_DAYS),

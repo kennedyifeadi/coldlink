@@ -12,7 +12,7 @@ export interface SearchCriteria {
   capacityUnit: CapacityUnit;
   startDate: string;
   endDate: string;
-  /** Who may appear: approved only while `require_provider_approval` is on (decision 69). */
+  /** Who may appear: approved only while `require_provider_approval` is on (decision 72). */
   verificationStatuses: VerificationStatus[];
 }
 
