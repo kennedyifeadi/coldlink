@@ -1,19 +1,50 @@
 import {
   bookingQuoteBodySchema,
-  calculatePricing,
-  type AppConfig,
+  bookingStatusSchema,
+  cancelBookingBodySchema,
+  createBookingBodySchema,
+  farmerCancellationRefundKobo,
+  isFarmerCancellable,
   type BookingQuote,
   type BookingQuoteInput,
+  type CancelBookingInput,
+  type CancelledBooking,
+  type CreateBookingInput,
+  type FarmerBookingsResponse,
 } from '@coldlink/shared';
 import { Router } from 'express';
+import * as z from 'zod';
 import type { AppConfigReader } from '../appConfig.js';
-import { availableQuantity } from '../bookings/availability.js';
-import { AppError, invalidBody } from '../errors.js';
-import { optionalAuth, type AuthDependencies } from '../middleware/auth.js';
+import { generateBookingCode } from '../bookings/code.js';
+import type { TransitionHooks } from '../bookings/hooks.js';
+import { priceBooking, type PricedBooking } from '../bookings/pricing.js';
+import {
+  findFarmerBooking,
+  insertBooking,
+  listFarmerBookings,
+  lockFarmerBooking,
+  recordBookingCreated,
+  requireFarmerBooking,
+} from '../bookings/store.js';
+import {
+  BookingNotFoundError,
+  runAfterCommitHooks,
+  transitionBooking,
+} from '../bookings/transition.js';
+import { toFarmerBooking, toFarmerBookingSummary } from '../bookings/views.js';
+import { inTransaction } from '../db/transaction.js';
+import { invalidBody } from '../errors.js';
+import {
+  optionalAuth,
+  requireAuth,
+  requireRole,
+  signedInUser,
+  type AuthDependencies,
+} from '../middleware/auth.js';
 import { rateLimit, type RateLimitOptions } from '../middleware/rateLimit.js';
 import { validate } from '../middleware/validate.js';
-import { findProvider, type ProviderRecord } from '../providers/store.js';
-import { isBookable } from '../providers/visibility.js';
+import { lockProvider } from '../providers/store.js';
+import { findCropCategoryId } from '../search/store.js';
 import { storagePeriod, type StoragePeriod } from '../storagePeriod.js';
 
 // As loose as search (decision 74): a farmer adjusting quantity and days asks for several quotes.
@@ -21,48 +52,20 @@ export const defaultQuoteIpLimit: RateLimitOptions = { windowMs: 15 * 60 * 1000,
 
 export interface BookingRouteDependencies extends AuthDependencies {
   appConfig: AppConfigReader;
+  hooks: TransitionHooks;
   quoteIpLimit: RateLimitOptions;
   now?: () => Date;
+  generateCode?: () => string;
 }
 
-function checkTerms(provider: ProviderRecord, input: BookingQuoteInput): void {
-  if (input.capacity_unit !== provider.capacity_unit) {
-    throw invalidBody('capacity_unit', `This facility is listed in ${provider.capacity_unit}`);
-  }
-  if (input.days < provider.min_storage_days) {
-    throw invalidBody(
-      'days',
-      `This facility stores for at least ${provider.min_storage_days} days`,
-    );
-  }
-}
-
-function notEnoughSpace(providerId: string, available: number): AppError {
-  return new AppError(
-    'conflict',
-    'The facility does not have that much space free on those dates',
-    {
-      provider_id: providerId,
-      available_quantity: available,
-    },
-  );
-}
+const bookingParamsSchema = z.object({ id: z.uuid() });
+type BookingParams = z.infer<typeof bookingParamsSchema>;
 
 function toQuote(
-  provider: ProviderRecord,
   input: BookingQuoteInput,
-  config: AppConfig,
   period: StoragePeriod,
-  available: number,
+  { provider, available, pricing }: PricedBooking,
 ): BookingQuote {
-  const pricing = calculatePricing({
-    quantity: input.quantity,
-    duration_days: input.days,
-    unit_price_kobo: provider.price_per_unit_per_day_kobo,
-    commission_rate: config.commission_rate,
-    deposit_percent: config.deposit_percent,
-    service_fee_kobo: config.service_fee_kobo,
-  });
   return {
     provider_id: provider.id,
     quantity: input.quantity,
@@ -82,8 +85,16 @@ function toQuote(
 }
 
 export function bookingRoutes(deps: BookingRouteDependencies): Router {
-  const { db, appConfig, quoteIpLimit, now = () => new Date() } = deps;
+  const {
+    db,
+    appConfig,
+    hooks,
+    quoteIpLimit,
+    now = () => new Date(),
+    generateCode = generateBookingCode,
+  } = deps;
   const router = Router();
+  const farmerOnly = [requireAuth(deps), requireRole('farmer')];
 
   // Reads only: a quote holds no capacity and writes no row (PRD 8).
   router.post(
@@ -95,17 +106,111 @@ export function bookingRoutes(deps: BookingRouteDependencies): Router {
       const input = req.body as BookingQuoteInput;
       const period = storagePeriod(input.start_date, input.days, now());
       const config = await appConfig.get();
-      const provider = await findProvider(db, input.provider_id);
-      // One 404 for unknown and hidden facilities, as GET /providers/:id does (decision 63).
-      if (provider === undefined || !isBookable(provider, config)) {
-        throw new AppError('not_found', 'Facility not found');
-      }
-      checkTerms(provider, input);
+      const priced = await priceBooking(db, input, period, config);
+      res.json(toQuote(input, period, priced));
+    },
+  );
 
-      const available = await availableQuantity(db, provider.id, period.startDate, period.endDate);
-      if (available < input.quantity) throw notEnoughSpace(provider.id, available);
+  // PRD 6.3: the provider's row is locked before its visibility, terms and free capacity are
+  // checked, so two farmers racing for the last space are served one after the other.
+  router.post(
+    '/bookings',
+    ...farmerOnly,
+    validate({ body: createBookingBodySchema }),
+    async (req, res) => {
+      const input = req.body as CreateBookingInput;
+      const farmerId = signedInUser(req).id;
+      const period = storagePeriod(input.start_date, input.days, now());
+      const cropCategoryId = await findCropCategoryId(db, input.crop_id);
+      if (cropCategoryId === undefined) throw invalidBody('crop_id', 'Unknown crop');
+      const config = await appConfig.get();
 
-      res.json(toQuote(provider, input, config, period, available));
+      const booking = await inTransaction(db, async (trx) => {
+        await lockProvider(trx, input.provider_id);
+        const { provider, pricing } = await priceBooking(
+          trx,
+          { ...input, cropCategoryId },
+          period,
+          config,
+        );
+        const id = await insertBooking(
+          trx,
+          {
+            farmerId,
+            providerId: provider.id,
+            cropId: input.crop_id,
+            quantity: input.quantity,
+            capacityUnit: provider.capacity_unit,
+            period,
+            days: input.days,
+            unitPriceKobo: provider.price_per_unit_per_day_kobo,
+            pricing,
+            config,
+          },
+          generateCode,
+        );
+        await recordBookingCreated(trx, id, farmerId);
+        return requireFarmerBooking(trx, farmerId, id);
+      });
+      res.status(201).set('Cache-Control', 'no-store').json(toFarmerBooking(booking));
+    },
+  );
+
+  router.get('/bookings', ...farmerOnly, async (req, res) => {
+    const bookings = await listFarmerBookings(db, signedInUser(req).id);
+    const body: FarmerBookingsResponse = { data: bookings.map(toFarmerBookingSummary) };
+    res.set('Cache-Control', 'no-store').json(body);
+  });
+
+  // Someone else's booking is the same 404 as an unknown id, so ids cannot be probed.
+  router.get(
+    '/bookings/:id',
+    ...farmerOnly,
+    validate({ params: bookingParamsSchema }),
+    async (req, res) => {
+      const { id } = req.params as BookingParams;
+      const booking = await findFarmerBooking(db, signedInUser(req).id, id);
+      if (booking === undefined) throw new BookingNotFoundError(id);
+      res.set('Cache-Control', 'no-store').json(toFarmerBooking(booking));
+    },
+  );
+
+  // The refund depends on the status, so it is worked out under the row lock the change takes.
+  router.post(
+    '/bookings/:id/cancel',
+    ...farmerOnly,
+    validate({ params: bookingParamsSchema, body: cancelBookingBodySchema }),
+    async (req, res) => {
+      const { id } = req.params as BookingParams;
+      const { reason } = req.body as CancelBookingInput;
+      const farmerId = signedInUser(req).id;
+      const { farmer_free_cancel_hours } = await appConfig.get();
+
+      const { result, booking, refundKobo } = await inTransaction(db, async (trx) => {
+        const locked = await lockFarmerBooking(trx, farmerId, id);
+        if (locked === undefined) throw new BookingNotFoundError(id);
+        const status = bookingStatusSchema.parse(locked.status);
+        // transitionBooking refuses every other status with a 409, so this 0 is never stored.
+        const refund = isFarmerCancellable(status)
+          ? farmerCancellationRefundKobo({ ...locked, status }, now(), farmer_free_cancel_hours)
+          : 0;
+        const transition = await transitionBooking(trx, hooks, {
+          bookingId: id,
+          to: 'cancelled',
+          actor: { type: 'farmer', id: farmerId },
+          ...(reason === undefined ? {} : { reason }),
+          metadata: { refund_kobo: refund },
+        });
+        return {
+          result: transition,
+          booking: await requireFarmerBooking(trx, farmerId, id),
+          refundKobo: refund,
+        };
+      });
+      await runAfterCommitHooks(req.log, result);
+
+      const body: CancelledBooking = { ...toFarmerBooking(booking), refund_kobo: refundKobo };
+      res.set('Cache-Control', 'no-store').json(body);
     },
   );
 

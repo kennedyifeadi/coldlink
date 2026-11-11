@@ -17,3 +17,8 @@ const MS_PER_DAY = 24 * 60 * 60 * 1000;
 export function addDays(date: string, days: number): string {
   return new Date(Date.parse(`${date}T00:00:00Z`) + days * MS_PER_DAY).toISOString().slice(0, 10);
 }
+
+/** The instant a 'YYYY-MM-DD' date begins in Lagos, where it is UTC+1 all year (no daylight saving). */
+export function startOfDayInLagos(date: string): Date {
+  return new Date(`${date}T00:00:00+01:00`);
+}

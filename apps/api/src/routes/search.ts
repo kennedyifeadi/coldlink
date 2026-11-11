@@ -1,5 +1,4 @@
 import {
-  calculatePricing,
   searchBodySchema,
   type AppConfig,
   type SearchInput,
@@ -8,6 +7,7 @@ import {
 } from '@coldlink/shared';
 import { Router } from 'express';
 import type { AppConfigReader } from '../appConfig.js';
+import { pricingFor } from '../bookings/pricing.js';
 import { invalidBody } from '../errors.js';
 import { optionalAuth, type AuthDependencies } from '../middleware/auth.js';
 import { rateLimit, type RateLimitOptions } from '../middleware/rateLimit.js';
@@ -42,14 +42,7 @@ function toResult(
   config: AppConfig,
   storage: PhotoStorage,
 ): SearchResult {
-  const pricing = calculatePricing({
-    quantity: input.quantity,
-    duration_days: input.days,
-    unit_price_kobo: candidate.provider.price_per_unit_per_day_kobo,
-    commission_rate: config.commission_rate,
-    deposit_percent: config.deposit_percent,
-    service_fee_kobo: config.service_fee_kobo,
-  });
+  const pricing = pricingFor(candidate.provider, input, config);
   return {
     provider: toPublicProvider(candidate.provider, storage),
     distance_km: displayDistanceKm(candidate.distance_km),

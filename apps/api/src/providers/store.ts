@@ -127,6 +127,14 @@ export async function findProvider(db: Database, id: string): Promise<ProviderRe
   return record;
 }
 
+/**
+ * Locks the provider's row until the transaction ends, so bookings for it are made one at a time
+ * and each sees the capacity the one before took (PRD 6.3). Does nothing for an unknown id.
+ */
+export async function lockProvider(trx: Database, id: string): Promise<void> {
+  await trx.selectFrom('providers').select('id').where('id', '=', id).forUpdate().execute();
+}
+
 /** For a provider the caller has just read or written; a missing one is a bug, not a 404. */
 export async function requireProvider(db: Database, id: string): Promise<ProviderRecord> {
   const provider = await findProvider(db, id);

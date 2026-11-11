@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { addDays, todayInLagos } from './dates.js';
+import { addDays, startOfDayInLagos, todayInLagos } from './dates.js';
 
 describe('todayInLagos', () => {
   it('is already the next day in Lagos from 23:00 UTC', () => {
@@ -21,5 +21,17 @@ describe('addDays', () => {
     ['2026-11-10', 365, '2027-11-10'],
   ])('%s plus %i days is %s', (date, days, expected) => {
     expect(addDays(date, days)).toBe(expected);
+  });
+});
+
+describe('startOfDayInLagos', () => {
+  it('is 23:00 UTC the day before', () => {
+    expect(startOfDayInLagos('2026-12-01').toISOString()).toBe('2026-11-30T23:00:00.000Z');
+  });
+
+  it('is the instant todayInLagos turns to that date', () => {
+    const start = startOfDayInLagos('2027-01-01');
+    expect(todayInLagos(start)).toBe('2027-01-01');
+    expect(todayInLagos(new Date(start.getTime() - 1))).toBe('2026-12-31');
   });
 });

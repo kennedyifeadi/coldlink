@@ -5,6 +5,7 @@ import { createAccessTokens, type AccessTokens } from '../auth/tokens.js';
 import { createBackgroundTasks, type BackgroundTasks } from '../backgroundTasks.js';
 import type { Config } from '../config.js';
 import type { Database } from '../db/client.js';
+import { createTransitionHooks, type TransitionHooks } from '../bookings/hooks.js';
 import { checkDatabase } from '../db/health.js';
 import { createNotificationStore, type NotificationStore } from '../notifications/store.js';
 import { smsTemplates } from '../notifications/templates.js';
@@ -34,7 +35,9 @@ export interface RouteDependencies {
   searchIpLimit?: RateLimitOptions;
   quoteIpLimit?: RateLimitOptions;
   storage?: PhotoStorage;
+  bookingHooks?: TransitionHooks;
   now?: () => Date;
+  generateBookingCode?: () => string;
 }
 
 export function apiRoutes({
@@ -50,7 +53,9 @@ export function apiRoutes({
   searchIpLimit = defaultSearchIpLimit,
   quoteIpLimit = defaultQuoteIpLimit,
   storage = createPhotoStorage(config.storage),
+  bookingHooks = createTransitionHooks(),
   now,
+  generateBookingCode,
 }: RouteDependencies): Router {
   const router = Router();
   router.get('/health', async (req, res) => {
@@ -88,8 +93,10 @@ export function apiRoutes({
       db,
       tokens,
       appConfig,
+      hooks: bookingHooks,
       quoteIpLimit,
       ...(now === undefined ? {} : { now }),
+      ...(generateBookingCode === undefined ? {} : { generateCode: generateBookingCode }),
     }),
   );
   return router;
