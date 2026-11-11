@@ -8,7 +8,6 @@ import {
   updateProviderBodySchema,
   type CreateProviderInput,
   type UpdateProviderInput,
-  type ValidationIssue,
 } from '@coldlink/shared';
 import express, { Router, type Request, type RequestHandler } from 'express';
 import type { Logger } from 'pino';
@@ -17,7 +16,7 @@ import type { AppConfigReader } from '../appConfig.js';
 import type { User } from '../auth/users.js';
 import type { Database } from '../db/client.js';
 import { inTransaction } from '../db/transaction.js';
-import { AppError } from '../errors.js';
+import { AppError, invalidBody } from '../errors.js';
 import {
   requireAuth,
   requireRole,
@@ -66,11 +65,6 @@ function tooManyPhotos(): AppError {
     'conflict',
     `A facility can have at most ${MAX_PROVIDER_PHOTOS} photos. Remove one to add another.`,
   );
-}
-
-function invalidBody(path: string, message: string): AppError {
-  const issue: ValidationIssue = { location: 'body', path, message };
-  return new AppError('validation_failed', 'Some fields are missing or invalid', [issue]);
 }
 
 async function requireCategories(db: Database, ids: string[]): Promise<void> {

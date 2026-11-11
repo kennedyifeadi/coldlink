@@ -1,5 +1,6 @@
 export * from './appConfig.js';
 export * from './auth.js';
+export * from './bookingQuote.js';
 export * from './bookingStateMachine.js';
 export * from './dates.js';
 export * from './enums.js';

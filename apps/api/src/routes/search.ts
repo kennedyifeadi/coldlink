@@ -1,22 +1,19 @@
 import {
-  addDays,
   calculatePricing,
   searchBodySchema,
-  todayInLagos,
   type AppConfig,
   type SearchInput,
   type SearchResponse,
   type SearchResult,
-  type ValidationIssue,
-  type VerificationStatus,
 } from '@coldlink/shared';
 import { Router } from 'express';
 import type { AppConfigReader } from '../appConfig.js';
-import { AppError } from '../errors.js';
+import { invalidBody } from '../errors.js';
 import { optionalAuth, type AuthDependencies } from '../middleware/auth.js';
 import { rateLimit, type RateLimitOptions } from '../middleware/rateLimit.js';
 import { validate } from '../middleware/validate.js';
 import { toPublicProvider } from '../providers/views.js';
+import { visibleStatuses } from '../providers/visibility.js';
 import { displayDistanceKm, rankResults } from '../search/ranking.js';
 import {
   findCropCategoryId,
@@ -26,6 +23,7 @@ import {
   type SearchCriteria,
 } from '../search/store.js';
 import type { PhotoStorage } from '../storage/photoStorage.js';
+import { storagePeriod } from '../storagePeriod.js';
 
 // Per IP and per instance, as for the auth limits (decision 56). Loose because carrier-grade NAT
 // puts many farmers behind one mobile IP, and a farmer adjusting the form searches several times.
@@ -36,16 +34,6 @@ export interface SearchRouteDependencies extends AuthDependencies {
   storage: PhotoStorage;
   ipLimit: RateLimitOptions;
   now?: () => Date;
-}
-
-function invalidBody(path: string, message: string): AppError {
-  const issue: ValidationIssue = { location: 'body', path, message };
-  return new AppError('validation_failed', 'Some fields are missing or invalid', [issue]);
-}
-
-// Suspended and rejected providers stay hidden even when approval is not required (decision 72).
-function visibleStatuses(config: AppConfig): VerificationStatus[] {
-  return config.require_provider_approval ? ['approved'] : ['approved', 'pending'];
 }
 
 function toResult(
@@ -95,16 +83,11 @@ export function searchRoutes(deps: SearchRouteDependencies): Router {
     validate({ body: searchBodySchema }),
     async (req, res) => {
       const input = req.body as SearchInput;
-      const today = todayInLagos(now());
-      const startDate = input.start_date ?? today;
-      if (startDate < today) {
-        throw invalidBody('start_date', 'Choose today or a later date');
-      }
+      const { startDate, endDate } = storagePeriod(input.start_date, input.days, now());
       const categoryId = await findCropCategoryId(db, input.crop_id);
       if (categoryId === undefined) throw invalidBody('crop_id', 'Unknown crop');
 
       const config = await appConfig.get();
-      const endDate = addDays(startDate, input.days);
       const criteria: SearchCriteria = {
         lat: input.lat,
         lng: input.lng,

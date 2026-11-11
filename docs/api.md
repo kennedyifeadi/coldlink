@@ -10,8 +10,8 @@ The API contract, written as an OpenAPI 3.1 document in the YAML block below. Ea
 - **Lists:** a list response is `{ data: [...] }`, so a cursor can sit next to `data` later without changing the shape.
 - **Pagination:** paginated lists take `limit` and `cursor` (PRD 8). The reference lists (`/crops`, `/crop-categories`) are not paginated: they are small, admin-managed reference data (22 crops, 7 categories) that a client loads whole.
 - **Caching:** the public reference endpoints send `Cache-Control: public` with a short `max-age` (5 minutes for crops and categories, 60 seconds for config). Responses for the signed-in user (`/me`, the owner's provider views) send `no-store`. Other responses, and every error, send none.
-- **Rate limits:** limited routes send `RateLimit` and `RateLimit-Policy` headers, and `Retry-After` with a 429. The reference endpoints are not limited yet: they are cheap, cacheable reads. The auth routes are limited per IP (decision 56); `POST /auth/otp/request` is also limited per phone number, and its 429 adds `details.retry_after_seconds`. `POST /search` is limited to 300 requests per IP per 15 minutes (decision 74).
-- **Response schemas:** the Zod schemas for request and response bodies live in `packages/shared` (`cropCategoriesResponseSchema`, `cropsResponseSchema`, `publicConfigSchema`, `otpRequestBodySchema`, `otpRequestResponseSchema`, `otpVerifyBodySchema`, `sessionResponseSchema`, `userProfileSchema`, `updateProfileBodySchema`, `createProviderBodySchema`, `updateProviderBodySchema`, `publicProviderSchema`, `ownProviderSchema`, `ownProvidersResponseSchema`, `searchBodySchema`, `searchResponseSchema`), for the web app to validate forms and parse responses with.
+- **Rate limits:** limited routes send `RateLimit` and `RateLimit-Policy` headers, and `Retry-After` with a 429. The reference endpoints are not limited yet: they are cheap, cacheable reads. The auth routes are limited per IP (decision 56); `POST /auth/otp/request` is also limited per phone number, and its 429 adds `details.retry_after_seconds`. `POST /search` and `POST /bookings/quote` are each limited to 300 requests per IP per 15 minutes (decisions 74, 75).
+- **Response schemas:** the Zod schemas for request and response bodies live in `packages/shared` (`cropCategoriesResponseSchema`, `cropsResponseSchema`, `publicConfigSchema`, `otpRequestBodySchema`, `otpRequestResponseSchema`, `otpVerifyBodySchema`, `sessionResponseSchema`, `userProfileSchema`, `updateProfileBodySchema`, `createProviderBodySchema`, `updateProviderBodySchema`, `publicProviderSchema`, `ownProviderSchema`, `ownProvidersResponseSchema`, `searchBodySchema`, `searchResponseSchema`, `bookingQuoteBodySchema`, `bookingQuoteSchema`), for the web app to validate forms and parse responses with.
 - **Phone numbers:** send them as people type them: `08031234567`, `8031234567`, `2348031234567` or `+2348031234567`, with or without spaces or hyphens. The API stores `+234` and ten digits, and accepts only mobile numbers (70x, 80x, 81x, 90x, 91x). `normalisePhone` and `phoneSchema` in `packages/shared` do the same in the browser. Responses never contain a full phone number; a profile has `phone_masked` (`+234803***4567`).
 
 ## Authentication
@@ -33,7 +33,7 @@ Sign-in is by phone and a 6-digit code sent by SMS (PRD 7.1; decisions 54 to 61)
 | `bad_request` | 400 | The body is not valid JSON or cannot be read; or a photo upload is empty, not JPEG, PNG or WebP, or not the type its `Content-Type` claims. |
 | `validation_failed` | 400 | Params, query or body fail validation. `details` lists every issue as `{ location, path, message }`. |
 | `not_found` | 404 | No such route, or no such resource. |
-| `conflict` | 409 | The request clashes with the resource's current state: a booking status change the state machine does not allow from its current status or for this actor (`details` names the booking, `from`, `to` and `actor_type`), or a fifth photo for a facility. |
+| `conflict` | 409 | The request clashes with the resource's current state: a booking status change the state machine does not allow from its current status or for this actor (`details` names the booking, `from`, `to` and `actor_type`), a fifth photo for a facility, or a quote for more than the facility has free on those dates (`details` gives `provider_id` and `available_quantity`). |
 | `payload_too_large` | 413 | The JSON body is over 100 kB, or a photo is over 5 MB. |
 | `rate_limited` | 429 | Too many requests from this client, or too many codes for this phone number; retry after `Retry-After` seconds. |
 | `unauthorized` | 401 | No access token, or it is invalid or expired, or its user is gone or inactive; or the refresh cookie is missing, expired, revoked or reused. Sign in or refresh. Access-token routes add `WWW-Authenticate: Bearer`. |
@@ -63,6 +63,16 @@ A provider is a storage facility (PRD 5.3, 7.2; decisions 62 to 66).
 - **Order:** nearest first, by the distance shown (to 0.1 km); facilities at the same distance, the higher rated first.
 - **Prices** are estimates for this quantity and period at today's prices: `total_estimate_kobo` is the storage subtotal plus the service fee, before any delivery, and `deposit_kobo` is what is paid online when booking. `POST /bookings/quote` gives the exact figures.
 - Every search is logged for demand analytics, including those that find nothing.
+
+## Bookings
+
+`POST /bookings/quote` prices a booking before it is made (PRD 6.1, 7.4; decisions 75, 76). It writes nothing and holds no space, so the price and free capacity can change before the booking.
+
+- **Signing in is optional**, as for search.
+- **Send** the facility's `provider_id`, `quantity` in the facility's `capacity_unit` (whole crates), `days`, and optionally `start_date` (today in Lagos by default, never earlier).
+- **What can be quoted:** the facilities search would show that are taking bookings. Any other id is a 404. A `capacity_unit` other than the facility's, or fewer `days` than its `min_storage_days`, is a 400 on that field.
+- **Capacity:** if less than `quantity` is free on any day of the period, the answer is 409 `conflict` with `details.available_quantity`.
+- **Prices:** `storage_subtotal_kobo` is split into `deposit_kobo` (paid online) and `balance_due_kobo` (paid at the facility). `total_charged_online_kobo` is the deposit plus `service_fee_kobo` plus `delivery_fee_kobo`, which is 0 until delivery can be added to a booking.
 
 ## OpenAPI
 
@@ -753,6 +763,47 @@ paths:
           $ref: '#/components/responses/RateLimited'
         '500':
           $ref: '#/components/responses/Internal'
+  /bookings/quote:
+    post:
+      operationId: quoteBooking
+      summary: Price a booking
+      description: >-
+        Open to everyone; writes nothing. Only facilities search would show can be quoted. Rate
+        limited per IP.
+      tags: [Bookings]
+      security:
+        - {}
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BookingQuoteRequest'
+            example:
+              provider_id: 0b8f6a3e-2d4c-4b1a-9e7f-3c5d2a1b0e9f
+              quantity: 2
+              capacity_unit: sqm
+              days: 30
+      responses:
+        '200':
+          description: The price for this quantity and period at the facility's current price.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BookingQuote'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/Internal'
 components:
   securitySchemes:
     bearerAuth:
@@ -1337,6 +1388,90 @@ components:
           type: string
           format: date
           description: start_date plus days.
+    BookingQuoteRequest:
+      type: object
+      additionalProperties: false
+      required: [provider_id, quantity, capacity_unit, days]
+      properties:
+        provider_id:
+          type: string
+          format: uuid
+        quantity:
+          type: number
+          exclusiveMinimum: 0
+          description: In capacity_unit, at most 3 decimal places; a whole number of crates.
+        capacity_unit:
+          type: string
+          enum: [sqm, crates, kg]
+          description: Must be the facility's unit.
+        days:
+          type: integer
+          minimum: 1
+          maximum: 365
+          description: At least the facility's min_storage_days.
+        start_date:
+          type: string
+          format: date
+          description: Defaults to today in Africa/Lagos; earlier dates are refused.
+    BookingQuote:
+      type: object
+      additionalProperties: false
+      required:
+        - provider_id
+        - quantity
+        - capacity_unit
+        - start_date
+        - duration_days
+        - end_date
+        - available_quantity
+        - unit_price_kobo
+        - storage_subtotal_kobo
+        - deposit_kobo
+        - balance_due_kobo
+        - service_fee_kobo
+        - delivery_fee_kobo
+        - total_charged_online_kobo
+      properties:
+        provider_id:
+          type: string
+          format: uuid
+        quantity:
+          type: number
+        capacity_unit:
+          type: string
+          enum: [sqm, crates, kg]
+        start_date:
+          type: string
+          format: date
+        duration_days:
+          type: integer
+        end_date:
+          type: string
+          format: date
+          description: start_date plus duration_days, the day the produce is collected.
+        available_quantity:
+          type: number
+          description: Free on the busiest day of the period, in capacity_unit.
+        unit_price_kobo:
+          type: integer
+          description: The facility's price per unit per day.
+        storage_subtotal_kobo:
+          type: integer
+          description: quantity x duration_days x unit_price_kobo, rounded half up to the kobo.
+        deposit_kobo:
+          type: integer
+          description: deposit_percent of the subtotal, paid online.
+        balance_due_kobo:
+          type: integer
+          description: The rest of the subtotal, paid at the facility.
+        service_fee_kobo:
+          type: integer
+        delivery_fee_kobo:
+          type: integer
+          description: Always 0 until delivery can be added to a booking.
+        total_charged_online_kobo:
+          type: integer
+          description: Deposit plus service fee plus delivery fee.
     ErrorCode:
       type: string
       enum:

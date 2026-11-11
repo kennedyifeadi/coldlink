@@ -15,6 +15,7 @@ import type { PhotoStorage } from '../storage/photoStorage.js';
 import type { RateLimitOptions } from '../middleware/rateLimit.js';
 import { version } from '../version.js';
 import { authRoutes, defaultAuthIpLimits, type AuthIpLimits } from './auth.js';
+import { bookingRoutes, defaultQuoteIpLimit } from './bookings.js';
 import { meRoutes } from './me.js';
 import { providerRoutes } from './providers.js';
 import { referenceDataRoutes } from './referenceData.js';
@@ -31,6 +32,7 @@ export interface RouteDependencies {
   tokens?: AccessTokens;
   authIpLimits?: AuthIpLimits;
   searchIpLimit?: RateLimitOptions;
+  quoteIpLimit?: RateLimitOptions;
   storage?: PhotoStorage;
   now?: () => Date;
 }
@@ -46,6 +48,7 @@ export function apiRoutes({
   tokens = createAccessTokens(config.auth.jwtSecret),
   authIpLimits = defaultAuthIpLimits,
   searchIpLimit = defaultSearchIpLimit,
+  quoteIpLimit = defaultQuoteIpLimit,
   storage = createPhotoStorage(config.storage),
   now,
 }: RouteDependencies): Router {
@@ -77,6 +80,15 @@ export function apiRoutes({
       appConfig,
       storage,
       ipLimit: searchIpLimit,
+      ...(now === undefined ? {} : { now }),
+    }),
+  );
+  router.use(
+    bookingRoutes({
+      db,
+      tokens,
+      appConfig,
+      quoteIpLimit,
       ...(now === undefined ? {} : { now }),
     }),
   );

@@ -1,4 +1,4 @@
-import type { ErrorCode, ErrorResponse } from '@coldlink/shared';
+import type { ErrorCode, ErrorResponse, ValidationIssue } from '@coldlink/shared';
 
 const statusByCode: Record<ErrorCode, number> = {
   bad_request: 400,
@@ -32,4 +32,10 @@ export class AppError extends Error {
     const { code, message, details } = this;
     return { error: details === undefined ? { code, message } : { code, message, details } };
   }
+}
+
+/** A 400 for one body field that passed the schema but fails a check against stored data. */
+export function invalidBody(path: string, message: string): AppError {
+  const issue: ValidationIssue = { location: 'body', path, message };
+  return new AppError('validation_failed', 'Some fields are missing or invalid', [issue]);
 }
