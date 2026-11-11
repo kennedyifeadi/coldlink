@@ -10,13 +10,10 @@ import PrimaryButton from '../../components/ui/PrimaryButton';
 import ErrorMessage from '../../components/ui/ErrorMessage';
 import StepProgress from '../../components/ui/StepProgress';
 import TextButton from '../../components/ui/TextButton';
-import { fetchCrops } from '../../api/referenceData';
+import { cropsQuery } from '../../api/referenceData';
 import { describeApiError } from '../../api/describeError';
 import { produceIcon } from './produceIcons';
 import { SEARCH_STEPS, useSearchFlow } from './searchFlow';
-
-// The API caches crops for five minutes (decision 49).
-const CROPS_STALE_MS = 5 * 60_000;
 
 // Local names are stored without tone marks (decision 40), so plain typing finds "ata" or "isu".
 const matches = (crop: Crop, query: string) =>
@@ -44,11 +41,7 @@ const Produce = () => {
   const { draft, update } = useSearchFlow();
   const [selected, setSelected] = useState<Crop | undefined>(draft.crop);
   const [filter, setFilter] = useState('');
-  const crops = useQuery({
-    queryKey: ['crops'],
-    queryFn: ({ signal }) => fetchCrops(signal),
-    staleTime: CROPS_STALE_MS,
-  });
+  const crops = useQuery(cropsQuery);
 
   if (!draft.place) return <Navigate to={SEARCH_STEPS.place} replace />;
 
