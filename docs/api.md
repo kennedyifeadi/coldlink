@@ -8,10 +8,10 @@ The API contract, written as an OpenAPI 3.1 document in the YAML block below. Ea
 - **Errors:** every error response has the shape `{ error: { code, message, details? } }`. The schema and the list of codes live in `packages/shared/src/errors.ts` (`errorResponseSchema`, `errorCodes`); the table below must match them.
 - **Correlation ID:** send `X-Request-Id` to tag a request (1 to 128 characters from `A-Z a-z 0-9 . _ : -`). Anything else, or no header, gets a generated UUID. The response always echoes the ID in `X-Request-Id`, and every log line for the request carries it, so quote it when reporting a problem.
 - **Lists:** a list response is `{ data: [...] }`, so a cursor can sit next to `data` later without changing the shape.
-- **Pagination:** paginated lists take `limit` and `cursor` (PRD 8). The reference lists (`/crops`, `/crop-categories`) are not paginated: they are small, admin-managed reference data (22 crops, 7 categories) that a client loads whole.
-- **Caching:** the public reference endpoints send `Cache-Control: public` with a short `max-age` (5 minutes for crops and categories, 60 seconds for config). Responses for the signed-in user (`/me`, the owner's provider views) send `no-store`. Other responses, and every error, send none.
+- **Pagination:** paginated lists take `limit` and `cursor` (PRD 8). The reference lists (`/crops`, `/crop-categories`) are not paginated: they are small, admin-managed reference data (22 crops, 7 categories) that a client loads whole. `GET /providers/mine` and `GET /bookings` are not paginated yet either (decisions 62, 85).
+- **Caching:** the public reference endpoints send `Cache-Control: public` with a short `max-age` (5 minutes for crops and categories, 60 seconds for config). Responses for the signed-in user (`/me`, the owner's provider views, the farmer's bookings) send `no-store`. Other responses, and every error, send none.
 - **Rate limits:** limited routes send `RateLimit` and `RateLimit-Policy` headers, and `Retry-After` with a 429. The reference endpoints are not limited yet: they are cheap, cacheable reads. The auth routes are limited per IP (decision 56); `POST /auth/otp/request` is also limited per phone number, and its 429 adds `details.retry_after_seconds`. `POST /search` and `POST /bookings/quote` are each limited to 300 requests per IP per 15 minutes (decisions 74, 75).
-- **Response schemas:** the Zod schemas for request and response bodies live in `packages/shared` (`cropCategoriesResponseSchema`, `cropsResponseSchema`, `publicConfigSchema`, `otpRequestBodySchema`, `otpRequestResponseSchema`, `otpVerifyBodySchema`, `sessionResponseSchema`, `userProfileSchema`, `updateProfileBodySchema`, `createProviderBodySchema`, `updateProviderBodySchema`, `publicProviderSchema`, `ownProviderSchema`, `ownProvidersResponseSchema`, `searchBodySchema`, `searchResponseSchema`, `bookingQuoteBodySchema`, `bookingQuoteSchema`), for the web app to validate forms and parse responses with.
+- **Response schemas:** the Zod schemas for request and response bodies live in `packages/shared` (`cropCategoriesResponseSchema`, `cropsResponseSchema`, `publicConfigSchema`, `otpRequestBodySchema`, `otpRequestResponseSchema`, `otpVerifyBodySchema`, `sessionResponseSchema`, `userProfileSchema`, `updateProfileBodySchema`, `createProviderBodySchema`, `updateProviderBodySchema`, `publicProviderSchema`, `ownProviderSchema`, `ownProvidersResponseSchema`, `searchBodySchema`, `searchResponseSchema`, `bookingQuoteBodySchema`, `bookingQuoteSchema`, `createBookingBodySchema`, `farmerBookingSchema`, `farmerBookingsResponseSchema`, `cancelBookingBodySchema`, `cancelledBookingSchema`), for the web app to validate forms and parse responses with.
 - **Phone numbers:** send them as people type them: `08031234567`, `8031234567`, `2348031234567` or `+2348031234567`, with or without spaces or hyphens. The API stores `+234` and ten digits, and accepts only mobile numbers (70x, 80x, 81x, 90x, 91x). `normalisePhone` and `phoneSchema` in `packages/shared` do the same in the browser. Responses never contain a full phone number; a profile has `phone_masked` (`+234803***4567`).
 
 ## Authentication
@@ -33,7 +33,7 @@ Sign-in is by phone and a 6-digit code sent by SMS (PRD 7.1; decisions 54 to 61)
 | `bad_request` | 400 | The body is not valid JSON or cannot be read; or a photo upload is empty, not JPEG, PNG or WebP, or not the type its `Content-Type` claims. |
 | `validation_failed` | 400 | Params, query or body fail validation. `details` lists every issue as `{ location, path, message }`. |
 | `not_found` | 404 | No such route, or no such resource. |
-| `conflict` | 409 | The request clashes with the resource's current state: a booking status change the state machine does not allow from its current status or for this actor (`details` names the booking, `from`, `to` and `actor_type`), a fifth photo for a facility, or a quote for more than the facility has free on those dates (`details` gives `provider_id` and `available_quantity`). |
+| `conflict` | 409 | The request clashes with the resource's current state: a booking status change the state machine does not allow from its current status or for this actor (`details` names the booking, `from`, `to` and `actor_type`), a fifth photo for a facility, or a quote or booking for more than the facility has free on those dates (`details` gives `provider_id` and `available_quantity`). |
 | `payload_too_large` | 413 | The JSON body is over 100 kB, or a photo is over 5 MB. |
 | `rate_limited` | 429 | Too many requests from this client, or too many codes for this phone number; retry after `Retry-After` seconds. |
 | `unauthorized` | 401 | No access token, or it is invalid or expired, or its user is gone or inactive; or the refresh cookie is missing, expired, revoked or reused. Sign in or refresh. Access-token routes add `WWW-Authenticate: Bearer`. |
@@ -73,6 +73,14 @@ A provider is a storage facility (PRD 5.3, 7.2; decisions 62 to 66).
 - **What can be quoted:** the facilities search would show that are taking bookings. Any other id is a 404. A `capacity_unit` other than the facility's, or fewer `days` than its `min_storage_days`, is a 400 on that field.
 - **Capacity:** if less than `quantity` is free on any day of the period, the answer is 409 `conflict` with `details.available_quantity`.
 - **Prices:** `storage_subtotal_kobo` is split into `deposit_kobo` (paid online) and `balance_due_kobo` (paid at the facility). `total_charged_online_kobo` is the deposit plus `service_fee_kobo` plus `delivery_fee_kobo`, which is 0 until delivery can be added to a booking.
+
+The farmer's own bookings (PRD 5.5, 6.3, 6.6, 7.4; decisions 82 to 86) need a signed-in user with the `farmer` role; any other role gets 403.
+
+- **`POST /bookings`** takes the quote's body plus `crop_id`, and answers with the same 400s, 404 and 409 as the quote. The facility must store the crop's category (otherwise 400 on `crop_id`). On success it is 201 with the booking in `payment_pending`, holding the space until `payment_expires_at`; pay before then, or the booking expires and the space is freed. Two requests for the last space are handled one after the other, so only one gets it.
+- **Prices are fixed when booking:** every price, rate and fee is copied onto the booking, so a later change to the facility's price or the platform's rates never changes it.
+- **`GET /bookings`** lists the farmer's bookings, newest first, with what a list needs: code, status, dates, quantity, facility name and LGA, crop and the amounts. **`GET /bookings/:id`** gives one in full. Another farmer's booking is the same 404 as an unknown id.
+- **`POST /bookings/:id/cancel`**, with an optional `reason`, cancels a booking awaiting the provider (`pending_provider`) or confirmed. The response adds `refund_kobo`, what the policy refunds of the online payment: all of it before the provider accepts; after that, the deposit (not the service fee) if it is at least `farmer_free_cancel_hours` before 00:00 in Lagos on `start_date`; nothing later. Any other status is 409 `conflict`, including `payment_pending`: an unpaid booking is not cancelled, it expires. The refund itself is made separately.
+- The farmer's view never has the commission, its rate or the provider's payout.
 
 ## OpenAPI
 
@@ -804,6 +812,152 @@ paths:
           $ref: '#/components/responses/RateLimited'
         '500':
           $ref: '#/components/responses/Internal'
+  /bookings:
+    post:
+      operationId: createBooking
+      summary: Book storage
+      description: >-
+        Farmers only. Locks the facility, checks it again as the quote does, and holds the space
+        in payment_pending until payment_expires_at.
+      tags: [Bookings]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BookingCreateRequest'
+            example:
+              provider_id: 0b8f6a3e-2d4c-4b1a-9e7f-3c5d2a1b0e9f
+              crop_id: 6d1f0c2a-8e3b-4f5a-9c7d-1b2e3f4a5b6c
+              quantity: 2
+              capacity_unit: sqm
+              days: 30
+      responses:
+        '201':
+          description: The booking, in the farmer's view.
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/NoStore'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FarmerBooking'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '500':
+          $ref: '#/components/responses/Internal'
+    get:
+      operationId: listMyBookings
+      summary: The signed-in farmer's bookings
+      description: Newest first, ties broken by id. Not paginated.
+      tags: [Bookings]
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: The bookings.
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/NoStore'
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                additionalProperties: false
+                properties:
+                  data:
+                    type: array
+                    items:
+                      allOf:
+                        - $ref: '#/components/schemas/FarmerBookingSummary'
+                      unevaluatedProperties: false
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/Internal'
+  /bookings/{id}:
+    parameters:
+      - $ref: '#/components/parameters/BookingId'
+    get:
+      operationId: getMyBooking
+      summary: One of the signed-in farmer's bookings
+      description: Another farmer's booking is a 404, as an unknown id is.
+      tags: [Bookings]
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: The booking, in the farmer's view.
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/NoStore'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FarmerBooking'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/Internal'
+  /bookings/{id}/cancel:
+    parameters:
+      - $ref: '#/components/parameters/BookingId'
+    post:
+      operationId: cancelMyBooking
+      summary: Cancel one of the signed-in farmer's bookings
+      description: >-
+        From pending_provider or confirmed only; any other status, payment_pending included, is
+        409. The refund is worked out under PRD 6.6 and returned, and made separately.
+      tags: [Bookings]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CancelBookingRequest'
+      responses:
+        '200':
+          description: The cancelled booking and its refund.
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/NoStore'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CancelledBooking'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '500':
+          $ref: '#/components/responses/Internal'
 components:
   securitySchemes:
     bearerAuth:
@@ -840,6 +994,13 @@ components:
         type: string
         pattern: '^[A-Za-z0-9._:-]{1,128}$'
   parameters:
+    BookingId:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
     ProviderId:
       name: id
       in: path
@@ -1472,6 +1633,188 @@ components:
         total_charged_online_kobo:
           type: integer
           description: Deposit plus service fee plus delivery fee.
+    BookingCreateRequest:
+      type: object
+      description: The quote's body plus the crop.
+      additionalProperties: false
+      required: [provider_id, crop_id, quantity, capacity_unit, days]
+      properties:
+        provider_id:
+          $ref: '#/components/schemas/BookingQuoteRequest/properties/provider_id'
+        crop_id:
+          type: string
+          format: uuid
+          description: A crop whose category the facility stores.
+        quantity:
+          $ref: '#/components/schemas/BookingQuoteRequest/properties/quantity'
+        capacity_unit:
+          $ref: '#/components/schemas/BookingQuoteRequest/properties/capacity_unit'
+        days:
+          $ref: '#/components/schemas/BookingQuoteRequest/properties/days'
+        start_date:
+          $ref: '#/components/schemas/BookingQuoteRequest/properties/start_date'
+    CancelBookingRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        reason:
+          type: string
+          minLength: 1
+          maxLength: 500
+          description: Trimmed; saved as cancel_reason.
+    FarmerBookingSummary:
+      type: object
+      description: A booking as GET /bookings lists it.
+      required:
+        - id
+        - code
+        - status
+        - provider
+        - crop
+        - quantity
+        - capacity_unit
+        - start_date
+        - duration_days
+        - end_date
+        - total_charged_online_kobo
+        - balance_due_kobo
+        - created_at
+      properties:
+        id:
+          type: string
+          format: uuid
+        code:
+          type: string
+          pattern: '^CL-[A-HJ-NP-Z2-9]{5}$'
+        status:
+          type: string
+          enum:
+            - payment_pending
+            - pending_provider
+            - confirmed
+            - rejected
+            - expired
+            - in_storage
+            - cancelled
+            - no_show
+            - completed
+        provider:
+          type: object
+          required: [id, display_name, lga]
+          properties:
+            id:
+              type: string
+              format: uuid
+            display_name:
+              type: string
+            lga:
+              type: [string, 'null']
+        crop:
+          type: object
+          additionalProperties: false
+          required: [id, name]
+          properties:
+            id:
+              type: string
+              format: uuid
+            name:
+              type: string
+        quantity:
+          type: number
+        capacity_unit:
+          type: string
+          enum: [sqm, crates, kg]
+        start_date:
+          type: string
+          format: date
+        duration_days:
+          type: integer
+        end_date:
+          type: string
+          format: date
+          description: start_date plus duration_days, the day the produce is collected.
+        total_charged_online_kobo:
+          type: integer
+          description: Deposit plus service fee plus delivery fee.
+        balance_due_kobo:
+          type: integer
+          description: Paid at the facility.
+        created_at:
+          type: string
+          format: date-time
+    FarmerBooking:
+      description: >-
+        The farmer's view of a booking, with every amount as it was when booked. No commission,
+        rate or payout.
+      allOf:
+        - $ref: '#/components/schemas/FarmerBookingSummary'
+        - $ref: '#/components/schemas/FarmerBookingDetails'
+      unevaluatedProperties: false
+    FarmerBookingDetails:
+      type: object
+      description: What GET /bookings/{id} adds to the summary.
+      required:
+        - unit_price_kobo
+        - storage_subtotal_kobo
+        - service_fee_kobo
+        - deposit_kobo
+        - delivery_fee_kobo
+        - payment_expires_at
+        - provider_response_due_at
+        - checked_in_at
+        - collected_at
+        - cancelled_by
+        - cancel_reason
+      properties:
+        unit_price_kobo:
+          type: integer
+        storage_subtotal_kobo:
+          type: integer
+        service_fee_kobo:
+          type: integer
+        deposit_kobo:
+          type: integer
+          description: Paid online.
+        delivery_fee_kobo:
+          type: integer
+          description: Always 0 until delivery can be added to a booking.
+        payment_expires_at:
+          type: [string, 'null']
+          format: date-time
+          description: When an unpaid booking stops holding its space.
+        provider_response_due_at:
+          type: [string, 'null']
+          format: date-time
+        checked_in_at:
+          type: [string, 'null']
+          format: date-time
+        collected_at:
+          type: [string, 'null']
+          format: date-time
+        cancelled_by:
+          type: [string, 'null']
+          enum: [farmer, provider, system, admin, null]
+        cancel_reason:
+          type: [string, 'null']
+        provider:
+          type: object
+          required: [address_text, landmark]
+          properties:
+            address_text:
+              type: string
+            landmark:
+              type: [string, 'null']
+    CancelledBooking:
+      allOf:
+        - $ref: '#/components/schemas/FarmerBookingSummary'
+        - $ref: '#/components/schemas/FarmerBookingDetails'
+        - type: object
+          required: [refund_kobo]
+          properties:
+            refund_kobo:
+              type: integer
+              description: What the cancellation policy refunds of total_charged_online_kobo.
+      unevaluatedProperties: false
     ErrorCode:
       type: string
       enum:
