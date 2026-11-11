@@ -1,6 +1,14 @@
 import React, { lazy, Suspense, useState, type ReactNode } from 'react';
-import { MapPin, MapPinned, Search, Crosshair, CheckCircle2, type LucideIcon } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import {
+  CheckCircle2,
+  Crosshair,
+  Info,
+  MapPin,
+  MapPinned,
+  Search,
+  type LucideIcon,
+} from 'lucide-react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import TopNavBar from '../../components/TopNavBar';
 import BottomActionBar from '../../components/ui/BottomActionBar';
@@ -8,7 +16,12 @@ import PrimaryButton from '../../components/ui/PrimaryButton';
 import ErrorMessage from '../../components/ui/ErrorMessage';
 import StepProgress from '../../components/ui/StepProgress';
 import { areas, type AreaId } from './areas';
-import { SEARCH_STEPS, useSearchFlow, type SearchPlace } from './searchFlow';
+import {
+  SEARCH_STEPS,
+  searchNoticeStateSchema,
+  useSearchFlow,
+  type SearchPlace,
+} from './searchFlow';
 import { useDeviceLocation, type DeviceLocationFailure } from './useDeviceLocation';
 
 // Leaflet only loads for farmers who open the map, so it never slows the first screens.
@@ -78,6 +91,7 @@ const Location = () => {
   const navigate = useNavigate();
   const { t } = useTranslation();
   const { draft, update } = useSearchFlow();
+  const notice = searchNoticeStateSchema.safeParse(useLocation().state).data?.notice;
   const initial = draft.place;
 
   const [mode, setMode] = useState<Mode | undefined>(initial?.kind);
@@ -126,6 +140,15 @@ const Location = () => {
       <StepProgress step={1} count={3} label={t('search.step', { step: 1, count: 3 })} />
 
       <div className="flex flex-col px-6 pt-8 pb-28 flex-grow overflow-y-auto">
+        {notice && (
+          <div
+            role="status"
+            className="flex gap-3 bg-accent-faint text-accent-ink rounded-xl p-4 mb-6"
+          >
+            <Info size={20} className="shrink-0 mt-0.5" aria-hidden="true" />
+            <p className="text-body leading-relaxed">{t(`search.location.${notice}`)}</p>
+          </div>
+        )}
         <div className="flex justify-center mb-6">
           <div className="w-20 h-20 bg-surface-muted rounded-full flex items-center justify-center">
             <MapPin size={32} className="text-primary-strong" />

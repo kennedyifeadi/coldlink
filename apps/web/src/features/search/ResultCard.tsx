@@ -18,7 +18,7 @@ interface ResultCardProps {
   onBook: () => void;
 }
 
-const Rating = ({ average, count }: { average: number; count: number }) => {
+export const Rating = ({ average, count }: { average: number; count: number }) => {
   const { t } = useTranslation();
 
   if (count === 0) {
