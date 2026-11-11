@@ -14,7 +14,10 @@ import { availableQuantity } from './availability.js';
 export type BookingTerms = Pick<
   BookingQuoteInput,
   'provider_id' | 'quantity' | 'capacity_unit' | 'days'
->;
+> & {
+  /** The category of the crop being stored, which the facility must support; a quote has none. */
+  cropCategoryId?: string;
+};
 
 export interface PricedBooking {
   provider: ProviderRecord;
@@ -48,6 +51,13 @@ function checkTerms(provider: ProviderRecord, terms: BookingTerms): void {
       'days',
       `This facility stores for at least ${provider.min_storage_days} days`,
     );
+  }
+  const { cropCategoryId } = terms;
+  if (
+    cropCategoryId !== undefined &&
+    !provider.categories.some((category) => category.id === cropCategoryId)
+  ) {
+    throw invalidBody('crop_id', 'This facility does not store that crop');
   }
 }
 

@@ -1,16 +1,11 @@
 import { randomInt } from 'node:crypto';
 import type { BookingStatus } from '@coldlink/shared';
 import { sql } from 'kysely';
+import { generateBookingCode } from '../bookings/code.js';
 import type { Database } from '../db/client.js';
-
-const CODE_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 
 function digits(count: number): string {
   return Array.from({ length: count }, () => randomInt(10)).join('');
-}
-
-function bookingCode(): string {
-  return `CL-${Array.from({ length: 5 }, () => CODE_ALPHABET[randomInt(CODE_ALPHABET.length)]).join('')}`;
 }
 
 // +234 800 is the toll-free range, so no SMS could reach a real person; 9 keeps clear of the dev
@@ -67,7 +62,7 @@ export async function insertBooking(db: Database, status: BookingStatus): Promis
   const { id: bookingId } = await db
     .insertInto('bookings')
     .values({
-      code: bookingCode(),
+      code: generateBookingCode(),
       farmer_id: farmerId,
       provider_id: providerId,
       crop_id: cropId,
@@ -109,5 +104,33 @@ export async function deleteBooking(db: Database, fixture: BookingFixture): Prom
     await trx.deleteFrom('bookings').where('id', '=', fixture.bookingId).execute();
     await trx.deleteFrom('providers').where('id', '=', fixture.providerId).execute();
     await trx.deleteFrom('users').where('id', 'in', [fixture.farmerId, fixture.ownerId]).execute();
+  });
+}
+
+export interface CommittedRows {
+  providerIds: string[];
+  userIds: string[];
+}
+
+/**
+ * Deletes committed providers and users with every booking and booking event made for those
+ * providers, disabling the append-only trigger for this one transaction as deleteBooking does.
+ */
+export async function deleteCommittedRows(db: Database, rows: CommittedRows): Promise<void> {
+  await db.transaction().execute(async (trx) => {
+    const bookingIds = trx
+      .selectFrom('bookings')
+      .select('id')
+      .where('provider_id', 'in', rows.providerIds);
+    await sql`alter table public.booking_events disable trigger booking_events_no_update_or_delete`.execute(
+      trx,
+    );
+    await trx.deleteFrom('booking_events').where('booking_id', 'in', bookingIds).execute();
+    await sql`alter table public.booking_events enable trigger booking_events_no_update_or_delete`.execute(
+      trx,
+    );
+    await trx.deleteFrom('bookings').where('provider_id', 'in', rows.providerIds).execute();
+    await trx.deleteFrom('providers').where('id', 'in', rows.providerIds).execute();
+    await trx.deleteFrom('users').where('id', 'in', rows.userIds).execute();
   });
 }

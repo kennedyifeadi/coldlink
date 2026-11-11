@@ -7,6 +7,7 @@ import {
   type VerificationStatus,
 } from '@coldlink/shared';
 import { sql } from 'kysely';
+import { generateBookingCode } from '../bookings/code.js';
 import type { Database } from '../db/client.js';
 
 // Fixtures for the search tests and benchmark. Their phones use +234 800 6, the toll-free range, so
@@ -106,16 +107,6 @@ export async function insertSearchProvider(
   return id;
 }
 
-const BOOKING_CODE_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-
-function bookingCode(): string {
-  const letters = Array.from(
-    { length: 5 },
-    () => BOOKING_CODE_ALPHABET[randomInt(BOOKING_CODE_ALPHABET.length)],
-  );
-  return `CL-${letters.join('')}`;
-}
-
 export interface OccupancyFixture {
   providerId: string;
   farmerId: string;
@@ -140,7 +131,7 @@ export async function insertOccupancy(db: Database, fixture: OccupancyFixture): 
   await db
     .insertInto('bookings')
     .values({
-      code: bookingCode(),
+      code: generateBookingCode(),
       farmer_id: fixture.farmerId,
       provider_id: fixture.providerId,
       crop_id: fixture.cropId,
