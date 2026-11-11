@@ -65,6 +65,17 @@ const searchFromBodija = async (user: UserEvent) => {
   await enterAmount(user, '10');
 };
 
+// Enter in a field submits through the form's default button: its first submit button in tree
+// order, where a <button> with no type counts (HTML implicit submission). user-event's Enter only
+// looks for an explicit type="submit", so it would miss a stray default button.
+const pressEnterIn = async (user: UserEvent, input: HTMLElement) => {
+  const defaultButton = [...input.closest('form')!.elements].find(
+    (element): element is HTMLButtonElement =>
+      element instanceof HTMLButtonElement && element.type === 'submit',
+  );
+  await user.click(defaultButton!);
+};
+
 beforeEach(() => {
   vi.useFakeTimers({ toFake: ['Date'] });
   vi.setSystemTime(NOW);
@@ -274,6 +285,29 @@ describe('amount step', FLOW_TIMEOUT, () => {
 
     expect(screen.getByRole('alert')).toHaveTextContent('Pick today or a later date.');
     expect(requestsTo(fetchMock, 'POST', '/search')).toHaveLength(0);
+  });
+
+  it('searches when Enter is pressed in the amount', async () => {
+    const fetchMock = mockApi({
+      ...signedOut,
+      ...crops,
+      'POST /search': jsonResponse(200, searchResponse([dugbe])),
+    });
+    const user = renderApp('/location');
+    await pickArea(user, 'Bodija, Ibadan');
+    await pickCrop(user, 'Tomatoes');
+
+    const input = await screen.findByLabelText('Amount', undefined, SCREEN_TIMEOUT);
+    await user.type(input, '10');
+    await pressEnterIn(user, input);
+
+    expect(await findHeading('Dugbe Fridge Fleet (Sample)')).toBeInTheDocument();
+    expect(currentPath()).toBe('/results');
+    expect(requestsTo(fetchMock, 'POST', '/search')).toHaveLength(1);
+
+    // Enter only searched: it did not also step back, so Back returns to the amount step.
+    await user.click(screen.getByRole('button', { name: 'Go back' }));
+    expect(await findHeading('How much do you want to store?')).toBeInTheDocument();
   });
 });
 
