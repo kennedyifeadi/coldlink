@@ -3,3 +3,4 @@ export { default as Duration } from './Duration';
 export { default as Review } from './Review';
 export { default as Payment } from './Payment';
 export { default as Confirmation } from './Confirmation';
+export { default as MyBookings } from './MyBookings';

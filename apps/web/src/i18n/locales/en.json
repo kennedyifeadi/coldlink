@@ -75,7 +75,7 @@
       "idLabel": "Your ColdLink ID",
       "copy": "Copy ID",
       "copied": "Copied!",
-      "channels": "This ID works across ColdLink Web, WhatsApp and USSD.",
+      "channels": "Keep this ID safe. Give it when you contact ColdLink support.",
       "findStorage": "Find storage",
       "copyFailed": "Couldn't copy the ID. Write it down instead.",
       "signOut": "Sign out"
@@ -130,36 +130,146 @@
     }
   },
   "search": {
+    "step": "Step {{step}} of {{count}}",
+    "home": {
+      "title": "Keep your harvest fresh.",
+      "intro": "Find cold rooms near you with space for your produce, and see the price before you book.",
+      "searchHint": "Tell us where you are, what you're storing and how much.",
+      "findStorage": "Find cold storage",
+      "myBookings": "My bookings",
+      "myBookingsHint": "Check a booking or find your booking code"
+    },
+    "place": {
+      "device": "Your current location",
+      "pin": "The spot on your map"
+    },
     "location": {
       "navTitle": "Location",
       "title": "Where are you storing from?",
-      "intro": "We'll use your location to find the closest available cold rooms and calculate delivery.",
+      "intro": "We'll show the cold rooms closest to this place first.",
       "useCurrent": "Use my current location",
-      "useCurrentHint": "Recommended for accuracy",
+      "useCurrentHint": "Your phone will ask to share it",
+      "locating": "Finding your location...",
+      "deviceDenied": "Location is turned off for ColdLink. Pick your area or drop a pin instead.",
+      "deviceUnavailable": "Couldn't find your location. Move to an open spot and try again, or pick your area.",
+      "deviceUnsupported": "This phone can't share its location. Pick your area or drop a pin instead.",
       "or": "OR",
-      "enterManually": "Enter location manually",
-      "searchLabel": "Search for a location",
-      "searchPlaceholder": "Search for a location..."
+      "pickArea": "Pick your area",
+      "searchLabel": "Search for your area",
+      "searchPlaceholder": "Type a town or area, like Bodija",
+      "noAreaMatch": "No area called \"{{query}}\" yet. Pick the nearest town, or drop a pin on the map.",
+      "dropPin": "Drop a pin on the map",
+      "dropPinHint": "Tap the map where your produce is",
+      "mapLabel": "Map. Tap to drop a pin where your produce is.",
+      "mapLoading": "Loading map...",
+      "pinCentre": "Put the pin in the middle of the map",
+      "pinDropped": "Pin dropped. Tap the map again to move it."
+    },
+    "areas": {
+      "bodija": "Bodija, Ibadan",
+      "oje": "Oje, Ibadan",
+      "dugbe": "Dugbe, Ibadan",
+      "apata": "Apata, Ibadan",
+      "iwoRoad": "Iwo Road, Ibadan",
+      "moniya": "Moniya, Ibadan",
+      "sango": "Sango, Ibadan",
+      "ojoo": "Ojoo, Ibadan",
+      "challenge": "Challenge, Ibadan",
+      "oyo": "Oyo",
+      "ogbomoso": "Ogbomoso",
+      "iseyin": "Iseyin",
+      "saki": "Saki",
+      "igboho": "Igboho",
+      "eruwa": "Eruwa",
+      "igboOra": "Igbo-Ora",
+      "kishi": "Kishi"
     },
     "produce": {
       "navTitle": "Produce",
       "title": "What do you want to store?",
-      "intro": "Select the produce you're looking to preserve.",
-      "other": "Other",
-      "findStorage": "Find cold storage"
+      "intro": "Pick the produce you want to keep fresh.",
+      "filterLabel": "Search produce",
+      "filterPlaceholder": "Search, like tomatoes or ata",
+      "loading": "Loading produce...",
+      "noMatch": "No produce called \"{{query}}\". Try another name, or pick one of the \"Other\" options."
     },
-    "discovery": {
+    "amount": {
+      "navTitle": "Amount",
+      "title": "How much do you want to store?",
+      "intro": "We'll only show cold rooms with this much space free for the whole time.",
+      "quantityLabel": "Amount",
+      "quantityPlaceholder": "For example, 10",
+      "quantityErrors": {
+        "missing": "Enter the amount as a number, like 10.",
+        "notPositive": "Enter an amount above 0.",
+        "tooPrecise": "Use up to 3 numbers after the decimal point."
+      },
+      "unitLegend": "Measured in",
+      "unitHint": "Cold rooms list their space in one of these. We'll show the ones that use yours.",
+      "daysTitle": "How many days?",
+      "daysLabel_one": "Day",
+      "daysLabel_other": "Days",
+      "removeDay": "Remove a day",
+      "addDay": "Add a day",
+      "startLabel": "Start date",
+      "startError": "Pick today or a later date.",
+      "submit": "Find cold storage"
+    },
+    "units": {
+      "crates": {
+        "name": "Crates",
+        "amount_one": "{{value}} crate",
+        "amount_other": "{{value}} crates"
+      },
+      "kg": {
+        "name": "Kilograms (kg)",
+        "amount_one": "{{value}} kg",
+        "amount_other": "{{value}} kg"
+      },
+      "sqm": {
+        "name": "Floor space (square metres)",
+        "amount_one": "{{value}} m²",
+        "amount_other": "{{value}} m²"
+      }
+    },
+    "facilityTypes": {
+      "cold_room": "Cold room",
+      "chest_freezer": "Chest freezer",
+      "fridge": "Fridge",
+      "fridge_fleet": "Fridge fleet",
+      "other": "Other storage"
+    },
+    "results": {
       "navTitle": "Cold rooms",
       "title": "Cold storage near you",
-      "filters": "Filters",
+      "changeCrop": "Change produce: {{value}}",
+      "changePlace": "Change place: {{value}}",
+      "changeAmountLabel": "Change amount: {{value}}",
+      "amountSummary_one": "{{amount}} for {{count}} day",
+      "amountSummary_other": "{{amount}} for {{count}} days",
+      "loading": "Finding cold rooms near you...",
+      "count_one": "{{count}} cold room has space.",
+      "count_other": "{{count}} cold rooms have space, nearest first.",
+      "widened": "No cold rooms had space close by, so we looked further. These are up to {{radius}} km away.",
       "distance": "{{distance}} km away",
-      "perDay": "/ day",
-      "availability": "Availability",
-      "spacesLeft_one": "Only {{count}} space left",
-      "spacesLeft_other": "Only {{count}} spaces left",
-      "spacesOfTotal_one": "{{available}} of {{count}} space",
-      "spacesOfTotal_other": "{{available}} of {{count}} spaces",
-      "viewStorage": "View storage"
+      "space": "{{free}} free",
+      "lowSpace": "Only {{free}} free",
+      "estimate_one": "Estimate for {{count}} day",
+      "estimate_other": "Estimate for {{count}} days",
+      "deposit": "{{amount}} deposit",
+      "rating_one": "Rated {{rating}} out of 5 from {{count}} rating",
+      "rating_other": "Rated {{rating}} out of 5 from {{count}} ratings",
+      "noRatings": "No ratings yet",
+      "book": "Book",
+      "emptyTitle": "No cold rooms with space for {{crop}} were found nearby.",
+      "emptyBody": "We looked up to {{radius}} km away.",
+      "emptyTips": {
+        "amount": "Try a smaller amount or fewer days.",
+        "unit": "Try another unit. Cold rooms that measure space differently don't show.",
+        "place": "Search from another town or area."
+      },
+      "tryAnotherLocation": "Try another location",
+      "changeAmount": "Change amount or unit"
     }
   },
   "booking": {
@@ -258,39 +368,20 @@
       "balanceHint": "To be paid on arrival",
       "viewBooking": "View booking",
       "backHome": "Back to home"
+    },
+    "myBookings": {
+      "navTitle": "Bookings",
+      "title": "My bookings",
+      "body": "Your bookings will show here soon. Until then, your booking code is in the SMS we send when you book.",
+      "findStorage": "Find cold storage"
     }
   },
   "mock": {
-    "produce": {
-      "tomato": "Tomatoes",
-      "pepper": "Peppers",
-      "onion": "Onions",
-      "vegetables": "Leafy vegetables",
-      "fruits": "Fruits",
-      "yam": "Yams / tubers",
-      "meat": "Meat & poultry",
-      "fish": "Fish & seafood",
-      "dairy": "Dairy products"
-    },
     "coldRooms": {
       "cr-001": {
         "name": "Oyo Fresh Store",
         "location": "Bodija Market, Ibadan"
-      },
-      "cr-002": {
-        "name": "Ibadan North Cold Storage",
-        "location": "Oje Market, Ibadan"
-      },
-      "cr-003": {
-        "name": "Moniya Hub Coolers",
-        "location": "Moniya, Ibadan"
       }
-    },
-    "places": {
-      "ibadan": "Ibadan",
-      "bodija": "Bodija, Ibadan",
-      "apata": "Apata, Ibadan",
-      "iwoRoad": "Iwo Road, Ibadan"
     },
     "sampleBooking": {
       "produce": "Tomatoes",

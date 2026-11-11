@@ -2,6 +2,7 @@ import React from 'react';
 import { Snowflake, User, ShoppingBag } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import { MY_BOOKINGS_PATH } from '../session/routes';
 
 type BottomNavTab = 'find' | 'bookings' | 'profile';
 
@@ -19,7 +20,7 @@ const BottomNav = ({ activeTab = 'find' }: BottomNavProps) => {
       className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[430px] bg-surface border-t border-line flex justify-between px-8 pt-3 pb-safe-3 z-20 shadow-bar"
     >
       <button
-        onClick={() => void navigate('/discovery')}
+        onClick={() => void navigate('/')}
         aria-current={activeTab === 'find' ? 'page' : undefined}
         className={`flex flex-col items-center gap-1 transition-colors ${activeTab === 'find' ? 'text-primary-strong' : 'text-copy-subtle hover:text-copy'}`}
       >
@@ -28,6 +29,7 @@ const BottomNav = ({ activeTab = 'find' }: BottomNavProps) => {
       </button>
 
       <button
+        onClick={() => void navigate(MY_BOOKINGS_PATH)}
         aria-current={activeTab === 'bookings' ? 'page' : undefined}
         className={`flex flex-col items-center gap-1 transition-colors ${activeTab === 'bookings' ? 'text-primary-strong' : 'text-copy-subtle hover:text-copy'}`}
       >

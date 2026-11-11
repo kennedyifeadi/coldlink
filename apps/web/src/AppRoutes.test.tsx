@@ -22,7 +22,7 @@ describe('app routes', () => {
 
     await user.click(await screen.findByRole('button', { name: 'Go to start' }, SCREEN_TIMEOUT));
 
-    expect(await findHeading('Find cold storage near you.')).toBeInTheDocument();
+    expect(await findHeading('Keep your harvest fresh.')).toBeInTheDocument();
   });
 
   it('opens farmer screens for a signed-in user after a reload', async () => {
@@ -62,7 +62,7 @@ describe('app routes', () => {
     mockApi(signedIn);
     renderApp('/onboarding');
 
-    expect(await findHeading('Where are you storing from?')).toBeInTheDocument();
+    expect(await findHeading('Keep your harvest fresh.')).toBeInTheDocument();
   });
 
   it('offers a retry when the API cannot be reached on load', async () => {
@@ -81,5 +81,17 @@ describe('app routes', () => {
     await user.click(screen.getByRole('button', { name: 'Try again' }));
 
     expect(await findHeading('How long do you need storage?')).toBeInTheDocument();
+  });
+
+  it.each([
+    ['View booking', 'My bookings'],
+    ['Back to home', 'Keep your harvest fresh.'],
+  ])('leads from the confirmation screen through %s', async (button, heading) => {
+    mockApi(signedIn);
+    const user = renderApp('/confirmation');
+
+    await user.click(await screen.findByRole('button', { name: button }, SCREEN_TIMEOUT));
+
+    expect(await findHeading(heading)).toBeInTheDocument();
   });
 });

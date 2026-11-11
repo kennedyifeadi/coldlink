@@ -3,6 +3,9 @@ import { cleanup } from '@testing-library/react';
 import '@testing-library/jest-dom/vitest';
 import '../i18n';
 
+// jsdom does not lay out pages, so its window.scrollTo only reports "Not implemented".
+window.scrollTo = () => {};
+
 afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();

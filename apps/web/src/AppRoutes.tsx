@@ -1,9 +1,10 @@
 import React, { lazy, type ComponentType } from 'react';
-import { Routes, Route, Navigate } from 'react-router-dom';
+import { Routes, Route } from 'react-router-dom';
 import AppLayout from './components/AppLayout';
 import NotFound from './components/NotFound';
 import { RedirectIfSignedIn, RequireSession } from './session/guards';
-import { SIGN_IN_PATH } from './session/routes';
+import { MY_BOOKINGS_PATH, SIGN_IN_PATH } from './session/routes';
+import { SEARCH_STEPS } from './features/search/searchFlow';
 
 // One chunk per feature: every screen of a feature loads with the first one visited.
 const lazyScreen = <Module extends Record<Name, ComponentType>, Name extends keyof Module>(
@@ -20,32 +21,38 @@ const OtpEntry = lazyScreen(loadAuth, 'OtpEntry');
 const Consent = lazyScreen(loadAuth, 'Consent');
 const PrivacyNotice = lazyScreen(loadAuth, 'PrivacyNotice');
 const UserId = lazyScreen(loadAuth, 'UserId');
+const Home = lazyScreen(loadSearch, 'Home');
 const Location = lazyScreen(loadSearch, 'Location');
 const Produce = lazyScreen(loadSearch, 'Produce');
-const Discovery = lazyScreen(loadSearch, 'Discovery');
+const Amount = lazyScreen(loadSearch, 'Amount');
+const Results = lazyScreen(loadSearch, 'Results');
 const Details = lazyScreen(loadBooking, 'Details');
 const Duration = lazyScreen(loadBooking, 'Duration');
 const Review = lazyScreen(loadBooking, 'Review');
 const Payment = lazyScreen(loadBooking, 'Payment');
 const Confirmation = lazyScreen(loadBooking, 'Confirmation');
+const MyBookings = lazyScreen(loadBooking, 'MyBookings');
 
 // Provider and admin screens (later issues) go under <RequireSession roles={[...]} />.
 const AppRoutes = () => (
   <Routes>
     <Route element={<AppLayout />}>
-      <Route path="/" element={<Navigate to={SIGN_IN_PATH} replace />} />
+      <Route path="/" element={<Home />} />
       <Route element={<RedirectIfSignedIn />}>
         <Route path={SIGN_IN_PATH} element={<Onboarding />} />
       </Route>
       <Route path="/onboarding/code" element={<OtpEntry />} />
       <Route path="/onboarding/consent" element={<Consent />} />
       <Route path="/privacy" element={<PrivacyNotice />} />
+      {/* Anyone can search; signing in waits until Book (PRD 7.3, decision 70). */}
+      <Route path={SEARCH_STEPS.place} element={<Location />} />
+      <Route path={SEARCH_STEPS.crop} element={<Produce />} />
+      <Route path={SEARCH_STEPS.amount} element={<Amount />} />
+      <Route path={SEARCH_STEPS.results} element={<Results />} />
       <Route element={<RequireSession />}>
         <Route path="/userid" element={<UserId />} />
-        <Route path="/location" element={<Location />} />
-        <Route path="/produce" element={<Produce />} />
-        <Route path="/discovery" element={<Discovery />} />
-        <Route path="/details" element={<Details />} />
+        <Route path={MY_BOOKINGS_PATH} element={<MyBookings />} />
+        <Route path="/details/:providerId" element={<Details />} />
         <Route path="/duration" element={<Duration />} />
         <Route path="/review" element={<Review />} />
         <Route path="/payment" element={<Payment />} />

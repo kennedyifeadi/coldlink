@@ -24,6 +24,7 @@ const TopNavBar = ({ title, showBack = false, showProfile = false }: TopNavBarPr
       <div className="flex items-center gap-2">
         {showBack && (
           <button
+            type="button"
             onClick={handleBack}
             aria-label={t('common.goBack')}
             className="p-2 -ml-2 text-copy-muted hover:bg-surface-muted rounded-full transition-colors shrink-0"
