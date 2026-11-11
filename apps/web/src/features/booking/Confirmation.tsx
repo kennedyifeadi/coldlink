@@ -8,6 +8,7 @@ import Card from '../../components/ui/Card';
 import SummaryRow from '../../components/ui/SummaryRow';
 import PrimaryButton from '../../components/ui/PrimaryButton';
 import { formatNaira } from '../../i18n/format';
+import { MY_BOOKINGS_PATH } from '../../session/routes';
 
 const bookingCode = 'CL-847291';
 
@@ -124,11 +125,12 @@ const Confirmation = () => {
 
         {/* Action Buttons */}
         <div className="flex flex-col gap-4 mt-auto">
-          <PrimaryButton onClick={() => void navigate('/discovery')} withArrow>
+          <PrimaryButton onClick={() => void navigate(MY_BOOKINGS_PATH)} withArrow>
             {t('booking.confirmation.viewBooking')}
           </PrimaryButton>
           <button
-            onClick={() => void navigate('/discovery')}
+            type="button"
+            onClick={() => void navigate('/')}
             className="w-full py-4 bg-surface border border-line-strong text-ink font-medium text-lead hover:bg-surface-muted rounded-lg transition-colors"
           >
             {t('booking.confirmation.backHome')}
