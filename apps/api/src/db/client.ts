@@ -44,9 +44,17 @@ export function createDatabase(config: DatabaseConfig, logger: Logger): Database
     idleTimeoutMillis: IDLE_TIMEOUT_MS,
     types: typeParsers,
   });
-  // An idle client that loses its connection emits here; unhandled, it would crash the process.
-  pool.on('error', (err) => {
-    logger.error({ err }, 'Idle database connection failed');
+  // A client emits 'error' when its connection drops, as when the pooler resets it. The pool only
+  // listens while the client is idle, and an unheard 'error' crashes the process, so every client
+  // gets a listener of its own for its whole life. Its query still rejects, and the pool discards
+  // it on release.
+  pool.on('connect', (client) => {
+    client.on('error', (err) => {
+      logger.error({ err }, 'Database connection failed');
+    });
   });
+  // For an idle client the pool re-emits the same error here, already logged by the client's own
+  // listener; this listener only keeps that second emit from crashing the process.
+  pool.on('error', () => undefined);
   return new Kysely<DB>({ dialect: new PostgresDialect({ pool }) });
 }
