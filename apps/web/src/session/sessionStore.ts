@@ -17,6 +17,11 @@ export interface SessionStore {
   retryRestore: () => void;
   start: (session: SessionResponse) => void;
   signOut: () => Promise<void>;
+  /**
+   * Refreshes now to read the user's roles again after the API changed them (a first facility makes
+   * the user a provider). If that fails, the next request refreshes before it goes out.
+   */
+  refreshProfile: () => void;
   /** Sends a request with the access token, refreshing it first if it is about to expire or on a 401. */
   authorizedRequest: <T>(
     path: string,
@@ -43,6 +48,7 @@ export const createSessionStore = (now: () => number = Date.now): SessionStore =
   let expiresAt = 0;
   let refreshing: Promise<string | undefined> | undefined;
   let restoring = false;
+  let profileStale = false;
   const listeners = new Set<() => void>();
 
   const setState = (next: SessionState) => {
@@ -81,9 +87,16 @@ export const createSessionStore = (now: () => number = Date.now): SessionStore =
     return refreshing;
   };
 
+  const refreshStaleProfile = async () => {
+    const token = await refresh();
+    profileStale = false;
+    return token;
+  };
+
   const currentToken = async () => {
     if (refreshing) return refreshing;
     if (accessToken === undefined) return undefined;
+    if (profileStale) return refreshStaleProfile();
     if (expiresAt - now() > EXPIRY_MARGIN_MS) return accessToken;
     return refresh();
   };
@@ -139,5 +152,11 @@ export const createSessionStore = (now: () => number = Date.now): SessionStore =
     start,
     signOut,
     authorizedRequest,
+    refreshProfile: () => {
+      if (accessToken === undefined) return;
+      profileStale = true;
+      // A failure leaves profileStale set, so the next request retries the refresh first.
+      refreshStaleProfile().catch(() => undefined);
+    },
   };
 };

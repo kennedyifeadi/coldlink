@@ -35,7 +35,8 @@ export const isApiError = (error: unknown, code?: ApiErrorCode): error is ApiErr
   error instanceof ApiError && (code === undefined || error.code === code);
 
 export interface ApiRequestOptions<T> {
-  method?: 'GET' | 'POST' | 'PATCH';
+  method?: 'GET' | 'POST' | 'PATCH' | 'DELETE';
+  /** Sent as JSON, except a Blob, which is sent as it is with its own type (a photo upload). */
   body?: unknown;
   /** Parses the response body; a 204 is parsed as `undefined`. */
   schema: z.ZodType<T>;
@@ -93,14 +94,16 @@ export const apiRequest = async <T>(
   { method = 'GET', body, schema, accessToken, signal }: ApiRequestOptions<T>,
 ): Promise<T> => {
   const headers = new Headers({ Accept: 'application/json' });
-  if (body !== undefined) headers.set('Content-Type', 'application/json');
+  const isRaw = body instanceof Blob;
+  if (isRaw) headers.set('Content-Type', body.type);
+  else if (body !== undefined) headers.set('Content-Type', 'application/json');
   if (accessToken !== undefined) headers.set('Authorization', `Bearer ${accessToken}`);
 
   // The refresh cookie rides on every call; its Path keeps it to the auth routes.
   const response = await send(`${env.VITE_API_URL}${path}`, {
     method,
     headers,
-    body: body === undefined ? undefined : JSON.stringify(body),
+    body: isRaw ? body : body === undefined ? undefined : JSON.stringify(body),
     credentials: 'include',
     signal,
   });

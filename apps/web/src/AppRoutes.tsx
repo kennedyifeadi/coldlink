@@ -3,9 +3,10 @@ import { Routes, Route } from 'react-router-dom';
 import AppLayout from './components/AppLayout';
 import NotFound from './components/NotFound';
 import { RedirectIfSignedIn, RequireSession } from './session/guards';
-import { MY_BOOKINGS_PATH, SIGN_IN_PATH } from './session/routes';
+import { MY_BOOKINGS_PATH, PROVIDER_ONBOARDING_PATH, SIGN_IN_PATH } from './session/routes';
 import { SEARCH_STEPS } from './features/search/searchFlow';
 import { BOOKING_STEPS, paymentReturnPath } from './features/booking/bookingIntent';
+import { ONBOARDING_STEPS } from './features/provider/onboardingFlow';
 
 // One chunk per feature: every screen of a feature loads with the first one visited.
 const lazyScreen = <Module extends Record<Name, ComponentType>, Name extends keyof Module>(
@@ -16,6 +17,7 @@ const lazyScreen = <Module extends Record<Name, ComponentType>, Name extends key
 const loadAuth = () => import('./features/auth');
 const loadSearch = () => import('./features/search');
 const loadBooking = () => import('./features/booking');
+const loadProvider = () => import('./features/provider');
 
 const Onboarding = lazyScreen(loadAuth, 'Onboarding');
 const OtpEntry = lazyScreen(loadAuth, 'OtpEntry');
@@ -32,6 +34,13 @@ const Review = lazyScreen(loadBooking, 'Review');
 const Payment = lazyScreen(loadBooking, 'Payment');
 const Confirmation = lazyScreen(loadBooking, 'Confirmation');
 const MyBookings = lazyScreen(loadBooking, 'MyBookings');
+const Facilities = lazyScreen(loadProvider, 'Facilities');
+const ContactStep = lazyScreen(loadProvider, 'ContactStep');
+const LocationStep = lazyScreen(loadProvider, 'LocationStep');
+const CapacityStep = lazyScreen(loadProvider, 'CapacityStep');
+const ProduceStep = lazyScreen(loadProvider, 'ProduceStep');
+const PhotosStep = lazyScreen(loadProvider, 'PhotosStep');
+const Outcome = lazyScreen(loadProvider, 'Outcome');
 
 // Provider and admin screens (later issues) go under <RequireSession roles={[...]} />.
 const AppRoutes = () => (
@@ -59,6 +68,14 @@ const AppRoutes = () => (
         <Route path="/userid" element={<UserId />} />
         <Route path={MY_BOOKINGS_PATH} element={<MyBookings />} />
         <Route path="/confirmation" element={<Confirmation />} />
+        {/* Any signed-in user can list a facility and becomes a provider by it (decision 62). */}
+        <Route path={PROVIDER_ONBOARDING_PATH} element={<Facilities />} />
+        <Route path={ONBOARDING_STEPS.contact} element={<ContactStep />} />
+        <Route path={ONBOARDING_STEPS.location} element={<LocationStep />} />
+        <Route path={ONBOARDING_STEPS.capacity} element={<CapacityStep />} />
+        <Route path={ONBOARDING_STEPS.produce} element={<ProduceStep />} />
+        <Route path={ONBOARDING_STEPS.photos} element={<PhotosStep />} />
+        <Route path={ONBOARDING_STEPS.done} element={<Outcome />} />
       </Route>
       <Route path="*" element={<NotFound />} />
     </Route>

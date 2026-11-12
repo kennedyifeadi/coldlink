@@ -259,7 +259,11 @@ const Location = () => {
           {mode === 'pin' && (
             <div className="flex flex-col gap-3">
               <Suspense fallback={<MapPlaceholder />}>
-                <PinMap pin={pin} onPick={(lat, lng) => setPin({ lat, lng })} />
+                <PinMap
+                  pin={pin}
+                  onPick={(lat, lng) => setPin({ lat, lng })}
+                  label={t('search.location.mapLabel')}
+                />
               </Suspense>
               {pin && <Confirmed>{t('search.location.pinDropped')}</Confirmed>}
             </div>
