@@ -77,6 +77,7 @@
       "copied": "Copied!",
       "channels": "Keep this ID safe. Give it when you contact ColdLink support.",
       "findStorage": "Find storage",
+      "continue": "Continue",
       "copyFailed": "Couldn't copy the ID. Write it down instead.",
       "signOut": "Sign out"
     }
