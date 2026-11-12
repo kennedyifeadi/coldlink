@@ -66,7 +66,11 @@ const providerFields = {
   category_ids: categoryIdsSchema,
 };
 
-function temperaturesInOrder(body: { temp_min_c?: number | null; temp_max_c?: number | null }) {
+/** Also used by forms that check the temperatures before the rest of the body is complete. */
+export function temperaturesInOrder(body: {
+  temp_min_c?: number | null;
+  temp_max_c?: number | null;
+}) {
   const { temp_min_c: min, temp_max_c: max } = body;
   return min === undefined || min === null || max === undefined || max === null || min <= max;
 }
