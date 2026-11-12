@@ -13,6 +13,7 @@ import {
 } from '../../test/api';
 import { renderApp, SCREEN_TIMEOUT } from '../../test/renderApp';
 import { apata, cropsResponse, dugbe, searchResponse, tomatoes } from '../../test/searchFixtures';
+import { enterAmount, pickArea, pickCrop, searchFromBodija } from '../../test/searchSteps';
 
 // The map itself needs a real browser; this stands in for a tap on it.
 vi.mock('./PinMap', () => ({
@@ -39,31 +40,6 @@ const PAGE_CHANGE_TIMEOUT = { timeout: 15_000 };
 const currentPath = () => screen.getByTestId('location').textContent;
 const findHeading = (name: string | RegExp) =>
   screen.findByRole('heading', { name }, SCREEN_TIMEOUT);
-
-const pickArea = async (user: UserEvent, area: string) => {
-  await user.click(await screen.findByRole('button', { name: 'Pick your area' }, SCREEN_TIMEOUT));
-  await user.type(screen.getByLabelText('Search for your area'), area.split(',')[0]!);
-  await user.click(screen.getByRole('button', { name: area }));
-  await user.click(screen.getByRole('button', { name: /^Continue/ }));
-};
-
-const pickCrop = async (user: UserEvent, crop: string) => {
-  await user.click(await screen.findByRole('button', { name: crop }, SCREEN_TIMEOUT));
-  await user.click(screen.getByRole('button', { name: /^Continue/ }));
-};
-
-const enterAmount = async (user: UserEvent, quantity: string) => {
-  const input = await screen.findByLabelText('Amount', undefined, SCREEN_TIMEOUT);
-  await user.clear(input);
-  await user.type(input, quantity);
-  await user.click(screen.getByRole('button', { name: /^Find cold storage/ }));
-};
-
-const searchFromBodija = async (user: UserEvent) => {
-  await pickArea(user, 'Bodija, Ibadan');
-  await pickCrop(user, 'Tomatoes');
-  await enterAmount(user, '10');
-};
 
 // Enter in a field submits through the form's default button: its first submit button in tree
 // order, where a <button> with no type counts (HTML implicit submission). user-event's Enter only
@@ -488,38 +464,6 @@ describe('results', FLOW_TIMEOUT, () => {
 
     await vi.waitFor(
       () => expect(currentPath()).toBe(`/details/${apata.provider.id}`),
-      PAGE_CHANGE_TIMEOUT,
-    );
-  });
-
-  it('keeps the chosen facility through sign-in', async () => {
-    mockApi({
-      ...signedOut,
-      ...crops,
-      'POST /search': jsonResponse(200, searchResponse([dugbe])),
-      'POST /auth/otp/request': jsonResponse(200, {
-        expires_in_seconds: 600,
-        resend_after_seconds: 60,
-      }),
-      'POST /auth/otp/verify': jsonResponse(200, sessionFixture()),
-    });
-    const user = renderApp('/location');
-    await searchFromBodija(user);
-
-    await user.click(await screen.findByRole('button', { name: 'Book' }, SCREEN_TIMEOUT));
-    await user.type(
-      await screen.findByLabelText('Phone number', undefined, SCREEN_TIMEOUT),
-      '08031234567',
-    );
-    await user.click(screen.getByRole('button', { name: /^Continue/ }));
-    await user.type(
-      await screen.findByLabelText('6-digit code', undefined, SCREEN_TIMEOUT),
-      '482913',
-    );
-    await user.click(screen.getByRole('button', { name: /^Continue/ }));
-
-    await vi.waitFor(
-      () => expect(currentPath()).toBe(`/details/${dugbe.provider.id}`),
       PAGE_CHANGE_TIMEOUT,
     );
   });

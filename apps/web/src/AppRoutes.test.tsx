@@ -27,9 +27,9 @@ describe('app routes', () => {
 
   it('opens farmer screens for a signed-in user after a reload', async () => {
     mockApi(signedIn);
-    renderApp('/duration');
+    renderApp('/bookings');
 
-    expect(await findHeading('How long do you need storage?')).toBeInTheDocument();
+    expect(await findHeading('My bookings')).toBeInTheDocument();
     expect(screen.queryByRole('heading', { name: 'Page not found' })).not.toBeInTheDocument();
   });
 
@@ -42,7 +42,7 @@ describe('app routes', () => {
       }),
       'POST /auth/otp/verify': jsonResponse(200, sessionFixture()),
     });
-    const user = renderApp('/duration');
+    const user = renderApp('/bookings');
 
     await user.type(
       await screen.findByLabelText('Phone number', undefined, SCREEN_TIMEOUT),
@@ -55,7 +55,7 @@ describe('app routes', () => {
     );
     await user.click(screen.getByRole('button', { name: /^Continue/ }));
 
-    expect(await findHeading('How long do you need storage?')).toBeInTheDocument();
+    expect(await findHeading('My bookings')).toBeInTheDocument();
   });
 
   it('skips the sign-in screen for a signed-in user', async () => {
@@ -72,7 +72,7 @@ describe('app routes', () => {
         jsonResponse(200, sessionFixture()),
       ],
     });
-    const user = renderApp('/duration');
+    const user = renderApp('/bookings');
 
     expect(await findHeading("Can't reach ColdLink")).toBeInTheDocument();
     expect(
@@ -80,7 +80,7 @@ describe('app routes', () => {
     ).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Try again' }));
 
-    expect(await findHeading('How long do you need storage?')).toBeInTheDocument();
+    expect(await findHeading('My bookings')).toBeInTheDocument();
   });
 
   it.each([

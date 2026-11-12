@@ -1,4 +1,5 @@
 import { createContext, useContext } from 'react';
+import * as z from 'zod';
 import type { CapacityUnit, Crop, SearchBody } from '@coldlink/shared';
 import type { AreaId } from './areas';
 
@@ -59,3 +60,7 @@ export const readDraft = (draft: SearchDraft): ReadDraft => {
     place,
   };
 };
+
+/** Router state that tells the first search step why the farmer was sent back to it. */
+export const searchNoticeStateSchema = z.object({ notice: z.literal('bookingLinkBroken') });
+export type SearchNoticeState = z.infer<typeof searchNoticeStateSchema>;

@@ -5,6 +5,7 @@ import NotFound from './components/NotFound';
 import { RedirectIfSignedIn, RequireSession } from './session/guards';
 import { MY_BOOKINGS_PATH, SIGN_IN_PATH } from './session/routes';
 import { SEARCH_STEPS } from './features/search/searchFlow';
+import { BOOKING_STEPS, paymentReturnPath } from './features/booking/bookingIntent';
 
 // One chunk per feature: every screen of a feature loads with the first one visited.
 const lazyScreen = <Module extends Record<Name, ComponentType>, Name extends keyof Module>(
@@ -27,7 +28,6 @@ const Produce = lazyScreen(loadSearch, 'Produce');
 const Amount = lazyScreen(loadSearch, 'Amount');
 const Results = lazyScreen(loadSearch, 'Results');
 const Details = lazyScreen(loadBooking, 'Details');
-const Duration = lazyScreen(loadBooking, 'Duration');
 const Review = lazyScreen(loadBooking, 'Review');
 const Payment = lazyScreen(loadBooking, 'Payment');
 const Confirmation = lazyScreen(loadBooking, 'Confirmation');
@@ -49,13 +49,15 @@ const AppRoutes = () => (
       <Route path={SEARCH_STEPS.crop} element={<Produce />} />
       <Route path={SEARCH_STEPS.amount} element={<Amount />} />
       <Route path={SEARCH_STEPS.results} element={<Results />} />
+      {/* The exact price comes before the phone number (decision 75); paying needs a session. */}
+      <Route path={`${BOOKING_STEPS.details}/:providerId`} element={<Details />} />
+      <Route path={`${BOOKING_STEPS.review}/:providerId`} element={<Review />} />
+      <Route element={<RequireSession returnTo={paymentReturnPath} />}>
+        <Route path={`${BOOKING_STEPS.payment}/:providerId`} element={<Payment />} />
+      </Route>
       <Route element={<RequireSession />}>
         <Route path="/userid" element={<UserId />} />
         <Route path={MY_BOOKINGS_PATH} element={<MyBookings />} />
-        <Route path="/details/:providerId" element={<Details />} />
-        <Route path="/duration" element={<Duration />} />
-        <Route path="/review" element={<Review />} />
-        <Route path="/payment" element={<Payment />} />
         <Route path="/confirmation" element={<Confirmation />} />
       </Route>
       <Route path="*" element={<NotFound />} />

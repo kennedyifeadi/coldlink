@@ -37,10 +37,15 @@ const SessionUnavailable = ({ error }: { error: unknown }) => {
 interface RequireSessionProps {
   /** The user needs at least one of these roles; otherwise the page is not found. */
   roles?: readonly UserRole[];
+  /** Where signing in leads back to; the page that was asked for by default. */
+  returnTo?: (location: { pathname: string; search: string }) => string;
 }
 
+const sameLocation = ({ pathname, search }: { pathname: string; search: string }) =>
+  `${pathname}${search}`;
+
 /** Lets signed-in users through, and sends everyone else to sign in and back. */
-export const RequireSession = ({ roles }: RequireSessionProps) => {
+export const RequireSession = ({ roles, returnTo = sameLocation }: RequireSessionProps) => {
   const session = useSession();
   const location = useLocation();
 
@@ -54,7 +59,7 @@ export const RequireSession = ({ roles }: RequireSessionProps) => {
         <Navigate
           to={SIGN_IN_PATH}
           replace
-          state={{ returnTo: `${location.pathname}${location.search}` } satisfies ReturnToState}
+          state={{ returnTo: returnTo(location) } satisfies ReturnToState}
         />
       );
     case 'signedIn':

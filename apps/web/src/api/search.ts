@@ -13,3 +13,6 @@ export const searchStorage = (
   const options = { method: 'POST', body, schema: searchResponseSchema, signal } as const;
   return signedIn ? store.authorizedRequest('/search', options) : apiRequest('/search', options);
 };
+
+/** Results are cached under the body searched, which the facility screen reads distances from. */
+export const searchQueryKey = (body: SearchBody | undefined) => ['search', body] as const;

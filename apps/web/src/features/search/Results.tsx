@@ -10,7 +10,7 @@ import PrimaryButton from '../../components/ui/PrimaryButton';
 import TextButton from '../../components/ui/TextButton';
 import ErrorMessage from '../../components/ui/ErrorMessage';
 import { describeApiError } from '../../api/describeError';
-import { searchStorage } from '../../api/search';
+import { searchQueryKey, searchStorage } from '../../api/search';
 import { formatNumber } from '../../i18n/format';
 import { useSession, useSessionStore } from '../../session/sessionContext';
 import { facilityPath } from '../booking/bookingIntent';
@@ -134,7 +134,7 @@ const Results = () => {
   const body = 'body' in draft ? draft.body : undefined;
 
   const search = useQuery({
-    queryKey: ['search', body],
+    queryKey: searchQueryKey(body),
     queryFn: ({ signal }) =>
       searchStorage(body!, { store, signedIn: session.status === 'signedIn', signal }),
     // Wait for the session check on load, so a signed-in farmer's search is logged as theirs.

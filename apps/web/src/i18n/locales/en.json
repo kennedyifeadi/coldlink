@@ -163,7 +163,8 @@
       "mapLabel": "Map. Tap to drop a pin where your produce is.",
       "mapLoading": "Loading map...",
       "pinCentre": "Put the pin in the middle of the map",
-      "pinDropped": "Pin dropped. Tap the map again to move it."
+      "pinDropped": "Pin dropped. Tap the map again to move it.",
+      "bookingLinkBroken": "That booking link was incomplete. Search again to choose a cold room."
     },
     "areas": {
       "bodija": "Bodija, Ibadan",
@@ -275,58 +276,55 @@
   "booking": {
     "payAmount": "Pay {{amount}}",
     "details": {
-      "navTitle": "Details",
-      "capacityTitle": "Storage capacity",
-      "unitsAvailable_one": "{{available}} of {{count}} unit available",
-      "unitsAvailable_other": "{{available}} of {{count}} units available",
-      "quantityTitle": "How much storage?",
-      "pricePerUnit": "{{price}} / unit / day",
-      "maxUnits_one": "Max {{count}} unit",
-      "maxUnits_other": "Max {{count}} units",
-      "unitsLabel_one": "Unit",
-      "unitsLabel_other": "Units",
-      "removeUnit": "Remove a unit",
-      "addUnit": "Add a unit"
-    },
-    "duration": {
-      "navTitle": "Duration",
-      "title": "How long do you need storage?",
-      "intro": "Select the number of days you need to store your goods.",
-      "daysLabel_one": "Day",
-      "daysLabel_other": "Days",
-      "removeDay": "Remove a day",
-      "addDay": "Add a day",
-      "costTitle": "Cost breakdown",
-      "storage": "Storage",
-      "delivery": "Delivery",
-      "bookingFee": "Booking fee",
-      "total": "Total",
-      "deliveryInfo": "Delivery is calculated based on the distance between your location and the cold room.",
-      "continueToPayment": "Continue to payment"
+      "navTitle": "Cold room",
+      "photo": "Photo {{number}} of {{name}}",
+      "near": "Near {{landmark}}",
+      "distance": "{{distance}} km from where you searched",
+      "spaceTitle": "Space and price",
+      "price": "Price",
+      "pricePer": {
+        "crates": "{{price}} per crate per day",
+        "kg": "{{price}} per kg per day",
+        "sqm": "{{price}} per m² per day"
+      },
+      "free": "Free on your dates",
+      "minDays": "Shortest stay",
+      "minDaysValue_one": "{{count}} day",
+      "minDaysValue_other": "{{count}} days",
+      "facilityTitle": "The facility",
+      "temperature": "Temperature",
+      "temperatureRange": "{{min}}°C to {{max}}°C",
+      "temperatureFrom": "From {{min}}°C",
+      "temperatureUpTo": "Up to {{max}}°C",
+      "backupPower": "Backup power",
+      "backup": {
+        "generator": "Generator",
+        "solar": "Solar",
+        "none": "None"
+      },
+      "storesTitle": "Stores",
+      "continue": "Continue"
     },
     "review": {
       "navTitle": "Review",
       "title": "Review your booking",
-      "intro": "Please confirm your storage details before payment.",
-      "roomLocation": "{{location}} ({{distance}} km)",
+      "intro": "Check the details and the price before you pay.",
       "produce": "Produce",
       "quantity": "Quantity",
-      "quantityValue_one": "{{count}} crate ({{weight}}kg)",
-      "quantityValue_other": "{{count}} crates ({{weight}}kg)",
+      "dropOff": "Drop off",
+      "collect": "Collect",
       "duration": "Duration",
       "durationValue_one": "{{count}} day",
       "durationValue_other": "{{count}} days",
-      "costTitle": "Cost summary",
-      "storage_one": "Storage ({{count}} day)",
-      "storage_other": "Storage ({{count}} days)",
-      "delivery": "Delivery",
-      "serviceFee": "Service fee",
-      "total": "Total",
-      "splitTitle": "Split payment plan",
-      "splitBody": "You'll pay 50% now to secure the space, and the remaining 50% according to the storage provider's arrangement.",
-      "payNow": "Pay now (50%)",
-      "balance": "Balance",
-      "edit": "Edit booking"
+      "priceTitle": "Price",
+      "storage_one": "Storage for {{count}} day",
+      "storage_other": "Storage for {{count}} days",
+      "deposit": "Deposit, paid now",
+      "serviceFee": "Service fee, paid now",
+      "delivery": "Delivery, paid now",
+      "balance": "Balance, paid at the facility",
+      "payNow": "You pay now: {{amount}}",
+      "payNowBody": "Pay the balance of {{balance}} at {{facility}} when you bring your produce."
     },
     "payment": {
       "navTitle": "Payment",
@@ -374,6 +372,24 @@
       "title": "My bookings",
       "body": "Your bookings will show here soon. Until then, your booking code is in the SMS we send when you book.",
       "findStorage": "Find cold storage"
+    },
+    "step": "Step {{step}} of {{count}}: {{name}}",
+    "steps": {
+      "details": "Details",
+      "review": "Review",
+      "pay": "Pay"
+    },
+    "loading": "Checking available space...",
+    "changeAmount": "Change amount or dates",
+    "problems": {
+      "notEnoughSpaceTitle": "Only {{free}} free on these dates",
+      "noSpaceTitle": "No space free on these dates",
+      "notEnoughSpaceBody": "You asked for {{asked}}. Choose a smaller amount or other dates.",
+      "invalidTermsTitle": "This cold room can't take this booking",
+      "goneTitle": "This cold room is no longer available",
+      "goneBody": "It may have closed to bookings. Other cold rooms near you may have space.",
+      "findAnother": "Find another cold room",
+      "failedTitle": "Couldn't load this cold room"
     }
   },
   "mock": {
