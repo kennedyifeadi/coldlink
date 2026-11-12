@@ -101,4 +101,14 @@ describe('apiRequest', () => {
       apiRequest('/auth/logout', { method: 'POST', schema: z.undefined() }),
     ).resolves.toBeUndefined();
   });
+
+  it('sends a Blob as it is, with its own type', async () => {
+    const fetchMock = mockApi({ 'POST /photos': jsonResponse(201, {}) });
+    const photo = new Blob(['jpeg bytes'], { type: 'image/jpeg' });
+
+    await apiRequest('/photos', { method: 'POST', body: photo, schema: z.object({}) });
+    const [[, init] = []] = requestsTo(fetchMock, 'POST', '/photos');
+    expect(new Headers(init?.headers).get('Content-Type')).toBe('image/jpeg');
+    expect(init?.body).toBe(photo);
+  });
 });
