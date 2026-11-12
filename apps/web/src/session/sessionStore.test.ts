@@ -207,6 +207,45 @@ describe('session store', () => {
     expect(store.getSnapshot().status).toBe('signedIn');
   });
 
+  it('reads the roles again when asked to refresh the profile', async () => {
+    mockApi({
+      'POST /auth/refresh': jsonResponse(200, sessionFixture({ roles: ['farmer', 'provider'] })),
+    });
+    const store = createSessionStore();
+    store.start(sessionFixture());
+
+    store.refreshProfile();
+
+    await vi.waitFor(() =>
+      expect(store.getSnapshot()).toMatchObject({ user: { roles: ['farmer', 'provider'] } }),
+    );
+  });
+
+  it('refreshes before the next request when refreshing the profile failed', async () => {
+    const fetchMock = mockApi({
+      'POST /auth/refresh': [
+        () => Promise.reject(new TypeError('Failed to fetch')),
+        jsonResponse(
+          200,
+          sessionFixture({ roles: ['farmer', 'provider'], accessToken: 'token-b' }),
+        ),
+      ],
+      'GET /me': jsonResponse(200, profile),
+    });
+    const store = createSessionStore();
+    store.start(sessionFixture({ accessToken: 'token-a' }));
+
+    store.refreshProfile();
+    await vi.waitFor(() => expect(requestsTo(fetchMock, 'POST', '/auth/refresh')).toHaveLength(1));
+    // Lets the failed refresh settle, so the request does not share it.
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    await getMe(store);
+
+    expect(requestsTo(fetchMock, 'POST', '/auth/refresh')).toHaveLength(2);
+    expect(authorizationOf(requestsTo(fetchMock, 'GET', '/me')[0])).toBe('Bearer token-b');
+    expect(store.getSnapshot()).toMatchObject({ user: { roles: ['farmer', 'provider'] } });
+  });
+
   it('refuses an authorized request without calling the API when signed out', async () => {
     const fetchMock = mockApi({});
     const store = createSessionStore();
