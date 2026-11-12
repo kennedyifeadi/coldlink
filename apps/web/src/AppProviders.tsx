@@ -5,6 +5,7 @@ import SessionProvider from './session/SessionProvider';
 import { createSessionStore } from './session/sessionStore';
 import SignInFlowProvider from './features/auth/SignInFlowProvider';
 import SearchFlowProvider from './features/search/SearchFlowProvider';
+import ProviderOnboardingFlowProvider from './features/provider/ProviderOnboardingFlowProvider';
 
 // One quiet retry for a dropped connection. Any other failure shows at once, with Try again, so a
 // farmer on a slow network is not left watching a loader through three backed-off retries.
@@ -21,7 +22,9 @@ const AppProviders = ({ children }: { children: ReactNode }) => {
     <QueryClientProvider client={queryClient}>
       <SessionProvider store={sessionStore}>
         <SignInFlowProvider>
-          <SearchFlowProvider>{children}</SearchFlowProvider>
+          <SearchFlowProvider>
+            <ProviderOnboardingFlowProvider>{children}</ProviderOnboardingFlowProvider>
+          </SearchFlowProvider>
         </SignInFlowProvider>
       </SessionProvider>
     </QueryClientProvider>

@@ -137,7 +137,11 @@
       "searchHint": "Tell us where you are, what you're storing and how much.",
       "findStorage": "Find cold storage",
       "myBookings": "My bookings",
-      "myBookingsHint": "Check a booking or find your booking code"
+      "myBookingsHint": "Check a booking or find your booking code",
+      "listColdRoom": "List your cold room",
+      "listColdRoomHint": "Let farmers nearby book your spare cold space",
+      "yourFacilities": "Your facilities",
+      "yourFacilitiesHint": "See your listings or add another"
     },
     "place": {
       "device": "Your current location",
@@ -390,6 +394,186 @@
       "goneBody": "It may have closed to bookings. Other cold rooms near you may have space.",
       "findAnother": "Find another cold room",
       "failedTitle": "Couldn't load this cold room"
+    }
+  },
+  "provider": {
+    "onboarding": {
+      "navTitle": "List storage",
+      "step": "Step {{step}} of {{count}}: {{name}}",
+      "steps": {
+        "contact": "Contact",
+        "location": "Location",
+        "capacity": "Space and price",
+        "produce": "Produce",
+        "photos": "Photos"
+      },
+      "optional": "(optional)"
+    },
+    "contact": {
+      "title": "Tell farmers who you are",
+      "intro": "Farmers see this name when they search and book.",
+      "displayNameLabel": "Name farmers will see",
+      "displayNameHint": "Most people use the name of the place, like Bodija Market Cold Room.",
+      "displayNamePlaceholder": "Bodija Market Cold Room",
+      "businessNameLabel": "Registered business name",
+      "businessNameHint": "Leave this empty if you store as an individual.",
+      "facilityTypeLegend": "What kind of storage is it?",
+      "phoneLegend": "Where should booking texts go?",
+      "phoneHint": "We send an SMS here when a farmer books, so you can accept or reject.",
+      "ownNumber": "My number, {{number}}",
+      "otherNumber": "Another number",
+      "otherNumberLabel": "Phone number for booking texts",
+      "phonePlaceholder": "0803 123 4567",
+      "whatsappLabel": "WhatsApp number",
+      "whatsappHint": "Only if it's different from your booking number."
+    },
+    "location": {
+      "title": "Where is your storage?",
+      "intro": "Farmers find the storage closest to them, so put the pin exactly where it is.",
+      "pinTitle": "Pin on the map",
+      "pinHint": "Zoom in and tap the spot where the storage is.",
+      "mapLabel": "Map. Tap to put the pin where your storage is.",
+      "pinDropped": "Pin set. Tap the map again to move it.",
+      "addressLabel": "Address",
+      "addressPlaceholder": "14 Dugbe Market Road, Ibadan",
+      "landmarkLabel": "Nearby landmark",
+      "landmarkHint": "Something farmers can ask for, like a bank, school or junction.",
+      "lgaLabel": "Local government area",
+      "lgaPlaceholder": "Choose your LGA"
+    },
+    "capacity": {
+      "title": "How much space, and at what price?",
+      "intro": "You can change the price later. New bookings use the new price.",
+      "unitLegend": "How do you measure your space?",
+      "unitHint": "Farmers search in this unit and pay per unit per day.",
+      "capacityLabel": "Total space",
+      "capacityHint": "All the space you can rent out at once.",
+      "capacityPlaceholder": "40",
+      "unitSuffix": {
+        "crates": "crates",
+        "kg": "kg",
+        "sqm": "m²"
+      },
+      "perUnit": {
+        "crates": "crate",
+        "kg": "kg",
+        "sqm": "square metre"
+      },
+      "priceLabel": "Price per unit per day",
+      "priceLabelFor": "Price per {{unit}} per day",
+      "priceHint": "In naira. ColdLink adds its service fee on top for the farmer.",
+      "pricePlaceholder": "500",
+      "naira": "naira",
+      "minDaysTitle": "Shortest booking",
+      "minDaysHint": "Farmers can't book for fewer days than this.",
+      "minDaysLabel_one": "{{count}} day",
+      "minDaysLabel_other": "{{count}} days",
+      "removeDay": "One day fewer",
+      "addDay": "One day more",
+      "temperatureLegend": "Temperature range",
+      "temperatureHint": "The coldest and warmest it usually gets inside, in °C.",
+      "tempMinLabel": "Lowest",
+      "tempMaxLabel": "Highest",
+      "celsius": "°C",
+      "backupLegend": "Backup power when the light goes off",
+      "backup": {
+        "generator": "Generator",
+        "solar": "Solar",
+        "none": "No backup power",
+        "unknown": "I'm not sure"
+      }
+    },
+    "produce": {
+      "title": "What produce can you store?",
+      "intro": "Pick every kind that suits your storage. Farmers only see storage that takes their produce.",
+      "groupLabel": "Kinds of produce",
+      "loading": "Loading kinds of produce...",
+      "submit": "Submit listing",
+      "submitting": "Submitting your listing..."
+    },
+    "photos": {
+      "title": "Add photos",
+      "intro": "Photos help farmers trust your storage. Show the outside, the inside and the entrance.",
+      "saved": "{{name}} is saved. Photos are optional.",
+      "count": "Photos: {{count}} of {{max}}",
+      "add": "Choose photos",
+      "addMore": "Add another photo",
+      "addHint_one": "JPEG, PNG or WebP. You can add {{count}} more.",
+      "addHint_other": "JPEG, PNG or WebP. You can add up to {{count}} more.",
+      "tooManyPicked": "You can add up to {{max}} photos. We kept the first ones you picked.",
+      "photoName": "Photo {{number}}",
+      "photoAlt": "Photo {{number}} of your storage",
+      "waiting": "Waiting to upload",
+      "uploading": "Uploading...",
+      "removing": "Removing...",
+      "uploaded": "Uploaded",
+      "remove": "Remove",
+      "removeLabel": "Remove photo {{number}}",
+      "finish": "Finish",
+      "finishWithout": "Finish without photos",
+      "finishWaiting": "Waiting for photos to upload...",
+      "problems": {
+        "tooLarge": "This photo is too big. Pick one under 5 MB.",
+        "wrongType": "This file isn't a JPEG, PNG or WebP photo. Remove it and pick a photo.",
+        "tooMany": "This facility already has 4 photos. Remove one to add this one.",
+        "network": "No network connection. Check your data or Wi-Fi, then try again.",
+        "sessionEnded": "You've been signed out. Sign in again, then add your photos.",
+        "failed": "This photo didn't upload. Try again in a moment.",
+        "removeFailed": "This photo couldn't be removed. Check your connection, then try again."
+      }
+    },
+    "outcome": {
+      "pending": {
+        "title": "Pending approval",
+        "intro": "Thanks for listing {{name}}. ColdLink checks every new listing before farmers can find it."
+      },
+      "live": {
+        "title": "Your storage is live",
+        "intro": "{{name}} is now in search. Farmers nearby can find and book it."
+      },
+      "summary": "{{capacity}} at {{price}} per {{unit}} per day",
+      "nextTitle": "What happens next",
+      "pendingNext1": "Our team checks your details. Farmers can't see or book your storage until it's approved.",
+      "pendingNext2": "Open Your facilities to see when the status changes to Live.",
+      "liveNext1": "When a farmer books, we send an SMS to your booking number so you can accept or reject.",
+      "liveNext2": "Keep your space and price up to date so farmers can rely on them.",
+      "seeFacilities": "See your facilities",
+      "home": "Back to home"
+    },
+    "facilities": {
+      "navTitle": "Facilities",
+      "title": "Your facilities",
+      "intro": "The storage you've listed on ColdLink.",
+      "loading": "Loading your facilities...",
+      "listAnother": "List another cold room"
+    },
+    "status": {
+      "pending": "Pending approval",
+      "approved": "Live",
+      "suspended": "Suspended",
+      "rejected": "Not approved"
+    },
+    "errors": {
+      "displayNameMissing": "Enter the name farmers will see.",
+      "displayNameTooLong": "Use a shorter name, at most 80 letters.",
+      "businessNameTooLong": "Use a shorter business name, at most 120 letters.",
+      "facilityTypeMissing": "Choose the kind of storage.",
+      "phoneInvalid": "Enter a Nigerian mobile number, like 0803 123 4567.",
+      "whatsappInvalid": "Enter a Nigerian mobile number, like 0803 123 4567, or leave it empty.",
+      "pinMissing": "Tap the map to put the pin where your storage is.",
+      "addressMissing": "Enter the address.",
+      "addressTooLong": "Use a shorter address, at most 200 letters.",
+      "landmarkTooLong": "Use a shorter landmark, at most 120 letters.",
+      "capacityMissing": "Enter how much space you have, as a number.",
+      "capacityNotPositive": "Enter a space above 0.",
+      "capacityTooPrecise": "Use at most 3 numbers after the decimal point.",
+      "unitMissing": "Choose how you measure your space.",
+      "priceMissing": "Enter the price in naira, as a number.",
+      "priceNotPositive": "Enter a price above 0.",
+      "priceTooPrecise": "Use at most 2 numbers after the decimal point (kobo).",
+      "temperatureInvalid": "Enter a temperature between -40 and 40 °C, or leave it empty.",
+      "temperatureOrder": "The highest temperature can't be below the lowest.",
+      "categoriesMissing": "Pick at least one kind of produce you can store."
     }
   },
   "mock": {

@@ -24,9 +24,11 @@ const ATTRIBUTION =
 interface PinMapProps {
   pin: { lat: number; lng: number } | undefined;
   onPick: (lat: number, lng: number) => void;
+  /** What tapping the map does, for screen readers. */
+  label: string;
 }
 
-const PinMap = ({ pin, onPick }: PinMapProps) => {
+const PinMap = ({ pin, onPick, label }: PinMapProps) => {
   const { t } = useTranslation();
   const container = useRef<HTMLDivElement>(null);
   const mapRef = useRef<LeafletMap>(undefined);
@@ -77,7 +79,7 @@ const PinMap = ({ pin, onPick }: PinMapProps) => {
     <div className="flex flex-col gap-2">
       <div
         ref={container}
-        aria-label={t('search.location.mapLabel')}
+        aria-label={label}
         className="h-64 rounded-xl overflow-hidden border border-line-strong z-0"
       />
       <button

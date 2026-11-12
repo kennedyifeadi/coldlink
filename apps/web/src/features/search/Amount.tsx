@@ -15,9 +15,8 @@ import ErrorMessage from '../../components/ui/ErrorMessage';
 import QuantityStepper from '../../components/ui/QuantityStepper';
 import StepProgress from '../../components/ui/StepProgress';
 import { SEARCH_STEPS, useSearchFlow } from './searchFlow';
+import { UNIT_CHOICES } from './units';
 
-// The ways farmers count produce first; floor space is how cold rooms, not farmers, measure.
-const UNIT_CHOICES = ['crates', 'kg', 'sqm'] as const satisfies readonly CapacityUnit[];
 const DEFAULT_UNIT: CapacityUnit = 'crates';
 const DEFAULT_DAYS = 7;
 
