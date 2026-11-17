@@ -11,6 +11,9 @@ import { createNotificationStore, type NotificationStore } from '../notification
 import { smsTemplates } from '../notifications/templates.js';
 import { createSmsProvider } from '../sms/createSmsProvider.js';
 import type { SmsProvider } from '../sms/provider.js';
+import { createPaymentGateway } from '../payments/createPaymentGateway.js';
+import type { PaymentGateway } from '../payments/gateway.js';
+import { registerRefundHooks } from '../payments/refundHooks.js';
 import { createPhotoStorage } from '../storage/createPhotoStorage.js';
 import type { PhotoStorage } from '../storage/photoStorage.js';
 import type { RateLimitOptions } from '../middleware/rateLimit.js';
@@ -18,6 +21,7 @@ import { version } from '../version.js';
 import { authRoutes, defaultAuthIpLimits, type AuthIpLimits } from './auth.js';
 import { bookingRoutes, defaultQuoteIpLimit } from './bookings.js';
 import { meRoutes } from './me.js';
+import { paymentRoutes } from './payments.js';
 import { providerRoutes } from './providers.js';
 import { referenceDataRoutes } from './referenceData.js';
 import { defaultSearchIpLimit, searchRoutes } from './search.js';
@@ -36,6 +40,7 @@ export interface RouteDependencies {
   quoteIpLimit?: RateLimitOptions;
   storage?: PhotoStorage;
   bookingHooks?: TransitionHooks;
+  paymentGateway?: PaymentGateway;
   now?: () => Date;
   generateBookingCode?: () => string;
 }
@@ -54,9 +59,11 @@ export function apiRoutes({
   quoteIpLimit = defaultQuoteIpLimit,
   storage = createPhotoStorage(config.storage),
   bookingHooks = createTransitionHooks(),
+  paymentGateway = createPaymentGateway(config.paystack),
   now,
   generateBookingCode,
 }: RouteDependencies): Router {
+  registerRefundHooks(bookingHooks, { db, gateway: paymentGateway, logger });
   const router = Router();
   router.get('/health', async (req, res) => {
     const database = await checkDatabase(db, req.log);
@@ -97,6 +104,18 @@ export function apiRoutes({
       quoteIpLimit,
       ...(now === undefined ? {} : { now }),
       ...(generateBookingCode === undefined ? {} : { generateCode: generateBookingCode }),
+    }),
+  );
+  router.use(
+    paymentRoutes({
+      db,
+      tokens,
+      appConfig,
+      gateway: paymentGateway,
+      hooks: bookingHooks,
+      config,
+      logger,
+      tasks,
     }),
   );
   return router;

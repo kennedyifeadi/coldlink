@@ -75,6 +75,17 @@ const envSchema = z.object({
   // Facility photos (PRD 10). The service-role key bypasses RLS, so it stays on the server.
   SUPABASE_URL: originSchema.optional(),
   SUPABASE_SERVICE_ROLE_KEY: z.string().min(1).optional(),
+  // Paystack's own key formats: sk_ or pk_, then test_ or live_ (decision 91).
+  PAYSTACK_SECRET_KEY: z
+    .string()
+    .regex(/^sk_(test|live)_[A-Za-z0-9]+$/, 'Must be a Paystack secret key (sk_test_ or sk_live_)')
+    .optional(),
+  PAYSTACK_PUBLIC_KEY: z
+    .string()
+    .regex(/^pk_(test|live)_[A-Za-z0-9]+$/, 'Must be a Paystack public key (pk_test_ or pk_live_)')
+    .optional(),
+  // Where Paystack sends the farmer after checkout: the web app's payment-return route.
+  WEB_APP_URL: originSchema.optional(),
 });
 
 export interface TermiiConfig {
@@ -89,6 +100,11 @@ export type SmsConfig = { provider: 'console' } | { provider: 'termii'; termii: 
 export interface StorageConfig {
   supabaseUrl: string;
   serviceRoleKey: string;
+}
+
+export interface PaystackConfig {
+  secretKey: string;
+  publicKey: string;
 }
 
 export interface AuthConfig {
@@ -114,6 +130,10 @@ export interface Config {
   trustProxyHops: number;
   /** Unset outside production when the Supabase settings are, as in CI. */
   storage: StorageConfig | undefined;
+  /** Unset outside production when the Paystack keys are, as in CI. */
+  paystack: PaystackConfig | undefined;
+  /** The web app's origin, which payment callbacks return to. */
+  webAppUrl: string;
 }
 
 export class ConfigError extends Error {
@@ -138,7 +158,10 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
   if (env['NODE_ENV'] === 'production' && env['DATABASE_SSL_ROOT_CERT'] === undefined) {
     issues.push('DATABASE_SSL_ROOT_CERT: Required in production');
   }
-  issues.push(...smsIssues(env), ...storageIssues(env));
+  if (env['NODE_ENV'] === 'production' && env['WEB_APP_URL'] === undefined) {
+    issues.push('WEB_APP_URL: Required in production');
+  }
+  issues.push(...smsIssues(env), ...storageIssues(env), ...paystackIssues(env));
   if (env['JWT_SECRET'] !== undefined && env['JWT_SECRET'] === env['OTP_PEPPER']) {
     issues.push('OTP_PEPPER: Must differ from JWT_SECRET');
   }
@@ -165,6 +188,9 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
     },
     trustProxyHops: result.data.TRUST_PROXY_HOPS,
     storage: storageConfig(result.data),
+    paystack: paystackConfig(result.data),
+    // Outside production an unset web app means the local Vite dev server.
+    webAppUrl: result.data.WEB_APP_URL ?? DEV_WEB_ORIGIN,
   };
 }
 
@@ -199,6 +225,30 @@ function storageIssues(env: NodeJS.ProcessEnv): string[] {
     return [`${missing[0]}: Required when ${set} is set`];
   }
   return [];
+}
+
+const paystackVariables = ['PAYSTACK_SECRET_KEY', 'PAYSTACK_PUBLIC_KEY'] as const;
+
+// Values are never echoed: they are the keys themselves.
+function paystackIssues(env: NodeJS.ProcessEnv): string[] {
+  const missing = paystackVariables.filter((name) => env[name] === undefined);
+  if (env['NODE_ENV'] === 'production') {
+    return missing.map((name) => `${name}: Required in production`);
+  }
+  if (missing.length === 1) {
+    const set = paystackVariables.find((name) => !missing.includes(name));
+    return [`${missing[0]}: Required when ${set} is set`];
+  }
+  // A live key outside production would take real money from a development or test run.
+  return paystackVariables
+    .filter((name) => /^[sp]k_live_/.test(env[name] ?? ''))
+    .map((name) => `${name}: A live key is only allowed in production`);
+}
+
+function paystackConfig(env: z.infer<typeof envSchema>): PaystackConfig | undefined {
+  const { PAYSTACK_SECRET_KEY, PAYSTACK_PUBLIC_KEY } = env;
+  if (PAYSTACK_SECRET_KEY === undefined || PAYSTACK_PUBLIC_KEY === undefined) return undefined;
+  return { secretKey: PAYSTACK_SECRET_KEY, publicKey: PAYSTACK_PUBLIC_KEY };
 }
 
 function storageConfig(env: z.infer<typeof envSchema>): StorageConfig | undefined {

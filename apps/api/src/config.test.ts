@@ -25,6 +25,15 @@ const supabase = {
   SUPABASE_URL: 'https://abcdefghij.supabase.co',
   SUPABASE_SERVICE_ROLE_KEY: 'service-role-key-123',
 };
+// Shaped as Paystack's keys, but not real ones.
+const paystack = {
+  PAYSTACK_SECRET_KEY: 'sk_test_0000000000fake',
+  PAYSTACK_PUBLIC_KEY: 'pk_test_0000000000fake',
+};
+const productionPayments = {
+  WEB_APP_URL: 'https://coldlink.ng',
+  ...paystack,
+};
 const productionSms =
   'SMS_PROVIDER: Must be termii in production, where the console provider sends nothing';
 
@@ -44,6 +53,7 @@ describe('loadConfig', () => {
         TRUST_PROXY_HOPS: '1',
         ...termii,
         ...supabase,
+        ...productionPayments,
       }),
     ).toEqual({
       nodeEnv: 'production',
@@ -67,6 +77,8 @@ describe('loadConfig', () => {
         supabaseUrl: 'https://abcdefghij.supabase.co',
         serviceRoleKey: 'service-role-key-123',
       },
+      paystack: { secretKey: 'sk_test_0000000000fake', publicKey: 'pk_test_0000000000fake' },
+      webAppUrl: 'https://coldlink.ng',
     });
   });
 
@@ -87,6 +99,8 @@ describe('loadConfig', () => {
       },
       trustProxyHops: 0,
       storage: undefined,
+      paystack: undefined,
+      webAppUrl: 'http://localhost:5173',
     });
   });
 
@@ -113,9 +127,12 @@ describe('loadConfig', () => {
     expect(configError({ ...required, NODE_ENV: 'production' }).issues).toEqual([
       'CORS_ORIGINS: Required in production',
       'DATABASE_SSL_ROOT_CERT: Required in production',
+      'WEB_APP_URL: Required in production',
       productionSms,
       'SUPABASE_URL: Required in production',
       'SUPABASE_SERVICE_ROLE_KEY: Required in production',
+      'PAYSTACK_SECRET_KEY: Required in production',
+      'PAYSTACK_PUBLIC_KEY: Required in production',
     ]);
   });
 
@@ -127,6 +144,7 @@ describe('loadConfig', () => {
         DATABASE_SSL_ROOT_CERT: 'ca.crt',
         ...termii,
         ...supabase,
+        ...productionPayments,
       }).issues,
     ).toEqual([
       expect.stringMatching(/^PORT: /),
@@ -256,6 +274,76 @@ describe('photo storage settings', () => {
   });
 });
 
+describe('Paystack settings', () => {
+  const liveSecret = 'sk_live_0000000000fake';
+  const livePublic = 'pk_live_0000000000fake';
+
+  it('are optional outside production', () => {
+    expect(loadConfig({ ...required, NODE_ENV: 'test' }).paystack).toBeUndefined();
+  });
+
+  it('must be set together', () => {
+    const { PAYSTACK_SECRET_KEY } = paystack;
+    expect(configError({ ...required, PAYSTACK_SECRET_KEY }).issues).toEqual([
+      'PAYSTACK_PUBLIC_KEY: Required when PAYSTACK_SECRET_KEY is set',
+    ]);
+  });
+
+  it.each(['development', 'test'])('refuse a live key in %s, without echoing it', (env) => {
+    const error = configError({
+      ...required,
+      NODE_ENV: env,
+      PAYSTACK_SECRET_KEY: liveSecret,
+      PAYSTACK_PUBLIC_KEY: livePublic,
+    });
+    expect(error.issues).toEqual([
+      'PAYSTACK_SECRET_KEY: A live key is only allowed in production',
+      'PAYSTACK_PUBLIC_KEY: A live key is only allowed in production',
+    ]);
+    expect(error.message).not.toContain(liveSecret);
+  });
+
+  it('refuse a live key outside production even beside a test key', () => {
+    expect(
+      configError({ ...paystack, ...required, PAYSTACK_SECRET_KEY: liveSecret }).issues,
+    ).toEqual(['PAYSTACK_SECRET_KEY: A live key is only allowed in production']);
+  });
+
+  it('accept live keys in production', () => {
+    const config = loadConfig({
+      ...required,
+      ...termii,
+      ...supabase,
+      ...productionPayments,
+      NODE_ENV: 'production',
+      CORS_ORIGINS: 'https://coldlink.ng',
+      DATABASE_SSL_ROOT_CERT: 'ca.crt',
+      PAYSTACK_SECRET_KEY: liveSecret,
+      PAYSTACK_PUBLIC_KEY: livePublic,
+    });
+    expect(config.paystack).toEqual({ secretKey: liveSecret, publicKey: livePublic });
+  });
+
+  it('refuse a value that is not a Paystack key, without echoing it', () => {
+    const error = configError({
+      ...required,
+      PAYSTACK_SECRET_KEY: 'pk_test_0000000000fake',
+      PAYSTACK_PUBLIC_KEY: 'not-a-key',
+    });
+    expect(error.issues).toEqual([
+      expect.stringMatching(/^PAYSTACK_SECRET_KEY: /),
+      expect.stringMatching(/^PAYSTACK_PUBLIC_KEY: /),
+    ]);
+    expect(error.message).not.toContain('not-a-key');
+  });
+
+  it('take WEB_APP_URL as an origin', () => {
+    expect(configError({ ...required, WEB_APP_URL: 'https://coldlink.ng/app' }).issues).toEqual([
+      expect.stringMatching(/^WEB_APP_URL: /),
+    ]);
+  });
+});
+
 describe('dev OTP guard', () => {
   it('is on only in development with the console SMS provider', () => {
     expect(loadConfig({ ...required, NODE_ENV: 'development' }).auth.devOtp).toBe(true);
@@ -268,6 +356,7 @@ describe('dev OTP guard', () => {
       ...required,
       ...termii,
       ...supabase,
+      ...productionPayments,
       NODE_ENV: 'production',
       CORS_ORIGINS: 'https://coldlink.ng',
       DATABASE_SSL_ROOT_CERT: 'ca.crt',

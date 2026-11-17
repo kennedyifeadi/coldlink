@@ -3,13 +3,13 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import { AppConfigError, createAppConfigReader } from './appConfig.js';
 import { noTestDatabase, useTestTransaction } from './test/integration.js';
 
-// PRD 5.15 placeholders, inserted by each test rather than taken from a seed.
+// PRD 5.15 placeholders and the owner's payment settings, inserted by each test.
 const placeholders: AppConfig = {
   commission_rate: 0.075,
   service_fee_kobo: 0,
   deposit_percent: 0.3,
   provider_response_minutes: 120,
-  payment_hold_minutes: 15,
+  payment_hold_minutes: 30,
   search_default_radius_km: 25,
   search_max_radius_km: 100,
   delivery_base_fee_kobo: 100_000,
@@ -20,6 +20,7 @@ const placeholders: AppConfig = {
   require_provider_approval: true,
   otp_required: true,
   farmer_free_cancel_hours: 24,
+  paystack_channels: ['card', 'bank', 'ussd', 'bank_transfer'],
 };
 
 async function readError(read: Promise<unknown>): Promise<AppConfigError> {
@@ -75,7 +76,7 @@ describe.skipIf(noTestDatabase)('app_config reader', () => {
     const reader = createAppConfigReader(db(), { now });
     await reader.get();
     await setValue('payment_hold_minutes', 20);
-    expect((await reader.get()).payment_hold_minutes).toBe(15);
+    expect((await reader.get()).payment_hold_minutes).toBe(30);
 
     reader.clear();
     expect((await reader.get()).payment_hold_minutes).toBe(20);

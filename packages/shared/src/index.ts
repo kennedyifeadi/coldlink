@@ -8,6 +8,7 @@ export * from './dates.js';
 export * from './enums.js';
 export * from './errors.js';
 export * from './money.js';
+export * from './payments.js';
 export * from './phone.js';
 export * from './pricing.js';
 export * from './providers.js';

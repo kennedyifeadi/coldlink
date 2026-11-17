@@ -11,7 +11,7 @@ The API contract, written as an OpenAPI 3.1 document in the YAML block below. Ea
 - **Pagination:** paginated lists take `limit` and `cursor` (PRD 8). The reference lists (`/crops`, `/crop-categories`) are not paginated: they are small, admin-managed reference data (22 crops, 7 categories) that a client loads whole. `GET /providers/mine` and `GET /bookings` are not paginated yet either (decisions 62, 85).
 - **Caching:** the public reference endpoints send `Cache-Control: public` with a short `max-age` (5 minutes for crops and categories, 60 seconds for config). Responses for the signed-in user (`/me`, the owner's provider views, the farmer's bookings) send `no-store`. Other responses, and every error, send none.
 - **Rate limits:** limited routes send `RateLimit` and `RateLimit-Policy` headers, and `Retry-After` with a 429. The reference endpoints are not limited yet: they are cheap, cacheable reads. The auth routes are limited per IP (decision 56); `POST /auth/otp/request` is also limited per phone number, and its 429 adds `details.retry_after_seconds`. `POST /search` and `POST /bookings/quote` are each limited to 300 requests per IP per 15 minutes (decisions 74, 75).
-- **Response schemas:** the Zod schemas for request and response bodies live in `packages/shared` (`cropCategoriesResponseSchema`, `cropsResponseSchema`, `publicConfigSchema`, `otpRequestBodySchema`, `otpRequestResponseSchema`, `otpVerifyBodySchema`, `sessionResponseSchema`, `userProfileSchema`, `updateProfileBodySchema`, `createProviderBodySchema`, `updateProviderBodySchema`, `publicProviderSchema`, `ownProviderSchema`, `ownProvidersResponseSchema`, `searchBodySchema`, `searchResponseSchema`, `bookingQuoteBodySchema`, `bookingQuoteSchema`, `createBookingBodySchema`, `farmerBookingSchema`, `farmerBookingsResponseSchema`, `cancelBookingBodySchema`, `cancelledBookingSchema`), for the web app to validate forms and parse responses with.
+- **Response schemas:** the Zod schemas for request and response bodies live in `packages/shared` (`cropCategoriesResponseSchema`, `cropsResponseSchema`, `publicConfigSchema`, `otpRequestBodySchema`, `otpRequestResponseSchema`, `otpVerifyBodySchema`, `sessionResponseSchema`, `userProfileSchema`, `updateProfileBodySchema`, `createProviderBodySchema`, `updateProviderBodySchema`, `publicProviderSchema`, `ownProviderSchema`, `ownProvidersResponseSchema`, `searchBodySchema`, `searchResponseSchema`, `bookingQuoteBodySchema`, `bookingQuoteSchema`, `createBookingBodySchema`, `farmerBookingSchema`, `farmerBookingsResponseSchema`, `cancelBookingBodySchema`, `cancelledBookingSchema`, `initializePaymentBodySchema`, `initializedPaymentSchema`, `paymentVerificationSchema`), for the web app to validate forms and parse responses with.
 - **Phone numbers:** send them as people type them: `08031234567`, `8031234567`, `2348031234567` or `+2348031234567`, with or without spaces or hyphens. The API stores `+234` and ten digits, and accepts only mobile numbers (70x, 80x, 81x, 90x, 91x). `normalisePhone` and `phoneSchema` in `packages/shared` do the same in the browser. Responses never contain a full phone number; a profile has `phone_masked` (`+234803***4567`).
 
 ## Authentication
@@ -81,6 +81,17 @@ The farmer's own bookings (PRD 5.5, 6.3, 6.6, 7.4; decisions 82 to 86) need a si
 - **`GET /bookings`** lists the farmer's bookings, newest first, with what a list needs: code, status, dates, quantity, facility name and LGA, crop and the amounts. **`GET /bookings/:id`** gives one in full. Another farmer's booking is the same 404 as an unknown id.
 - **`POST /bookings/:id/cancel`**, with an optional `reason`, cancels a booking awaiting the provider (`pending_provider`) or confirmed. The response adds `refund_kobo`, what the policy refunds of the online payment: all of it before the provider accepts; after that, the deposit (not the service fee) if it is at least `farmer_free_cancel_hours` before 00:00 in Lagos on `start_date`; nothing later. Any other status is 409 `conflict`, including `payment_pending`: an unpaid booking is not cancelled, it expires. The refund itself is made separately.
 - The farmer's view never has the commission, its rate or the provider's payout.
+
+## Payments
+
+A farmer pays a booking's `total_charged_online_kobo` through Paystack checkout (PRD 6.4, 7.5; decisions 90 to 96). The API holds the secret key; the browser only ever sees Paystack's checkout page.
+
+- **`POST /payments/initialize`** (farmer only) takes `{ booking_id }` for the farmer's own booking and answers `{ authorization_url, reference }`. Send the farmer to `authorization_url`. The amount is the booking's, never the client's, and checkout offers the channels in `app_config.paystack_channels`. The booking must be `payment_pending` with its hold (`payment_expires_at`) still running, otherwise 409 `conflict`; another farmer's booking is the same 404 as an unknown one. Calling it again while the payment is open returns the same page and reference.
+- **After checkout** Paystack sends the farmer to the web app's `/payment/return` with `?reference=`. **`GET /payments/:reference/verify`** (farmer only, own payment, 404 otherwise) asks Paystack for the charge and, if it is paid, confirms it as the webhook would. It answers `{ reference, payment_status, booking_id, booking_status }`: `success` and `pending_provider` once confirmed; `initiated` and `payment_pending` while Paystack does not report it paid; `refunded` if it came too late (below). A charge whose amount or currency is not the booking's is 409. In development this is the only way a payment is confirmed, since Paystack cannot reach localhost.
+- **`POST /webhooks/paystack`** is Paystack's. It needs `x-paystack-signature`, the HMAC-SHA512 of the raw body with the secret key; a missing or wrong one is 401. Any signed event is answered 200, including a replay, which changes nothing; only `charge.success` is acted on.
+- **When a payment is confirmed** the booking moves to `pending_provider`, and the provider has `provider_response_minutes` from then to answer (`provider_response_due_at`).
+- **A late payment** is refunded in full and the booking is left as it is: when the booking is no longer `payment_pending`, or its hold lapsed and its space has since been booked. If the hold lapsed but the space is still free, the payment is taken as usual.
+- **Refunds** are made automatically after a rejection, a provider who does not answer in time, and a cancellation: the policy's `refund_kobo` for the farmer's own (no refund when it is 0), everything paid online for anyone else's. A refund Paystack refuses is recorded to be retried; the booking's change stands.
 
 ## OpenAPI
 
@@ -958,6 +969,123 @@ paths:
           $ref: '#/components/responses/Conflict'
         '500':
           $ref: '#/components/responses/Internal'
+  /payments/initialize:
+    post:
+      operationId: initializePayment
+      summary: Start paying for one of the signed-in farmer's bookings
+      description: >-
+        For a payment_pending booking whose hold is still running. The amount is the booking's
+        total_charged_online_kobo. Calling again while the payment is open returns the same page.
+      tags: [Payments]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InitializePaymentRequest'
+      responses:
+        '200':
+          description: Paystack's checkout page for the payment.
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/NoStore'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InitializedPayment'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '500':
+          $ref: '#/components/responses/Internal'
+  /payments/{reference}/verify:
+    parameters:
+      - name: reference
+        in: path
+        required: true
+        schema:
+          type: string
+          pattern: '^CLP-[0-9a-f]{20}$'
+    get:
+      operationId: verifyPayment
+      summary: Confirm one of the signed-in farmer's payments with Paystack
+      description: >-
+        Asks Paystack for the charge and, if it is paid, confirms it as the webhook would. Another
+        farmer's payment is a 404, as an unknown reference is.
+      tags: [Payments]
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: The payment's and the booking's status after confirming.
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/NoStore'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaymentVerification'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '500':
+          $ref: '#/components/responses/Internal'
+  /webhooks/paystack:
+    post:
+      operationId: paystackWebhook
+      summary: Paystack's webhook
+      description: >-
+        Signed with x-paystack-signature, the HMAC-SHA512 of the raw body with the secret key. Only
+        charge.success is acted on, once; every other signed event, and a replay, is a 200 that
+        changes nothing.
+      tags: [Payments]
+      parameters:
+        - name: x-paystack-signature
+          in: header
+          required: true
+          schema:
+            type: string
+            pattern: '^[0-9a-f]{128}$'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Received.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [received]
+                properties:
+                  received:
+                    type: boolean
+                    const: true
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/Internal'
 components:
   securitySchemes:
     bearerAuth:
@@ -1815,6 +1943,53 @@ components:
               type: integer
               description: What the cancellation policy refunds of total_charged_online_kobo.
       unevaluatedProperties: false
+    InitializePaymentRequest:
+      type: object
+      required: [booking_id]
+      additionalProperties: false
+      properties:
+        booking_id:
+          type: string
+          format: uuid
+    InitializedPayment:
+      type: object
+      required: [authorization_url, reference]
+      additionalProperties: false
+      properties:
+        authorization_url:
+          type: string
+          format: uri
+          description: Paystack's checkout page.
+        reference:
+          type: string
+          pattern: '^CLP-[0-9a-f]{20}$'
+    PaymentVerification:
+      type: object
+      required: [reference, payment_status, booking_id, booking_status]
+      additionalProperties: false
+      properties:
+        reference:
+          type: string
+          pattern: '^CLP-[0-9a-f]{20}$'
+        payment_status:
+          type: string
+          enum: [initiated, success, failed, refunded, partially_refunded]
+          description: refunded when the payment came too late for the booking.
+        booking_id:
+          type: string
+          format: uuid
+        booking_status:
+          type: string
+          enum:
+            - payment_pending
+            - pending_provider
+            - confirmed
+            - rejected
+            - expired
+            - in_storage
+            - cancelled
+            - no_show
+            - completed
     ErrorCode:
       type: string
       enum:
