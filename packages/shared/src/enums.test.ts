@@ -93,13 +93,8 @@ describe.each([
   {
     name: 'action token purpose',
     schema: actionTokenPurposeSchema,
-    values: [
-      'provider_accept_booking',
-      'provider_reject_booking',
-      'delivery_accept',
-      'delivery_update',
-    ],
-    rejected: ['login'],
+    values: ['provider_respond_booking', 'delivery_accept', 'delivery_update'],
+    rejected: ['login', 'provider_accept_booking', 'provider_reject_booking'],
   },
   {
     name: 'search channel',

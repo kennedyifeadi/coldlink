@@ -142,9 +142,9 @@ export const notificationStatuses = ['queued', 'sent', 'failed'] as const;
 export type NotificationStatus = (typeof notificationStatuses)[number];
 export const notificationStatusSchema = z.enum(notificationStatuses);
 
+// One provider link offers both accept and reject (decision 98).
 export const actionTokenPurposes = [
-  'provider_accept_booking',
-  'provider_reject_booking',
+  'provider_respond_booking',
   'delivery_accept',
   'delivery_update',
 ] as const;

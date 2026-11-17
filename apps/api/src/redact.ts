@@ -80,12 +80,19 @@ function redactQueryPair(pair: string): string {
   return `${key}=${maskUrlPart(pair.slice(separator + 1), decodeQueryValue)}`;
 }
 
+// The path segment after one of these is a bearer secret: `/actions/:token` (PRD 5.13).
+const SECRET_SEGMENT_AFTER = new Set(['actions']);
+
 export function redactUrl(url: string): string {
   const queryStart = url.indexOf('?');
   const path = queryStart === -1 ? url : url.slice(0, queryStart);
   const maskedPath = path
     .split('/')
-    .map((segment) => maskUrlPart(segment, decodeOrKeep))
+    .map((segment, index, segments) =>
+      SECRET_SEGMENT_AFTER.has(segments[index - 1] ?? '') && segment !== ''
+        ? REDACTED
+        : maskUrlPart(segment, decodeOrKeep),
+    )
     .join('/');
   if (queryStart === -1) return maskedPath;
   const query = url

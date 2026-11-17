@@ -1069,7 +1069,7 @@ values (
 insert into public.action_tokens (
   token_hash, purpose, subject_id, expires_at, created_at, updated_at
 )
-select 'accept-hash', 'provider_accept_booking', id, now() + interval '12 hours', '2000-01-01',
+select 'respond-hash', 'provider_respond_booking', id, now() + interval '12 hours', '2000-01-01',
   '2000-01-01'
 from public.bookings
 where code = 'CL-7K3Q9';
@@ -1426,12 +1426,14 @@ select pg_temp.expect_check_violation(
 from (
   values
     ($$purpose = 'login'$$, 'action_tokens_purpose_valid'),
+    ($$purpose = 'provider_accept_booking'$$, 'action_tokens_purpose_valid'),
+    ($$purpose = 'provider_reject_booking'$$, 'action_tokens_purpose_valid'),
     ($$used_at = expires_at + interval '1 second'$$, 'action_tokens_used_before_expiry')
 ) as v(assignment, expected_constraint);
 
 select pg_temp.expect_unique_violation(
   $$insert into public.action_tokens (token_hash, purpose, subject_id, expires_at)
-    select token_hash, 'provider_reject_booking', subject_id, expires_at from public.action_tokens$$,
+    select token_hash, 'delivery_accept', subject_id, expires_at from public.action_tokens$$,
   'action_tokens_token_hash_key'
 );
 

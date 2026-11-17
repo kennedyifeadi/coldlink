@@ -53,6 +53,17 @@ describe('logger', () => {
     expect(text).not.toContain('482913');
   });
 
+  it('keeps an action link token out of the request log', async () => {
+    const { app, logs } = testApp();
+    const linkToken = 'Hk3_q-9ZxYv0LmN2pQrStUvWxYz0123456789abcDE';
+    await request(app).get(`/api/v1/actions/${linkToken}`);
+    await request(app).post(`/api/v1/actions/${linkToken}`).send({ action: 'accept' });
+
+    const text = logs.output();
+    expect(text).toContain('"url":"/api/v1/actions/[Redacted]"');
+    expect(text).not.toContain(linkToken);
+  });
+
   it.each(['/api/v1/users/8012345678', '/api/v1/y?q=%2B234%20801%20234%205678'])(
     'masks the phone number in the request log for %s',
     async (url) => {

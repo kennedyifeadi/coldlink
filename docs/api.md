@@ -9,9 +9,9 @@ The API contract, written as an OpenAPI 3.1 document in the YAML block below. Ea
 - **Correlation ID:** send `X-Request-Id` to tag a request (1 to 128 characters from `A-Z a-z 0-9 . _ : -`). Anything else, or no header, gets a generated UUID. The response always echoes the ID in `X-Request-Id`, and every log line for the request carries it, so quote it when reporting a problem.
 - **Lists:** a list response is `{ data: [...] }`, so a cursor can sit next to `data` later without changing the shape.
 - **Pagination:** paginated lists take `limit` and `cursor` (PRD 8). The reference lists (`/crops`, `/crop-categories`) are not paginated: they are small, admin-managed reference data (22 crops, 7 categories) that a client loads whole. `GET /providers/mine` and `GET /bookings` are not paginated yet either (decisions 62, 85).
-- **Caching:** the public reference endpoints send `Cache-Control: public` with a short `max-age` (5 minutes for crops and categories, 60 seconds for config). Responses for the signed-in user (`/me`, the owner's provider views, the farmer's bookings) send `no-store`. Other responses, and every error, send none.
-- **Rate limits:** limited routes send `RateLimit` and `RateLimit-Policy` headers, and `Retry-After` with a 429. The reference endpoints are not limited yet: they are cheap, cacheable reads. The auth routes are limited per IP (decision 56); `POST /auth/otp/request` is also limited per phone number, and its 429 adds `details.retry_after_seconds`. `POST /search` and `POST /bookings/quote` are each limited to 300 requests per IP per 15 minutes (decisions 74, 75).
-- **Response schemas:** the Zod schemas for request and response bodies live in `packages/shared` (`cropCategoriesResponseSchema`, `cropsResponseSchema`, `publicConfigSchema`, `otpRequestBodySchema`, `otpRequestResponseSchema`, `otpVerifyBodySchema`, `sessionResponseSchema`, `userProfileSchema`, `updateProfileBodySchema`, `createProviderBodySchema`, `updateProviderBodySchema`, `publicProviderSchema`, `ownProviderSchema`, `ownProvidersResponseSchema`, `searchBodySchema`, `searchResponseSchema`, `bookingQuoteBodySchema`, `bookingQuoteSchema`, `createBookingBodySchema`, `farmerBookingSchema`, `farmerBookingsResponseSchema`, `cancelBookingBodySchema`, `cancelledBookingSchema`, `initializePaymentBodySchema`, `initializedPaymentSchema`, `paymentVerificationSchema`), for the web app to validate forms and parse responses with.
+- **Caching:** the public reference endpoints send `Cache-Control: public` with a short `max-age` (5 minutes for crops and categories, 60 seconds for config). Responses for the signed-in user (`/me`, the owner's provider views, the farmer's bookings, the provider's booking actions) and the action link routes send `no-store`. Other responses, and every error, send none.
+- **Rate limits:** limited routes send `RateLimit` and `RateLimit-Policy` headers, and `Retry-After` with a 429. The reference endpoints are not limited yet: they are cheap, cacheable reads. The auth routes are limited per IP (decision 56); `POST /auth/otp/request` is also limited per phone number, and its 429 adds `details.retry_after_seconds`. `POST /search` and `POST /bookings/quote` are each limited to 300 requests per IP per 15 minutes (decisions 74, 75). `GET` and `POST /actions/:token` share a limit of 60 requests per IP per 15 minutes (decision 101).
+- **Response schemas:** the Zod schemas for request and response bodies live in `packages/shared` (`cropCategoriesResponseSchema`, `cropsResponseSchema`, `publicConfigSchema`, `otpRequestBodySchema`, `otpRequestResponseSchema`, `otpVerifyBodySchema`, `sessionResponseSchema`, `userProfileSchema`, `updateProfileBodySchema`, `createProviderBodySchema`, `updateProviderBodySchema`, `publicProviderSchema`, `ownProviderSchema`, `ownProvidersResponseSchema`, `searchBodySchema`, `searchResponseSchema`, `bookingQuoteBodySchema`, `bookingQuoteSchema`, `createBookingBodySchema`, `farmerBookingSchema`, `farmerBookingsResponseSchema`, `cancelBookingBodySchema`, `cancelledBookingSchema`, `initializePaymentBodySchema`, `initializedPaymentSchema`, `paymentVerificationSchema`, `rejectBookingBodySchema`, `providerBookingSchema`, `providerBookingRequestSchema`, `providerLinkActionBodySchema`, `providerLinkActionResultSchema`), for the web app to validate forms and parse responses with.
 - **Phone numbers:** send them as people type them: `08031234567`, `8031234567`, `2348031234567` or `+2348031234567`, with or without spaces or hyphens. The API stores `+234` and ten digits, and accepts only mobile numbers (70x, 80x, 81x, 90x, 91x). `normalisePhone` and `phoneSchema` in `packages/shared` do the same in the browser. Responses never contain a full phone number; a profile has `phone_masked` (`+234803***4567`).
 
 ## Authentication
@@ -33,7 +33,7 @@ Sign-in is by phone and a 6-digit code sent by SMS (PRD 7.1; decisions 54 to 61)
 | `bad_request` | 400 | The body is not valid JSON or cannot be read; or a photo upload is empty, not JPEG, PNG or WebP, or not the type its `Content-Type` claims. |
 | `validation_failed` | 400 | Params, query or body fail validation. `details` lists every issue as `{ location, path, message }`. |
 | `not_found` | 404 | No such route, or no such resource. |
-| `conflict` | 409 | The request clashes with the resource's current state: a booking status change the state machine does not allow from its current status or for this actor (`details` names the booking, `from`, `to` and `actor_type`), a fifth photo for a facility, or a quote or booking for more than the facility has free on those dates (`details` gives `provider_id` and `available_quantity`). |
+| `conflict` | 409 | The request clashes with the resource's current state: a booking status change the state machine does not allow from its current status or for this actor (`details` names the booking, `from`, `to` and `actor_type`), a provider's answer after `provider_response_due_at`, a check-in before the start date (`details.start_date`), a fifth photo for a facility, or a quote or booking for more than the facility has free on those dates (`details` gives `provider_id` and `available_quantity`). |
 | `payload_too_large` | 413 | The JSON body is over 100 kB, or a photo is over 5 MB. |
 | `rate_limited` | 429 | Too many requests from this client, or too many codes for this phone number; retry after `Retry-After` seconds. |
 | `unauthorized` | 401 | No access token, or it is invalid or expired, or its user is gone or inactive; or the refresh cookie is missing, expired, revoked or reused. Sign in or refresh. Access-token routes add `WWW-Authenticate: Bearer`. |
@@ -81,6 +81,22 @@ The farmer's own bookings (PRD 5.5, 6.3, 6.6, 7.4; decisions 82 to 86) need a si
 - **`GET /bookings`** lists the farmer's bookings, newest first, with what a list needs: code, status, dates, quantity, facility name and LGA, crop and the amounts. **`GET /bookings/:id`** gives one in full. Another farmer's booking is the same 404 as an unknown id.
 - **`POST /bookings/:id/cancel`**, with an optional `reason`, cancels a booking awaiting the provider (`pending_provider`) or confirmed. The response adds `refund_kobo`, what the policy refunds of the online payment: all of it before the provider accepts; after that, the deposit (not the service fee) if it is at least `farmer_free_cancel_hours` before 00:00 in Lagos on `start_date`; nothing later. Any other status is 409 `conflict`, including `payment_pending`: an unpaid booking is not cancelled, it expires. The refund itself is made separately.
 - The farmer's view never has the commission, its rate or the provider's payout.
+
+The provider's actions (PRD 6.4, 6.5, 7.2; decisions 97 to 100) move a booking for its facility's owner. Accept and reject are open to the `provider` and `admin` roles, check-in and collect to `provider` only; any other role gets 403. A booking at another provider's facility is the same 404 as an unknown id. Each answers with the provider's view of the booking (`providerBookingSchema`): code, status, facility, crop, quantity, dates, `balance_due_kobo` (collected at the facility), `payout_kobo` (what ColdLink pays the facility: the deposit less the commission) and the deadline and check-in times. It never has the farmer's phone or name.
+
+- **`POST /bookings/:id/accept`** confirms a `pending_provider` booking. **`POST /bookings/:id/reject`**, with an optional `reason` (1 to 500 characters; the body may be left out), rejects it, and the farmer is refunded everything paid online automatically. Both are 409 once `provider_response_due_at` has passed: the booking then expires and is refunded. An admin may accept or reject any booking.
+- **`POST /bookings/:id/check-in`** moves a `confirmed` booking to `in_storage`, from 00:00 in Lagos on `start_date` (earlier is 409), and records the payout owed to the facility.
+- **`POST /bookings/:id/collect`** moves an `in_storage` booking to `completed`. The farmer pays `balance_due_kobo` at the facility; ColdLink does not process it.
+- Any other status is the state machine's 409 `conflict`.
+
+## Action links
+
+The provider's SMS (#29) carries a link that answers a booking without signing in (PRD 5.13, 7.6; decisions 98, 101). The token in it is single use and lasts 12 hours. One link offers both accept and reject.
+
+- **`GET /actions/:token`** shows what the provider needs to decide (`providerBookingRequestSchema`): the facility name, crop, quantity and unit, dates and payout. Opening it does not use it.
+- **`POST /actions/:token`** with `{ "action": "accept" }` or `{ "action": "reject" }` answers the booking as the facility's owner and uses the link. It answers `{ status }`, `confirmed` or `rejected`. The same 409s as `POST /bookings/:id/accept` apply, and leave the link usable: a booking already answered from the dashboard, or past its deadline.
+- **A link that is unknown, used or expired** is always the same 404, "This link has expired or has already been used", for both routes.
+- The token is never written to the request log.
 
 ## Payments
 
@@ -967,6 +983,212 @@ paths:
           $ref: '#/components/responses/NotFound'
         '409':
           $ref: '#/components/responses/Conflict'
+        '500':
+          $ref: '#/components/responses/Internal'
+  /bookings/{id}/accept:
+    parameters:
+      - $ref: '#/components/parameters/BookingId'
+    post:
+      operationId: acceptBooking
+      summary: Accept a booking awaiting the provider
+      description: >-
+        For the facility's owner or an admin. From pending_provider only, before
+        provider_response_due_at. Another provider's booking is a 404, as an unknown id is.
+      tags: [Bookings]
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: The booking, in the provider's view.
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/NoStore'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProviderBooking'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '500':
+          $ref: '#/components/responses/Internal'
+  /bookings/{id}/reject:
+    parameters:
+      - $ref: '#/components/parameters/BookingId'
+    post:
+      operationId: rejectBooking
+      summary: Reject a booking awaiting the provider
+      description: >-
+        For the facility's owner or an admin. From pending_provider only, before
+        provider_response_due_at. The farmer is refunded everything paid online. Another
+        provider's booking is a 404.
+      tags: [Bookings]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RejectBookingRequest'
+      responses:
+        '200':
+          description: The booking, in the provider's view.
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/NoStore'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProviderBooking'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '500':
+          $ref: '#/components/responses/Internal'
+  /bookings/{id}/check-in:
+    parameters:
+      - $ref: '#/components/parameters/BookingId'
+    post:
+      operationId: checkInBooking
+      summary: Confirm the produce has arrived
+      description: >-
+        For the facility's owner only. From confirmed, on or after start_date in Lagos. Records
+        the payout owed to the facility.
+      tags: [Bookings]
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: The booking, in the provider's view.
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/NoStore'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProviderBooking'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '500':
+          $ref: '#/components/responses/Internal'
+  /bookings/{id}/collect:
+    parameters:
+      - $ref: '#/components/parameters/BookingId'
+    post:
+      operationId: collectBooking
+      summary: Confirm the produce has been collected
+      description: >-
+        For the facility's owner only. From in_storage.
+      tags: [Bookings]
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: The booking, in the provider's view.
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/NoStore'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProviderBooking'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '500':
+          $ref: '#/components/responses/Internal'
+  /actions/{token}:
+    parameters:
+      - name: token
+        in: path
+        required: true
+        description: The token from the provider's SMS link. Never logged.
+        schema:
+          type: string
+    get:
+      operationId: getProviderLink
+      summary: What a provider's SMS link is for
+      description: >-
+        Does not use the link. An unknown, used or expired link is the same 404.
+      tags: [Action links]
+      responses:
+        '200':
+          description: What the provider needs to decide.
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/NoStore'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProviderBookingRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/Internal'
+    post:
+      operationId: answerProviderLink
+      summary: Accept or reject a booking from the provider's SMS link
+      description: >-
+        Acts as the facility's owner and uses the link, in one transaction. A 409 (the booking was
+        already answered, or its deadline passed) leaves the link usable. An unknown, used or
+        expired link is the same 404.
+      tags: [Action links]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProviderLinkAction'
+      responses:
+        '200':
+          description: The booking's new status.
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/NoStore'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProviderLinkActionResult'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '429':
+          $ref: '#/components/responses/RateLimited'
         '500':
           $ref: '#/components/responses/Internal'
   /payments/initialize:
@@ -1943,6 +2165,155 @@ components:
               type: integer
               description: What the cancellation policy refunds of total_charged_online_kobo.
       unevaluatedProperties: false
+    RejectBookingRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        reason:
+          type: string
+          minLength: 1
+          maxLength: 500
+          description: Trimmed; kept in the booking's event.
+    ProviderBooking:
+      type: object
+      description: The provider's view of a booking. No farmer field, so no phone, name or ColdLink ID.
+      required:
+        - id
+        - code
+        - status
+        - provider
+        - crop
+        - quantity
+        - capacity_unit
+        - start_date
+        - duration_days
+        - end_date
+        - balance_due_kobo
+        - payout_kobo
+        - provider_response_due_at
+        - checked_in_at
+        - collected_at
+      additionalProperties: false
+      properties:
+        id:
+          type: string
+          format: uuid
+        code:
+          type: string
+          pattern: '^CL-[A-HJ-NP-Z2-9]{5}$'
+        status:
+          type: string
+          enum:
+            - payment_pending
+            - pending_provider
+            - confirmed
+            - rejected
+            - expired
+            - in_storage
+            - cancelled
+            - no_show
+            - completed
+        provider:
+          type: object
+          required: [id, display_name]
+          additionalProperties: false
+          properties:
+            id:
+              type: string
+              format: uuid
+            display_name:
+              type: string
+        crop:
+          type: object
+          required: [id, name]
+          additionalProperties: false
+          properties:
+            id:
+              type: string
+              format: uuid
+            name:
+              type: string
+        quantity:
+          type: number
+          exclusiveMinimum: 0
+        capacity_unit:
+          type: string
+          enum: [sqm, crates, kg]
+        start_date:
+          type: string
+          format: date
+        duration_days:
+          type: integer
+          minimum: 1
+        end_date:
+          type: string
+          format: date
+        balance_due_kobo:
+          type: integer
+          description: Paid by the farmer at the facility.
+        payout_kobo:
+          type: integer
+          description: What ColdLink pays the facility after check-in, the deposit less the commission.
+        provider_response_due_at:
+          type: [string, 'null']
+          format: date-time
+        checked_in_at:
+          type: [string, 'null']
+          format: date-time
+        collected_at:
+          type: [string, 'null']
+          format: date-time
+    ProviderBookingRequest:
+      type: object
+      description: What a provider's SMS link shows, and nothing more.
+      required:
+        - facility_name
+        - crop_name
+        - quantity
+        - capacity_unit
+        - start_date
+        - duration_days
+        - end_date
+        - payout_kobo
+      additionalProperties: false
+      properties:
+        facility_name:
+          type: string
+        crop_name:
+          type: string
+        quantity:
+          type: number
+          exclusiveMinimum: 0
+        capacity_unit:
+          type: string
+          enum: [sqm, crates, kg]
+        start_date:
+          type: string
+          format: date
+        duration_days:
+          type: integer
+          minimum: 1
+        end_date:
+          type: string
+          format: date
+        payout_kobo:
+          type: integer
+    ProviderLinkAction:
+      type: object
+      required: [action]
+      additionalProperties: false
+      properties:
+        action:
+          type: string
+          enum: [accept, reject]
+    ProviderLinkActionResult:
+      type: object
+      required: [status]
+      additionalProperties: false
+      properties:
+        status:
+          type: string
+          enum: [confirmed, rejected]
     InitializePaymentRequest:
       type: object
       required: [booking_id]

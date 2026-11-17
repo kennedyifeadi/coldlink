@@ -13,15 +13,18 @@ import { createSmsProvider } from '../sms/createSmsProvider.js';
 import type { SmsProvider } from '../sms/provider.js';
 import { createPaymentGateway } from '../payments/createPaymentGateway.js';
 import type { PaymentGateway } from '../payments/gateway.js';
+import { registerPayoutHooks } from '../payments/payoutHooks.js';
 import { registerRefundHooks } from '../payments/refundHooks.js';
 import { createPhotoStorage } from '../storage/createPhotoStorage.js';
 import type { PhotoStorage } from '../storage/photoStorage.js';
 import type { RateLimitOptions } from '../middleware/rateLimit.js';
 import { version } from '../version.js';
+import { actionRoutes, defaultActionIpLimit } from './actions.js';
 import { authRoutes, defaultAuthIpLimits, type AuthIpLimits } from './auth.js';
 import { bookingRoutes, defaultQuoteIpLimit } from './bookings.js';
 import { meRoutes } from './me.js';
 import { paymentRoutes } from './payments.js';
+import { providerBookingRoutes } from './providerBookings.js';
 import { providerRoutes } from './providers.js';
 import { referenceDataRoutes } from './referenceData.js';
 import { defaultSearchIpLimit, searchRoutes } from './search.js';
@@ -38,6 +41,7 @@ export interface RouteDependencies {
   authIpLimits?: AuthIpLimits;
   searchIpLimit?: RateLimitOptions;
   quoteIpLimit?: RateLimitOptions;
+  actionIpLimit?: RateLimitOptions;
   storage?: PhotoStorage;
   bookingHooks?: TransitionHooks;
   paymentGateway?: PaymentGateway;
@@ -57,12 +61,14 @@ export function apiRoutes({
   authIpLimits = defaultAuthIpLimits,
   searchIpLimit = defaultSearchIpLimit,
   quoteIpLimit = defaultQuoteIpLimit,
+  actionIpLimit = defaultActionIpLimit,
   storage = createPhotoStorage(config.storage),
   bookingHooks = createTransitionHooks(),
   paymentGateway = createPaymentGateway(config.paystack),
   now,
   generateBookingCode,
 }: RouteDependencies): Router {
+  registerPayoutHooks(bookingHooks);
   registerRefundHooks(bookingHooks, { db, gateway: paymentGateway, logger });
   const router = Router();
   router.get('/health', async (req, res) => {
@@ -104,6 +110,22 @@ export function apiRoutes({
       quoteIpLimit,
       ...(now === undefined ? {} : { now }),
       ...(generateBookingCode === undefined ? {} : { generateCode: generateBookingCode }),
+    }),
+  );
+  router.use(
+    providerBookingRoutes({
+      db,
+      tokens,
+      hooks: bookingHooks,
+      ...(now === undefined ? {} : { now }),
+    }),
+  );
+  router.use(
+    actionRoutes({
+      db,
+      hooks: bookingHooks,
+      ipLimit: actionIpLimit,
+      ...(now === undefined ? {} : { now }),
     }),
   );
   router.use(
