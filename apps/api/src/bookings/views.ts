@@ -4,7 +4,10 @@ import {
   capacityUnitSchema,
   type FarmerBooking,
   type FarmerBookingSummary,
+  type ProviderBooking,
+  type ProviderBookingRequest,
 } from '@coldlink/shared';
+import type { ProviderBookingRow } from './providerStore.js';
 import type { FarmerBookingRow } from './store.js';
 
 function isoOrNull(date: Date | null): string | null {
@@ -54,5 +57,43 @@ export function toFarmerBooking(row: FarmerBookingRow): FarmerBooking {
     collected_at: isoOrNull(row.collected_at),
     cancelled_by: row.cancelled_by === null ? null : cancelledBySchema.parse(row.cancelled_by),
     cancel_reason: row.cancel_reason,
+  };
+}
+
+/** PRD 6.1's provider payout, from the booking's snapshot. */
+function payoutKobo(row: Pick<ProviderBookingRow, 'deposit_kobo' | 'commission_kobo'>): number {
+  return row.deposit_kobo - row.commission_kobo;
+}
+
+export function toProviderBooking(row: ProviderBookingRow): ProviderBooking {
+  return {
+    id: row.id,
+    code: row.code,
+    status: bookingStatusSchema.parse(row.status),
+    provider: { id: row.provider_id, display_name: row.provider_display_name },
+    crop: { id: row.crop_id, name: row.crop_name },
+    quantity: row.quantity,
+    capacity_unit: capacityUnitSchema.parse(row.capacity_unit),
+    start_date: row.start_date,
+    duration_days: row.duration_days,
+    end_date: row.end_date,
+    balance_due_kobo: row.balance_due_kobo,
+    payout_kobo: payoutKobo(row),
+    provider_response_due_at: isoOrNull(row.provider_response_due_at),
+    checked_in_at: isoOrNull(row.checked_in_at),
+    collected_at: isoOrNull(row.collected_at),
+  };
+}
+
+export function toProviderBookingRequest(row: ProviderBookingRow): ProviderBookingRequest {
+  return {
+    facility_name: row.provider_display_name,
+    crop_name: row.crop_name,
+    quantity: row.quantity,
+    capacity_unit: capacityUnitSchema.parse(row.capacity_unit),
+    start_date: row.start_date,
+    duration_days: row.duration_days,
+    end_date: row.end_date,
+    payout_kobo: payoutKobo(row),
   };
 }
