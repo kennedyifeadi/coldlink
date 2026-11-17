@@ -13,7 +13,11 @@ import { createApp } from '../app.js';
 import { createAccessTokens } from '../auth/tokens.js';
 import { createBackgroundTasks } from '../backgroundTasks.js';
 import { createTransitionHooks } from '../bookings/hooks.js';
-import { runBookingTransition, type BookingActor } from '../bookings/transition.js';
+import {
+  runAfterCommitHooks,
+  transitionBooking,
+  type BookingActor,
+} from '../bookings/transition.js';
 import { createDatabase, type Database } from '../db/client.js';
 import { registerRefundHooks } from '../payments/refundHooks.js';
 import { lockProvider } from '../providers/store.js';
@@ -473,13 +477,19 @@ describe.skipIf(noTestDatabase)('payments against Postgres', () => {
       });
     });
 
-    function move(from: BookingStatus, to: BookingStatus, actor: BookingActor) {
-      return setStatus(db(), booking.bookingId, from).then(() =>
-        runBookingTransition(
-          { db: db(), hooks, logger: captureLogs().logger },
-          { bookingId: booking.bookingId, to, actor },
-        ),
-      );
+    // db() is already the test's transaction, which cannot nest, so this is decision 53's pattern
+    // for a caller inside one: transition, then run the after-commit hooks.
+    async function move(from: BookingStatus, to: BookingStatus, actor: BookingActor) {
+      await setStatus(db(), booking.bookingId, from);
+      const result = await transitionBooking(db(), hooks, {
+        bookingId: booking.bookingId,
+        to,
+        actor,
+      });
+      const logs = captureLogs();
+      await runAfterCommitHooks(logs.logger, result);
+      // The runner logs a hook's error rather than throwing it, so a broken hook shows only here.
+      expect(logs.output()).not.toContain('Booking after-commit hook failed');
     }
 
     async function refundRows() {
@@ -522,13 +532,13 @@ describe.skipIf(noTestDatabase)('payments against Postgres', () => {
     it.each([
       ['provider', () => booking.ownerId],
       ['admin', () => booking.farmerId],
-    ] as const)('refunds everything when a %s cancels', async (type, id) => {
+    ] as const)('refunds everything when the %s cancels', async (type, id) => {
       await move('confirmed', 'cancelled', { type, id: id() });
       await expectFullRefund();
     });
 
     describe("the farmer's cancellation", () => {
-      function cancel(at: Date) {
+      async function cancel(at: Date) {
         const logs = captureLogs();
         const routes = apiRoutes({
           db: db(),
@@ -538,10 +548,14 @@ describe.skipIf(noTestDatabase)('payments against Postgres', () => {
           bookingHooks: createTransitionHooks(),
           now: () => at,
         });
-        return request(createApp(testConfig, { db: db(), logger: logs.logger, routes }))
+        const response = await request(
+          createApp(testConfig, { db: db(), logger: logs.logger, routes }),
+        )
           .post(`/api/v1/bookings/${booking.bookingId}/cancel`)
           .set('Authorization', farmerAuth)
           .send({});
+        expect(logs.output()).not.toContain('Booking after-commit hook failed');
+        return response;
       }
 
       it('refunds everything before the provider accepts', async () => {
@@ -584,6 +598,7 @@ describe.skipIf(noTestDatabase)('payments against Postgres', () => {
       await move('pending_provider', 'rejected', { type: 'provider', id: booking.ownerId });
 
       expect((await bookingRow(db(), booking.bookingId)).status).toBe('rejected');
+      expect(payments.refunds).toEqual([{ chargeReference, amountKobo: DEPOSIT + SERVICE_FEE }]);
       expect(await paymentRows(db(), booking.bookingId)).toEqual([
         expect.objectContaining({ purpose: 'booking_deposit', status: 'success' }),
         expect.objectContaining({
@@ -608,7 +623,8 @@ describe.skipIf(noTestDatabase)('payments against Postgres', () => {
       await move('pending_provider', 'rejected', { type: 'provider', id: booking.ownerId });
 
       expect(payments.refunds).toHaveLength(1);
-      expect(await refundRows()).toHaveLength(1);
+      expect(await refundRows()).toEqual([expect.objectContaining({ status: 'failed' })]);
+      expect((await paymentRows(db(), booking.bookingId))[0]?.status).toBe('success');
     });
   });
 });
