@@ -36,6 +36,8 @@ export const testConfig: Config = {
   },
   trustProxyHops: 0,
   storage: undefined,
+  paystack: undefined,
+  webAppUrl: 'https://app.coldlink.test',
 };
 
 export type StubRows = Partial<Record<keyof DB, object[]>>;
