@@ -116,6 +116,15 @@ describe('redactUrl', () => {
     },
   );
 
+  it.each([
+    ['/api/v1/actions/Hk3_q-9ZxYv0LmN2pQrStUvWxYz0123456789abcDE', '/api/v1/actions/[Redacted]'],
+    ['/api/v1/actions/abc?x=1', '/api/v1/actions/[Redacted]?x=1'],
+    ['/api/v1/actions/abc/', '/api/v1/actions/[Redacted]/'],
+    ['/api/v1/actions', '/api/v1/actions'],
+  ])('hides the action link token in %s', (url, expected) => {
+    expect(redactUrl(url)).toBe(expected);
+  });
+
   it('masks a percent-encoded phone number in the path', () => {
     expect(redactUrl('/api/v1/users/%2B234%20801%20234%205678/bookings')).toBe(
       `/api/v1/users/${REDACTED_PHONE}/bookings`,
