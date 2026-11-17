@@ -9,7 +9,7 @@ import { createLogger } from './logger.js';
 import { errorHandler, notFound } from './middleware/errorHandler.js';
 import { requestId } from './middleware/requestId.js';
 import { requestLogger } from './middleware/requestLogger.js';
-import { API_BASE_PATH } from './paths.js';
+import { API_BASE_PATH, PAYSTACK_WEBHOOK_PATH } from './paths.js';
 import { apiRoutes } from './routes/index.js';
 
 export { API_BASE_PATH } from './paths.js';
@@ -41,6 +41,9 @@ export function createApp(
   app.use(helmet());
   // credentials lets the allowlisted web app send the refresh cookie (decision 60).
   app.use(cors({ origin: config.corsOrigins, credentials: true }));
+  // Before the JSON parser, which then leaves this route's body alone: the webhook signature is an
+  // HMAC of the exact bytes received.
+  app.use(PAYSTACK_WEBHOOK_PATH, express.raw({ type: () => true, limit: JSON_BODY_LIMIT }));
   app.use(express.json({ limit: JSON_BODY_LIMIT }));
   app.use(API_BASE_PATH, routes);
   app.use(notFound);
