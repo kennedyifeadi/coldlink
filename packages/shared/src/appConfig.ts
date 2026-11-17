@@ -1,12 +1,19 @@
 import * as z from 'zod';
 import { koboSchema } from './money.js';
+import { paystackChannelSchema } from './payments.js';
 import { rateSchema } from './pricing.js';
 
-// The keys and meanings in PRD 5.15. Values live in the app_config table, never in code (PRD 0.2).
+// The keys and meanings in PRD 5.15, plus paystack_channels (decision 90). Values live in the app_config table, never in code (PRD 0.2).
 const minutesSchema = z.int('Must be a whole number of minutes').positive('Must be at least 1');
 const hoursSchema = z.int('Must be a whole number of hours').nonnegative('Must be 0 or more');
 const radiusSchema = z.number().positive('Must be greater than 0');
 const feeSchema = koboSchema.nonnegative('Must be 0 or more');
+const channelsSchema = z
+  .array(paystackChannelSchema)
+  .min(1, 'List at least one channel')
+  .refine((channels) => new Set(channels).size === channels.length, {
+    message: 'List each channel once',
+  });
 
 export const appConfigSchema = z
   .object({
@@ -25,6 +32,7 @@ export const appConfigSchema = z
     require_provider_approval: z.boolean(),
     otp_required: z.boolean(),
     farmer_free_cancel_hours: hoursSchema,
+    paystack_channels: channelsSchema,
   })
   .refine((config) => config.deposit_percent > config.commission_rate, {
     path: ['deposit_percent'],

@@ -7,13 +7,13 @@ import {
   toPublicConfig,
 } from './appConfig.js';
 
-// PRD 5.15 placeholders.
+// PRD 5.15 placeholders, with the owner's settings from decision 90.
 const placeholders = {
   commission_rate: 0.075,
   service_fee_kobo: 0,
   deposit_percent: 0.3,
   provider_response_minutes: 120,
-  payment_hold_minutes: 15,
+  payment_hold_minutes: 30,
   search_default_radius_km: 25,
   search_max_radius_km: 100,
   delivery_base_fee_kobo: 100_000,
@@ -24,6 +24,7 @@ const placeholders = {
   require_provider_approval: true,
   otp_required: true,
   farmer_free_cancel_hours: 24,
+  paystack_channels: ['card', 'bank', 'ussd', 'bank_transfer'],
 };
 
 function issuePaths(input: unknown): string[] {
@@ -57,6 +58,9 @@ describe('appConfigSchema', () => {
     ['a rate past whole basis points', { commission_rate: 0.07501 }, 'commission_rate'],
     ['a rate over 1', { delivery_partner_share: 1.2 }, 'delivery_partner_share'],
     ['a string number', { payment_hold_minutes: '15' }, 'payment_hold_minutes'],
+    ['no Paystack channels', { paystack_channels: [] }, 'paystack_channels'],
+    ['an unknown Paystack channel', { paystack_channels: ['cash'] }, 'paystack_channels.0'],
+    ['a channel listed twice', { paystack_channels: ['card', 'card'] }, 'paystack_channels'],
     ['zero minutes', { provider_response_minutes: 0 }, 'provider_response_minutes'],
     ['a fraction of an hour', { farmer_free_cancel_hours: 1.5 }, 'farmer_free_cancel_hours'],
     ['a road factor under 1', { road_distance_factor: 0.9 }, 'road_distance_factor'],

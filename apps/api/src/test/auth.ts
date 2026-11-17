@@ -10,13 +10,13 @@ import { apiRoutes, type RouteDependencies } from '../routes/index.js';
 import { captureLogs, testConfig } from './helpers.js';
 import { fakeSmsProvider } from './notifications.js';
 
-// PRD 5.15 placeholders, as the seed_reference_data migration stores them.
+// PRD 5.15 placeholders and the owner's payment settings, as the migrations store them.
 export const appConfigValues: AppConfig = {
   commission_rate: 0.075,
   service_fee_kobo: 0,
   deposit_percent: 0.3,
   provider_response_minutes: 120,
-  payment_hold_minutes: 15,
+  payment_hold_minutes: 30,
   search_default_radius_km: 25,
   search_max_radius_km: 100,
   delivery_base_fee_kobo: 100_000,
@@ -27,6 +27,7 @@ export const appConfigValues: AppConfig = {
   require_provider_approval: true,
   otp_required: true,
   farmer_free_cancel_hours: 24,
+  paystack_channels: ['card', 'bank', 'ussd', 'bank_transfer'],
 };
 
 export function appConfigRows(overrides: Partial<AppConfig> = {}) {

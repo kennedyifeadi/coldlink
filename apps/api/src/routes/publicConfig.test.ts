@@ -9,7 +9,7 @@ const config: Record<string, unknown> = {
   service_fee_kobo: 50_000,
   deposit_percent: 0.3,
   provider_response_minutes: 120,
-  payment_hold_minutes: 15,
+  payment_hold_minutes: 30,
   search_default_radius_km: 25,
   search_max_radius_km: 100,
   delivery_base_fee_kobo: 100_000,
@@ -20,6 +20,7 @@ const config: Record<string, unknown> = {
   require_provider_approval: true,
   otp_required: true,
   farmer_free_cancel_hours: 24,
+  paystack_channels: ['card', 'bank', 'ussd', 'bank_transfer'],
 };
 
 const publicKeys = [
@@ -54,7 +55,7 @@ describe('GET /api/v1/config/public', () => {
     );
     expect(Object.keys(response.body as object).toSorted()).toEqual(publicKeys.toSorted());
     const privateKeys = appConfigKeys.filter((key) => !publicKeys.includes(key));
-    expect(privateKeys).toHaveLength(10);
+    expect(privateKeys).toHaveLength(11);
     for (const key of [...privateKeys, 'new_internal_key']) {
       expect(response.body).not.toHaveProperty(key);
     }

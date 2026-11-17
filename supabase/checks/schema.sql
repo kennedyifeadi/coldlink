@@ -448,7 +448,7 @@ begin
       ('service_fee_kobo', '0', 'number', true),
       ('deposit_percent', '0.30', 'number', true),
       ('provider_response_minutes', '120', 'number', true),
-      ('payment_hold_minutes', '15', 'number', false),
+      ('payment_hold_minutes', '30', 'number', false),
       ('search_default_radius_km', '25', 'number', false),
       ('search_max_radius_km', '100', 'number', false),
       ('delivery_base_fee_kobo', '100000', 'number', true),
@@ -458,7 +458,8 @@ begin
       ('road_distance_factor', '1.3', 'number', false),
       ('require_provider_approval', 'true', 'boolean', true),
       ('otp_required', 'true', 'boolean', true),
-      ('farmer_free_cancel_hours', '24', 'number', true)
+      ('farmer_free_cancel_hours', '24', 'number', true),
+      ('paystack_channels', '["card", "bank", "ussd", "bank_transfer"]', 'array', false)
   ) as e(key, value, json_type, unconfirmed)
   full join public.app_config a
     on a.key = e.key
@@ -543,6 +544,26 @@ end;
 $$;
 
 rollback to savepoint reference_rerun;
+
+-- The payment settings migration (decision 90) never overwrites what an admin has changed.
+savepoint payment_settings_rerun;
+
+update public.app_config set value = '20' where key = 'payment_hold_minutes';
+update public.app_config set value = '["card"]' where key = 'paystack_channels';
+
+\ir ../migrations/20261117090000_set_payment_settings.sql
+
+do $$
+begin
+  if (select value from public.app_config where key = 'payment_hold_minutes') <> '20'::jsonb
+    or (select value from public.app_config where key = 'paystack_channels') <> '["card"]'::jsonb
+  then
+    raise exception 'the payment settings migration overwrote values an admin changed';
+  end if;
+end;
+$$;
+
+rollback to savepoint payment_settings_rerun;
 
 insert into public.users (phone, coldlink_id, created_at, updated_at)
 values ('+2348012345678', '4820193', '2000-01-01', '2000-01-01');
