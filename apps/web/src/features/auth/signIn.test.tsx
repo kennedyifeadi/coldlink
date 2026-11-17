@@ -316,6 +316,8 @@ describe('consent', () => {
 
     expect(await screen.findByText('482 0193', undefined, SCREEN_TIMEOUT)).toBeInTheDocument();
     expect(currentPath()).toBe('/userid');
+    // Nothing asked for sign-in, so there is nowhere to continue to: the ID screen offers search.
+    expect(screen.queryByRole('button', { name: /^Continue/ })).not.toBeInTheDocument();
     const [first, second] = requestsTo(fetchMock, 'POST', '/auth/otp/verify');
     expect(bodyOf(first!)).toEqual({ phone: '+2348031234567', code: '482913' });
     expect(bodyOf(second!)).toEqual({ phone: '+2348031234567', code: '482913', consent: true });

@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { CheckCircle2, Copy } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import TopNavBar from '../../components/TopNavBar';
@@ -10,7 +10,7 @@ import TextButton from '../../components/ui/TextButton';
 import ErrorMessage from '../../components/ui/ErrorMessage';
 import { describeApiError } from '../../api/describeError';
 import { useSession, useSessionStore } from '../../session/sessionContext';
-import { SIGN_IN_PATH } from '../../session/routes';
+import { returnToStateSchema, SIGN_IN_PATH } from '../../session/routes';
 
 type CopyState = 'idle' | 'copied' | 'failed';
 
@@ -19,8 +19,11 @@ const groupColdLinkId = (id: string) => `${id.slice(0, 3)} ${id.slice(3)}`;
 
 const UserId = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { t } = useTranslation();
   const session = useSession();
+  // Where a new account was signing in to go, such as paying for a booking.
+  const returnTo = returnToStateSchema.safeParse(location.state).data?.returnTo;
   const store = useSessionStore();
   const queryClient = useQueryClient();
   const [copyState, setCopyState] = useState<CopyState>('idle');
@@ -100,9 +103,15 @@ const UserId = () => {
 
       {/* Action Button */}
       <div className="px-6 mb-6">
-        <PrimaryButton onClick={() => void navigate('/location')}>
-          {t('auth.userId.findStorage')}
-        </PrimaryButton>
+        {returnTo === undefined ? (
+          <PrimaryButton onClick={() => void navigate('/location')}>
+            {t('auth.userId.findStorage')}
+          </PrimaryButton>
+        ) : (
+          <PrimaryButton onClick={() => void navigate(returnTo, { replace: true })} withArrow>
+            {t('auth.userId.continue')}
+          </PrimaryButton>
+        )}
         <div className="mt-2">
           <TextButton onClick={() => signOut.mutate()} disabled={signOut.isPending}>
             {t('auth.userId.signOut')}

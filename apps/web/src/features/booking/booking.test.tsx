@@ -498,4 +498,51 @@ describe('paying', FLOW_TIMEOUT, () => {
       expect(bodyOf(call)).toEqual(dugbeQuoteBody);
     }
   });
+
+  it('brings a farmer who just made an account back to the review after their ColdLink ID', async () => {
+    mockApi({
+      ...signedOut,
+      ...dugbeFound,
+      ...quoted(),
+      ...crops,
+      'POST /auth/otp/request': jsonResponse(200, {
+        expires_in_seconds: 600,
+        resend_after_seconds: 60,
+      }),
+      'POST /auth/otp/verify': [
+        errorResponse(400, 'consent_required'),
+        jsonResponse(200, sessionFixture({ isNewUser: true, coldlinkId: '4820193' })),
+      ],
+    });
+    const user = renderApp(dugbeReviewPath);
+
+    await user.click(await screen.findByRole('button', { name: /^Pay ₦10,500/ }, SCREEN_TIMEOUT));
+    await user.type(
+      await screen.findByLabelText('Phone number', undefined, SCREEN_TIMEOUT),
+      '08031234567',
+    );
+    await user.click(screen.getByRole('button', { name: /^Continue/ }));
+    await user.type(
+      await screen.findByLabelText('6-digit code', undefined, SCREEN_TIMEOUT),
+      '482913',
+    );
+    await user.click(screen.getByRole('button', { name: /^Continue/ }));
+    await user.click(
+      await screen.findByRole(
+        'checkbox',
+        { name: 'I agree to the ColdLink privacy notice.' },
+        SCREEN_TIMEOUT,
+      ),
+    );
+    await user.click(screen.getByRole('button', { name: 'Create my ColdLink ID' }));
+    expect(await screen.findByText('482 0193', undefined, SCREEN_TIMEOUT)).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: /^Continue/ }));
+
+    await waitForPath(`/review/${dugbe.provider.id}`);
+    expect(`/review/${dugbe.provider.id}${currentQuery()}`).toBe(dugbeReviewPath);
+    expect(
+      await screen.findByText('You pay now: ₦10,500', undefined, SCREEN_TIMEOUT),
+    ).toBeVisible();
+  });
 });
