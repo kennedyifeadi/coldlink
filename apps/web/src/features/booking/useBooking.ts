@@ -11,13 +11,15 @@ const PROVIDER_STALE_MS = 60_000;
 
 const conflictDetailsSchema = z.object({ available_quantity: z.number().nonnegative() });
 const validationDetailsSchema = z.array(validationIssueSchema);
-const FARMER_FIELDS = new Set(['quantity', 'capacity_unit', 'days', 'start_date']);
+const QUOTE_FIELDS = new Set(['quantity', 'capacity_unit', 'days', 'start_date']);
+// Booking also takes the crop, and refuses one the facility does not store (decision 82).
+const BOOKING_FIELDS = new Set([...QUOTE_FIELDS, 'crop_id']);
 
 /** A quote the API refused for these terms, which the farmer can fix by changing them. */
 export type QuoteProblem =
   { kind: 'notEnoughSpace'; available: number } | { kind: 'invalidTerms'; message: string };
 
-const readQuoteProblem = (error: unknown): QuoteProblem | undefined => {
+const readProblem = (error: unknown, fields: Set<string>): QuoteProblem | undefined => {
   if (isApiError(error, 'conflict')) {
     const details = conflictDetailsSchema.safeParse(error.details);
     if (details.success)
@@ -28,11 +30,17 @@ const readQuoteProblem = (error: unknown): QuoteProblem | undefined => {
     // any other 400 is a fault in the request the farmer cannot fix.
     const issue = validationDetailsSchema
       .safeParse(error.details)
-      .data?.find(({ path }) => FARMER_FIELDS.has(path));
+      .data?.find(({ path }) => fields.has(path));
     if (issue) return { kind: 'invalidTerms', message: issue.message };
   }
   return undefined;
 };
+
+const readQuoteProblem = (error: unknown) => readProblem(error, QUOTE_FIELDS);
+
+/** A 400 from `POST /bookings` the farmer can act on; its 409 goes back to review instead. */
+export const readBookingProblem = (error: unknown) =>
+  isApiError(error, 'validation_failed') ? readProblem(error, BOOKING_FIELDS) : undefined;
 
 export interface ReadyBooking {
   status: 'ready';

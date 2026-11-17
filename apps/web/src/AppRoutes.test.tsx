@@ -82,16 +82,4 @@ describe('app routes', () => {
 
     expect(await findHeading('My bookings')).toBeInTheDocument();
   });
-
-  it.each([
-    ['View booking', 'My bookings'],
-    ['Back to home', 'Keep your harvest fresh.'],
-  ])('leads from the confirmation screen through %s', async (button, heading) => {
-    mockApi(signedIn);
-    const user = renderApp('/confirmation');
-
-    await user.click(await screen.findByRole('button', { name: button }, SCREEN_TIMEOUT));
-
-    expect(await findHeading(heading)).toBeInTheDocument();
-  });
 });

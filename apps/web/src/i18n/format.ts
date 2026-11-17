@@ -29,6 +29,22 @@ const dateFormat = new Intl.DateTimeFormat(LOCALE, {
   timeZone: 'UTC',
 });
 
+// Deadlines are instants; every user is in Oyo State, so they are shown on the Lagos clock whatever
+// the phone's time zone.
+const lagosTimeFormat = new Intl.DateTimeFormat(LOCALE, {
+  hour: 'numeric',
+  minute: '2-digit',
+  hour12: true,
+  timeZone: 'Africa/Lagos',
+});
+
+const lagosDayFormat = new Intl.DateTimeFormat(LOCALE, {
+  weekday: 'short',
+  day: 'numeric',
+  month: 'short',
+  timeZone: 'Africa/Lagos',
+});
+
 export const formatNaira = (amount: number) => nairaFormat.format(amount);
 
 /** "₦35,000", or "₦12,345.67" when there are kobo. */
@@ -41,3 +57,9 @@ export const formatKobo = (kobo: number) => {
 export const formatDate = (isoDate: string) => dateFormat.format(new Date(`${isoDate}T00:00:00Z`));
 
 export const formatNumber = (value: number) => numberFormat.format(value);
+
+/** An ISO instant as Lagos time and day: { time: "12:00 pm", day: "Tue, 10 Nov" }. */
+export const formatLagosTime = (isoInstant: string) => {
+  const instant = new Date(isoInstant);
+  return { time: lagosTimeFormat.format(instant), day: lagosDayFormat.format(instant) };
+};

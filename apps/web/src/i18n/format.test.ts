@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { formatDate, formatKobo, formatNaira, formatNumber } from './format';
+import { formatDate, formatKobo, formatLagosTime, formatNaira, formatNumber } from './format';
 
 describe('formatNaira', () => {
   it('prefixes the naira sign and groups thousands with commas', () => {
@@ -53,5 +53,21 @@ describe('formatDate', () => {
   it('shows the calendar day it was given, whatever the time zone', () => {
     expect(formatDate('2026-11-10')).toBe('Tue, 10 Nov 2026');
     expect(formatDate('2026-12-31')).toBe('Thu, 31 Dec 2026');
+  });
+});
+
+describe('formatLagosTime', () => {
+  it('shows an instant on the Lagos clock, an hour ahead of UTC', () => {
+    expect(formatLagosTime('2026-11-10T11:00:00.000Z')).toEqual({
+      time: '12:00 pm',
+      day: 'Tue, 10 Nov',
+    });
+  });
+
+  it('moves to the next day in Lagos after 23:00 UTC', () => {
+    expect(formatLagosTime('2026-11-10T23:05:00.000Z')).toEqual({
+      time: '12:05 am',
+      day: 'Wed, 11 Nov',
+    });
   });
 });
