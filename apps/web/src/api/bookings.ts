@@ -1,5 +1,17 @@
-import { bookingQuoteSchema, publicProviderSchema, type BookingQuoteBody } from '@coldlink/shared';
+import { queryOptions } from '@tanstack/react-query';
+import {
+  bookingQuoteSchema,
+  farmerBookingSchema,
+  initializedPaymentSchema,
+  paymentVerificationSchema,
+  publicProviderSchema,
+  type BookingQuoteBody,
+  type CreateBookingBody,
+} from '@coldlink/shared';
 import { apiRequest } from './client';
+import type { SessionStore } from '../session/sessionStore';
+
+type AuthorizedRequest = SessionStore['authorizedRequest'];
 
 export const fetchProvider = (providerId: string, signal?: AbortSignal) =>
   apiRequest(`/providers/${encodeURIComponent(providerId)}`, {
@@ -11,3 +23,36 @@ export const fetchProvider = (providerId: string, signal?: AbortSignal) =>
 // signed-out farmer get the same quote.
 export const quoteBooking = (body: BookingQuoteBody, signal?: AbortSignal) =>
   apiRequest('/bookings/quote', { method: 'POST', body, schema: bookingQuoteSchema, signal });
+
+export const createBooking = (request: AuthorizedRequest, body: CreateBookingBody) =>
+  request('/bookings', { method: 'POST', body, schema: farmerBookingSchema });
+
+export const bookingKey = (bookingId: string) => ['booking', bookingId] as const;
+
+// Never cached as fresh: a paid booking changes status when the provider answers.
+export const bookingQuery = (request: AuthorizedRequest, bookingId: string) =>
+  queryOptions({
+    queryKey: bookingKey(bookingId),
+    queryFn: ({ signal }) =>
+      request(`/bookings/${encodeURIComponent(bookingId)}`, {
+        schema: farmerBookingSchema,
+        signal,
+      }),
+  });
+
+export const initializePayment = (request: AuthorizedRequest, bookingId: string) =>
+  request('/payments/initialize', {
+    method: 'POST',
+    body: { booking_id: bookingId },
+    schema: initializedPaymentSchema,
+  });
+
+export const verifyPayment = (
+  request: AuthorizedRequest,
+  reference: string,
+  signal?: AbortSignal,
+) =>
+  request(`/payments/${encodeURIComponent(reference)}/verify`, {
+    schema: paymentVerificationSchema,
+    signal,
+  });

@@ -8,6 +8,7 @@ import { describeApiError } from '../../api/describeError';
 import TopNavBar from '../../components/TopNavBar';
 import Card from '../../components/ui/Card';
 import PrimaryButton from '../../components/ui/PrimaryButton';
+import TextButton from '../../components/ui/TextButton';
 import StepProgress from '../../components/ui/StepProgress';
 import {
   readDraft,
@@ -51,9 +52,10 @@ interface ProblemScreenProps {
   action: string;
   onAction: () => void;
   busy?: boolean;
+  secondary?: { label: string; onClick: () => void };
 }
 
-const ProblemScreen = ({
+export const ProblemScreen = ({
   navTitle,
   icon: Icon,
   title,
@@ -61,6 +63,7 @@ const ProblemScreen = ({
   action,
   onAction,
   busy = false,
+  secondary,
 }: ProblemScreenProps) => (
   <div className="flex flex-col h-full min-h-screen bg-background pb-8">
     <TopNavBar title={navTitle} showBack={true} />
@@ -71,10 +74,15 @@ const ProblemScreen = ({
       <h1 className="font-heading text-headline font-bold text-ink mb-3">{title}</h1>
       <p className="text-copy-muted text-lead leading-relaxed max-w-sm">{body}</p>
     </div>
-    <div className="mt-12 px-6">
+    <div className="mt-12 px-6 flex flex-col gap-2">
       <PrimaryButton onClick={onAction} disabled={busy}>
         {action}
       </PrimaryButton>
+      {secondary && (
+        <TextButton onClick={secondary.onClick} disabled={busy}>
+          {secondary.label}
+        </TextButton>
+      )}
     </div>
   </div>
 );
@@ -98,19 +106,20 @@ export const FacilityGone = ({ navTitle }: { navTitle: string }) => {
 
 interface LoadFailedProps {
   navTitle: string;
+  title?: string;
   error: unknown;
   retry: () => void;
   retrying: boolean;
 }
 
-export const LoadFailed = ({ navTitle, error, retry, retrying }: LoadFailedProps) => {
+export const LoadFailed = ({ navTitle, title, error, retry, retrying }: LoadFailedProps) => {
   const { t } = useTranslation();
 
   return (
     <ProblemScreen
       navTitle={navTitle}
       icon={isApiError(error, 'network') ? WifiOff : CircleAlert}
-      title={t('booking.problems.failedTitle')}
+      title={title ?? t('booking.problems.failedTitle')}
       body={describeApiError(error, t)}
       action={t('common.tryAgain')}
       onAction={retry}

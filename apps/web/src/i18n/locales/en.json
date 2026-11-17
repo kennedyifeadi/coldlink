@@ -333,44 +333,46 @@
     },
     "payment": {
       "navTitle": "Payment",
-      "totalToPay": "Total to pay",
-      "orderNumber": "Order #{{orderNumber}}",
-      "methods": {
-        "card": "Card",
-        "transfer": "Transfer",
-        "ussd": "USSD"
-      },
-      "cardNumber": "Card number",
-      "cardNumberPlaceholder": "0000 0000 0000 0000",
-      "expiry": "Expiry date",
-      "expiryPlaceholder": "MM/YY",
-      "cvv": "CVV",
-      "cvvPlaceholder": "123",
-      "saveCard": "Save card for future payments",
-      "comingSoon": "This payment method is coming soon."
+      "title": "Pay for your booking",
+      "intro": "You'll pay on Paystack's secure page. It will ask how you want to pay.",
+      "holdUntil": "We're holding your space until {{time}} on {{day}}.",
+      "priceChangedTitle": "The price changed",
+      "priceChangedBody": "The price changed after you checked it. Check the amount below before you pay.",
+      "opening": "Opening Paystack...",
+      "openingNote": "Taking you to Paystack to pay. Don't close this page.",
+      "holdExpiredTitle": "Your space was released",
+      "holdExpiredBody": "We held the space while you paid, but the time ran out. Check the space and price again to book.",
+      "startAgain": "Start again"
     },
     "confirmation": {
-      "title": "Booking confirmed!",
-      "sent": "A confirmation has been sent to your phone.",
-      "codeTitle": "Your Booking Code",
-      "codeHint": "Show this code when you arrive",
+      "waitingTitle": "Waiting for {{facility}} to confirm",
+      "waitingBody": "You've paid. {{facility}} has until {{time}} on {{day}} to accept. If they say no or don't answer in time, we refund what you paid online.",
+      "confirmedTitle": "Booking confirmed",
+      "confirmedBody": "{{facility}} is expecting your produce on {{date}}.",
+      "otherTitle": "Your booking",
+      "statusValue": "Status: {{status}}",
+      "codeTitle": "Your booking code",
+      "codeHint": "Show this code when you bring your produce.",
       "detailsTitle": "Booking details",
       "coldRoom": "Cold room",
-      "location": "Location",
+      "address": "Address",
       "produce": "Produce",
-      "produceValue_one": "{{produce}} ({{count}} crate)",
-      "produceValue_other": "{{produce}} ({{count}} crates)",
-      "duration": "Duration",
-      "durationValue_one": "{{dates}} ({{count}} day)",
-      "durationValue_other": "{{dates}} ({{count}} days)",
-      "paymentTitle": "Payment summary",
-      "totalCost": "Total cost",
-      "amountPaid": "Amount paid",
-      "amountPaidValue": "- {{amount}}",
-      "balanceDue": "Balance due",
-      "balanceHint": "To be paid on arrival",
-      "viewBooking": "View booking",
-      "backHome": "Back to home"
+      "produceValue": "{{produce}}, {{amount}}",
+      "dates": "Dates",
+      "datesValue_one": "{{start}} to {{end}} ({{count}} day)",
+      "datesValue_other": "{{start}} to {{end}} ({{count}} days)",
+      "paymentTitle": "Payment",
+      "paidOnline": "Paid online",
+      "dueAtFacility": "Due at the facility",
+      "dueHint": "Pay this when you bring your produce.",
+      "share": "Share on WhatsApp",
+      "shareText": "My ColdLink booking code is {{code}}. Cold room: {{facility}}, {{address}}.",
+      "shareTextNear": "My ColdLink booking code is {{code}}. Cold room: {{facility}}, {{address}}, near {{landmark}}.",
+      "viewBookings": "View my bookings",
+      "backHome": "Back to home",
+      "notFoundTitle": "We couldn't find this booking",
+      "notFoundBody": "This link doesn't match a booking on your account. Your bookings are in My bookings.",
+      "failedTitle": "Couldn't load your booking"
     },
     "myBookings": {
       "navTitle": "Bookings",
@@ -395,6 +397,31 @@
       "goneBody": "It may have closed to bookings. Other cold rooms near you may have space.",
       "findAnother": "Find another cold room",
       "failedTitle": "Couldn't load this cold room"
+    },
+    "paymentReturn": {
+      "checking": "Checking your payment...",
+      "notFinishedTitle": "Payment not finished",
+      "notFinishedBody": "Paystack hasn't told us that your payment went through. If money has left your account, check again in a few minutes. If not, pay again before {{time}} on {{day}}, while we hold your space.",
+      "checkAgain": "Check again",
+      "holdExpiredBody": "We held the space while you paid, but the time ran out and others can now book it. Search again to find space.",
+      "refundTitle": "Your money is coming back",
+      "refundBody": "Your payment of {{amount}} reached us after the space was released, so we are refunding all of it. It can take a few days to reach your account.",
+      "searchAgain": "Search again",
+      "unknownTitle": "We couldn't find this payment",
+      "unknownBody": "This link doesn't match a payment on your account. Your bookings are in My bookings.",
+      "goToBookings": "Go to my bookings",
+      "failedTitle": "Couldn't check your payment"
+    },
+    "status": {
+      "payment_pending": "Waiting for payment",
+      "pending_provider": "Waiting for the cold room",
+      "confirmed": "Confirmed",
+      "rejected": "Turned down",
+      "expired": "Expired",
+      "in_storage": "In storage",
+      "cancelled": "Cancelled",
+      "no_show": "Not brought in",
+      "completed": "Collected"
     }
   },
   "provider": {
@@ -575,18 +602,6 @@
       "temperatureInvalid": "Enter a temperature between -40 and 40 °C, or leave it empty.",
       "temperatureOrder": "The highest temperature can't be below the lowest.",
       "categoriesMissing": "Pick at least one kind of produce you can store."
-    }
-  },
-  "mock": {
-    "coldRooms": {
-      "cr-001": {
-        "name": "Oyo Fresh Store",
-        "location": "Bodija Market, Ibadan"
-      }
-    },
-    "sampleBooking": {
-      "produce": "Tomatoes",
-      "dates": "Oct 12 - Oct 15"
     }
   }
 }

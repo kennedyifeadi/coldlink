@@ -1,167 +1,333 @@
-import React, { useState } from 'react';
-import { ReceiptText, CreditCard, Landmark, Grip, HelpCircle } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import React, { type ReactNode } from 'react';
+import { CircleAlert, TimerOff } from 'lucide-react';
+import { Navigate, useLocation, useNavigate, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import type { CreateBookingBody } from '@coldlink/shared';
+import { bookingKey, bookingQuery, createBooking, initializePayment } from '../../api/bookings';
+import { isApiError } from '../../api/client';
+import { describeApiError } from '../../api/describeError';
+import { cropsQuery } from '../../api/referenceData';
 import TopNavBar from '../../components/TopNavBar';
+import BottomNav from '../../components/BottomNav';
 import Card from '../../components/ui/Card';
-import BottomActionBar from '../../components/ui/BottomActionBar';
+import ErrorMessage from '../../components/ui/ErrorMessage';
 import PrimaryButton from '../../components/ui/PrimaryButton';
-import { formatNaira } from '../../i18n/format';
+import { formatKobo, formatLagosTime } from '../../i18n/format';
+import { useSessionStore } from '../../session/sessionContext';
+import {
+  BookingProgress,
+  BrokenBookingLink,
+  FacilityGone,
+  LoadFailed,
+  ProblemScreen,
+  QuoteProblemNotice,
+} from './BookingStates';
+import { bookingStepPath, readBookingRoute, type BookingRoute } from './bookingIntent';
+import { BookingSummary, PayNowNotice, type BookingTerms } from './BookingSummary';
+import { confirmationPath, heldBookingPath, holdIsRunning, readHeldBookingId } from './paymentFlow';
+import { readBookingProblem, useBooking } from './useBooking';
+import {
+  isStepError,
+  PaymentStepError,
+  runStep,
+  usePaymentAttempt,
+  type PaymentStep,
+} from './usePaymentAttempt';
 
-type PaymentMethod = 'card' | 'transfer' | 'ussd';
+type PayFrom =
+  | { kind: 'new'; body: CreateBookingBody; quotedTotalKobo: number }
+  | { kind: 'held'; bookingId: string };
 
-const Payment = () => {
-  const navigate = useNavigate();
+interface HeldBookingState {
+  priceChanged?: boolean;
+}
+
+type Attempt = ReturnType<typeof usePaymentAttempt<PayFrom>>;
+
+const causeIn = (error: unknown, step: PaymentStep) =>
+  isStepError(error, step) ? error.cause : undefined;
+
+const PaymentScreen = ({ children }: { children: ReactNode }) => {
   const { t } = useTranslation();
-  const [activeTab, setActiveTab] = useState<PaymentMethod>('card');
-  const [saveCard, setSaveCard] = useState(false);
 
   return (
-    <div className="flex flex-col h-full min-h-screen bg-background relative pb-28">
-      {/* Top App Bar */}
+    <div className="flex flex-col h-full min-h-screen bg-background relative pb-20">
       <TopNavBar title={t('booking.payment.navTitle')} showBack={true} />
+      <BookingProgress step="pay" />
 
-      <div className="flex flex-col px-5 pt-6 flex-grow overflow-y-auto">
-        <Card
-          tone="muted"
-          className="p-6 mb-6 flex flex-col items-center justify-center text-center"
-        >
-          <p className="text-copy-muted text-body mb-1">{t('booking.payment.totalToPay')}</p>
-          <p className="text-primary-strong text-headline font-semibold mb-3">
-            {formatNaira(2700)}
-          </p>
-          <div className="flex items-center text-copy-subtle text-label">
-            <ReceiptText size={14} className="mr-1.5" />{' '}
-            {t('booking.payment.orderNumber', { orderNumber: '882-991A' })}
-          </div>
-        </Card>
-
-        {/* Payment Method Tabs */}
-        <div className="flex justify-between gap-3 mb-8">
-          <button
-            onClick={() => setActiveTab('card')}
-            aria-pressed={activeTab === 'card'}
-            className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-label font-medium transition-colors ${
-              activeTab === 'card'
-                ? 'bg-primary text-ink shadow-sm'
-                : 'bg-surface-muted text-copy-muted hover:bg-surface-sunken'
-            }`}
-          >
-            <CreditCard size={18} /> {t('booking.payment.methods.card')}
-          </button>
-
-          <button
-            onClick={() => setActiveTab('transfer')}
-            aria-pressed={activeTab === 'transfer'}
-            className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-label font-medium transition-colors ${
-              activeTab === 'transfer'
-                ? 'bg-primary text-ink shadow-sm'
-                : 'bg-surface-muted text-copy-muted hover:bg-surface-sunken'
-            }`}
-          >
-            <Landmark size={18} /> {t('booking.payment.methods.transfer')}
-          </button>
-
-          <button
-            onClick={() => setActiveTab('ussd')}
-            aria-pressed={activeTab === 'ussd'}
-            className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-label font-medium transition-colors ${
-              activeTab === 'ussd'
-                ? 'bg-primary text-ink shadow-sm'
-                : 'bg-surface-muted text-copy-muted hover:bg-surface-sunken'
-            }`}
-          >
-            <Grip size={18} /> {t('booking.payment.methods.ussd')}
-          </button>
+      <div className="flex flex-col gap-4 px-5 pt-6 pb-6 flex-grow">
+        <div className="mb-2">
+          <h1 className="font-heading text-headline-lg font-bold text-ink mb-2 tracking-tight">
+            {t('booking.payment.title')}
+          </h1>
+          <p className="text-copy-muted text-lead leading-relaxed">{t('booking.payment.intro')}</p>
         </div>
-
-        {/* Card Form */}
-        {activeTab === 'card' && (
-          <div className="flex flex-col gap-5 mb-8">
-            {/* Card Number */}
-            <div className="flex flex-col gap-2">
-              <label htmlFor="card-number" className="text-ink text-label font-medium">
-                {t('booking.payment.cardNumber')}
-              </label>
-              <div className="relative flex items-center">
-                <div className="absolute left-4 text-copy-subtle">
-                  <CreditCard size={20} />
-                </div>
-                <input
-                  id="card-number"
-                  type="text"
-                  placeholder={t('booking.payment.cardNumberPlaceholder')}
-                  className="w-full pl-12 pr-4 py-3.5 bg-surface border border-line rounded-xl text-body placeholder:text-copy-subtle outline-none focus:border-primary-strong focus:ring-1 focus:ring-primary-strong transition-all"
-                />
-              </div>
-            </div>
-
-            <div className="flex gap-4">
-              {/* Expiry Date */}
-              <div className="flex flex-col gap-2 flex-1">
-                <label htmlFor="card-expiry" className="text-ink text-label font-medium">
-                  {t('booking.payment.expiry')}
-                </label>
-                <input
-                  id="card-expiry"
-                  type="text"
-                  placeholder={t('booking.payment.expiryPlaceholder')}
-                  className="w-full px-4 py-3.5 bg-surface border border-line rounded-xl text-body placeholder:text-copy-subtle outline-none focus:border-primary-strong focus:ring-1 focus:ring-primary-strong transition-all text-center"
-                />
-              </div>
-
-              {/* CVV */}
-              <div className="flex flex-col gap-2 flex-1">
-                <label htmlFor="card-cvv" className="text-ink text-label font-medium">
-                  {t('booking.payment.cvv')}
-                </label>
-                <div className="relative flex items-center">
-                  <input
-                    id="card-cvv"
-                    type="text"
-                    placeholder={t('booking.payment.cvvPlaceholder')}
-                    className="w-full pl-4 pr-10 py-3.5 bg-surface border border-line rounded-xl text-body placeholder:text-copy-subtle outline-none focus:border-primary-strong focus:ring-1 focus:ring-primary-strong transition-all text-center"
-                  />
-                  <div className="absolute right-4 text-copy-subtle">
-                    <HelpCircle size={16} />
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <label className="relative flex items-center gap-3 mt-2 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={saveCard}
-                onChange={(e) => setSaveCard(e.target.checked)}
-                className="peer sr-only"
-              />
-              <span
-                aria-hidden="true"
-                className={`w-5 h-5 rounded border flex items-center justify-center transition-colors peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-primary-strong ${
-                  saveCard ? 'bg-primary border-primary-strong' : 'border-line-strong bg-surface'
-                }`}
-              >
-                {saveCard && <span className="w-2.5 h-2.5 bg-ink rounded-sm"></span>}
-              </span>
-              <span className="text-body text-copy-muted">{t('booking.payment.saveCard')}</span>
-            </label>
-          </div>
-        )}
-
-        {activeTab !== 'card' && (
-          <div className="flex items-center justify-center py-10 text-copy-subtle">
-            <p>{t('booking.payment.comingSoon')}</p>
-          </div>
-        )}
+        {children}
       </div>
 
-      <BottomActionBar>
-        <PrimaryButton onClick={() => void navigate('/confirmation')} withArrow>
-          {t('booking.payAmount', { amount: formatNaira(2700) })}
-        </PrimaryButton>
-      </BottomActionBar>
+      <BottomNav activeTab="find" />
     </div>
+  );
+};
+
+const PaymentSkeleton = () => {
+  const { t } = useTranslation();
+
+  return (
+    <PaymentScreen>
+      <p role="status" className="text-copy-muted text-body">
+        {t('booking.loading')}
+      </p>
+      <div aria-hidden="true" className="flex flex-col gap-4">
+        <div className="h-64 rounded-2xl bg-surface-muted" />
+        <div className="h-28 rounded-2xl bg-surface-sunken" />
+      </div>
+    </PaymentScreen>
+  );
+};
+
+interface PayButtonProps {
+  terms: BookingTerms;
+  attempt: Attempt;
+  onPay: () => void;
+}
+
+/** The one action: pay the exact amount shown, or, after a failed try, say why and try again. */
+const PayButton = ({ terms, attempt, onPay }: PayButtonProps) => {
+  const { t } = useTranslation();
+  const failure = attempt.error instanceof PaymentStepError ? attempt.error.cause : attempt.error;
+
+  return (
+    <div className="flex flex-col gap-3 mt-4">
+      {attempt.redirecting && (
+        <p role="status" className="text-copy-muted text-body">
+          {t('booking.payment.openingNote')}
+        </p>
+      )}
+      {failure !== null && <ErrorMessage>{describeApiError(failure, t)}</ErrorMessage>}
+      <PrimaryButton
+        onClick={onPay}
+        disabled={attempt.redirecting}
+        withArrow={!attempt.redirecting}
+      >
+        {attempt.redirecting
+          ? t('booking.payment.opening')
+          : isApiError(failure, 'network')
+            ? t('common.tryAgain')
+            : t('booking.payAmount', { amount: formatKobo(terms.total_charged_online_kobo) })}
+      </PrimaryButton>
+    </div>
+  );
+};
+
+const PriceChangedNotice = () => {
+  const { t } = useTranslation();
+
+  return (
+    <Card tone="muted" className="p-5">
+      <div role="alert" className="flex items-start gap-3">
+        <CircleAlert size={22} className="text-alert-strong shrink-0 mt-0.5" aria-hidden="true" />
+        <div>
+          <h2 className="font-heading font-semibold text-ink text-subtitle mb-1">
+            {t('booking.payment.priceChangedTitle')}
+          </h2>
+          <p className="text-copy text-body leading-relaxed">
+            {t('booking.payment.priceChangedBody')}
+          </p>
+        </div>
+      </div>
+    </Card>
+  );
+};
+
+/** Back to review of the same terms, which asks for the latest space and price. */
+const useStartAgain = (route: BookingRoute | undefined) => {
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  return () => {
+    if (!route) return;
+    // A quote cached before this one failed would show space that is gone.
+    queryClient.removeQueries({ queryKey: ['quote'] });
+    void navigate(bookingStepPath('review', route.providerId, route.intent), { replace: true });
+  };
+};
+
+const HoldExpired = ({ route }: { route: BookingRoute }) => {
+  const { t } = useTranslation();
+  const startAgain = useStartAgain(route);
+
+  return (
+    <ProblemScreen
+      navTitle={t('booking.payment.navTitle')}
+      icon={TimerOff}
+      title={t('booking.payment.holdExpiredTitle')}
+      body={t('booking.payment.holdExpiredBody')}
+      action={t('booking.payment.startAgain')}
+      onAction={startAgain}
+    />
+  );
+};
+
+const PayNewBooking = ({ attempt }: { attempt: Attempt }) => {
+  const booking = useBooking();
+  const crops = useQuery(cropsQuery);
+  const { t } = useTranslation();
+  const navTitle = t('booking.payment.navTitle');
+  const bookFailure = causeIn(attempt.error, 'book');
+
+  if (booking.status === 'invalidLink') return <BrokenBookingLink />;
+  if (booking.status === 'gone' || isApiError(bookFailure, 'not_found')) {
+    return <FacilityGone navTitle={navTitle} />;
+  }
+  if (booking.status === 'failed') return <LoadFailed navTitle={navTitle} {...booking} />;
+  if (crops.isError) {
+    return (
+      <LoadFailed
+        navTitle={navTitle}
+        error={crops.error}
+        retry={() => void crops.refetch()}
+        retrying={crops.isFetching}
+      />
+    );
+  }
+  const crop =
+    booking.status === 'ready'
+      ? crops.data?.data.find(({ id }) => id === booking.route.intent.crop_id)
+      : undefined;
+  if (crops.isSuccess && booking.status === 'ready' && !crop) return <BrokenBookingLink />;
+  if (booking.status !== 'ready' || !crop) return <PaymentSkeleton />;
+
+  const { route, provider, quote } = booking;
+  const problem = booking.problem ?? readBookingProblem(bookFailure);
+  const asked = { quantity: route.intent.quantity, unit: route.intent.capacity_unit };
+
+  return (
+    <PaymentScreen>
+      <BookingSummary facility={provider} cropName={crop.name} terms={quote} />
+      {problem && <QuoteProblemNotice problem={problem} asked={asked} />}
+      {quote && !problem && (
+        <>
+          <PayNowNotice terms={quote} facility={provider.display_name} />
+          <PayButton
+            terms={quote}
+            attempt={attempt}
+            onPay={() =>
+              attempt.start({
+                kind: 'new',
+                body: { ...route.intent, provider_id: route.providerId },
+                quotedTotalKobo: quote.total_charged_online_kobo,
+              })
+            }
+          />
+        </>
+      )}
+    </PaymentScreen>
+  );
+};
+
+interface PayHeldBookingProps {
+  route: BookingRoute;
+  bookingId: string;
+  attempt: Attempt;
+}
+
+const PayHeldBooking = ({ route, bookingId, attempt }: PayHeldBookingProps) => {
+  const store = useSessionStore();
+  const { t } = useTranslation();
+  const state = useLocation().state as HeldBookingState | null;
+  const held = useQuery(bookingQuery(store.authorizedRequest, bookingId));
+  const navTitle = t('booking.payment.navTitle');
+
+  if (isApiError(held.error, 'not_found')) return <BrokenBookingLink />;
+  if (held.isError) {
+    return (
+      <LoadFailed
+        navTitle={navTitle}
+        error={held.error}
+        retry={() => void held.refetch()}
+        retrying={held.isFetching}
+      />
+    );
+  }
+  if (!held.data) return <PaymentSkeleton />;
+
+  const booking = held.data;
+  if (booking.provider.id !== route.providerId) return <BrokenBookingLink />;
+  if (booking.status !== 'payment_pending' && booking.status !== 'expired') {
+    return <Navigate to={confirmationPath(booking.id)} replace />;
+  }
+  // Judged when the booking was read; a hold that lapses after that is refused by initialize.
+  if (!holdIsRunning(booking, held.dataUpdatedAt)) return <HoldExpired route={route} />;
+
+  return (
+    <PaymentScreen>
+      <BookingSummary facility={booking.provider} cropName={booking.crop.name} terms={booking} />
+      {state?.priceChanged && <PriceChangedNotice />}
+      <PayNowNotice terms={booking} facility={booking.provider.display_name} />
+      <p className="text-copy-muted text-body">
+        {t('booking.payment.holdUntil', formatLagosTime(booking.payment_expires_at!))}
+      </p>
+      <PayButton
+        terms={booking}
+        attempt={attempt}
+        onPay={() => attempt.start({ kind: 'held', bookingId: booking.id })}
+      />
+    </PaymentScreen>
+  );
+};
+
+const Payment = () => {
+  const { providerId } = useParams();
+  const { search } = useLocation();
+  const navigate = useNavigate();
+  const store = useSessionStore();
+  const queryClient = useQueryClient();
+  const query = new URLSearchParams(search);
+  const route = readBookingRoute(providerId, query);
+  const heldId = readHeldBookingId(query);
+  const startAgain = useStartAgain(route);
+
+  // The screen stays mounted when the new booking's id goes into the URL, so the attempt that made
+  // it carries on to Paystack and its errors stay on screen.
+  const attempt = usePaymentAttempt(async (from: PayFrom) => {
+    let bookingId = from.kind === 'held' ? from.bookingId : undefined;
+    if (from.kind === 'new' && route) {
+      let booking;
+      try {
+        booking = await createBooking(store.authorizedRequest, from.body);
+      } catch (error) {
+        // Someone took the space since the quote: review shows what is free now.
+        if (isApiError(error, 'conflict')) {
+          startAgain();
+          return undefined;
+        }
+        throw new PaymentStepError('book', error);
+      }
+      queryClient.setQueryData(bookingKey(booking.id), booking);
+      const priceChanged = booking.total_charged_online_kobo !== from.quotedTotalKobo;
+      void navigate(heldBookingPath(route, booking.id), {
+        replace: true,
+        state: { priceChanged } satisfies HeldBookingState,
+      });
+      // The farmer only ever pays an amount they have seen.
+      if (priceChanged) return undefined;
+      bookingId = booking.id;
+    }
+    if (bookingId === undefined) return undefined;
+    const charge = await runStep('pay', () =>
+      initializePayment(store.authorizedRequest, bookingId),
+    );
+    return charge.authorization_url;
+  });
+
+  if (!route || heldId === undefined) return <BrokenBookingLink />;
+  // The hold ran out before Paystack was asked (decision 92).
+  if (isApiError(causeIn(attempt.error, 'pay'), 'conflict')) return <HoldExpired route={route} />;
+  return heldId === null ? (
+    <PayNewBooking attempt={attempt} />
+  ) : (
+    <PayHeldBooking route={route} bookingId={heldId} attempt={attempt} />
   );
 };
 

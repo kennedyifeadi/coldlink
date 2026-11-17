@@ -6,6 +6,7 @@ import { RedirectIfSignedIn, RequireSession } from './session/guards';
 import { MY_BOOKINGS_PATH, PROVIDER_ONBOARDING_PATH, SIGN_IN_PATH } from './session/routes';
 import { SEARCH_STEPS } from './features/search/searchFlow';
 import { BOOKING_STEPS, paymentReturnPath } from './features/booking/bookingIntent';
+import { CONFIRMATION_PATH, PAYMENT_RETURN_PATH } from './features/booking/paymentFlow';
 import { ONBOARDING_STEPS } from './features/provider/onboardingFlow';
 
 // One chunk per feature: every screen of a feature loads with the first one visited.
@@ -32,6 +33,7 @@ const Results = lazyScreen(loadSearch, 'Results');
 const Details = lazyScreen(loadBooking, 'Details');
 const Review = lazyScreen(loadBooking, 'Review');
 const Payment = lazyScreen(loadBooking, 'Payment');
+const PaymentReturn = lazyScreen(loadBooking, 'PaymentReturn');
 const Confirmation = lazyScreen(loadBooking, 'Confirmation');
 const MyBookings = lazyScreen(loadBooking, 'MyBookings');
 const Facilities = lazyScreen(loadProvider, 'Facilities');
@@ -67,7 +69,9 @@ const AppRoutes = () => (
       <Route element={<RequireSession />}>
         <Route path="/userid" element={<UserId />} />
         <Route path={MY_BOOKINGS_PATH} element={<MyBookings />} />
-        <Route path="/confirmation" element={<Confirmation />} />
+        {/* Paystack's callback (decision 92); matched before /payment/:providerId. */}
+        <Route path={PAYMENT_RETURN_PATH} element={<PaymentReturn />} />
+        <Route path={`${CONFIRMATION_PATH}/:bookingId`} element={<Confirmation />} />
         {/* Any signed-in user can list a facility and becomes a provider by it (decision 62). */}
         <Route path={PROVIDER_ONBOARDING_PATH} element={<Facilities />} />
         <Route path={ONBOARDING_STEPS.contact} element={<ContactStep />} />

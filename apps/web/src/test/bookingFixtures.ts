@@ -1,5 +1,11 @@
-import type { BookingQuote, PublicProvider } from '@coldlink/shared';
+import type {
+  BookingQuote,
+  FarmerBooking,
+  PaymentVerification,
+  PublicProvider,
+} from '@coldlink/shared';
 import { bookingStepPath, type BookingIntent } from '../features/booking/bookingIntent';
+import { heldBookingPath } from '../features/booking/paymentFlow';
 import { dugbe, tomatoes } from './searchFixtures';
 
 /** Dugbe as GET /providers/:id gives it, with what search results leave out filled in. */
@@ -54,5 +60,68 @@ export const dugbeQuote = (changes: Partial<BookingQuote> = {}): BookingQuote =>
   service_fee_kobo: 0,
   delivery_fee_kobo: 0,
   total_charged_online_kobo: 1_050_000,
+  ...changes,
+});
+
+export const dugbePaymentPath = bookingStepPath('payment', dugbe.provider.id, tenCratesForAWeek);
+
+export const DUGBE_BOOKING_ID = '6b1f0c2e-8d4a-4e7b-9c3f-2a5d8e1b7f40';
+export const dugbeHeldPaymentPath = heldBookingPath(
+  { providerId: dugbe.provider.id, intent: tenCratesForAWeek },
+  DUGBE_BOOKING_ID,
+);
+
+/** The booking POST /bookings makes from `dugbeQuote`: held until 10:30 in Lagos on 10 Nov. */
+export const dugbeBooking = (changes: Partial<FarmerBooking> = {}): FarmerBooking => ({
+  id: DUGBE_BOOKING_ID,
+  code: 'CL-7KQ2M',
+  status: 'payment_pending',
+  provider: {
+    id: dugbe.provider.id,
+    display_name: dugbeProvider.display_name,
+    lga: dugbeProvider.lga,
+    address_text: dugbeProvider.address_text,
+    landmark: dugbeProvider.landmark,
+  },
+  crop: { id: tomatoes.id, name: tomatoes.name },
+  quantity: 10,
+  capacity_unit: 'crates',
+  start_date: '2026-11-10',
+  duration_days: 7,
+  end_date: '2026-11-17',
+  unit_price_kobo: 50_000,
+  storage_subtotal_kobo: 3_500_000,
+  deposit_kobo: 1_050_000,
+  service_fee_kobo: 0,
+  delivery_fee_kobo: 0,
+  total_charged_online_kobo: 1_050_000,
+  balance_due_kobo: 2_450_000,
+  payment_expires_at: '2026-11-10T09:30:00.000Z',
+  provider_response_due_at: null,
+  checked_in_at: null,
+  collected_at: null,
+  cancelled_by: null,
+  cancel_reason: null,
+  created_at: '2026-11-10T09:00:00.000Z',
+  ...changes,
+});
+
+/** Paid at 10:05 in Lagos; the provider has until 12:05 to answer. */
+export const paidDugbeBooking = (changes: Partial<FarmerBooking> = {}) =>
+  dugbeBooking({
+    status: 'pending_provider',
+    provider_response_due_at: '2026-11-10T11:05:00.000Z',
+    ...changes,
+  });
+
+export const PAYMENT_REFERENCE = 'CLP-0123456789abcdef0123';
+export const CHECKOUT_URL = 'https://checkout.paystack.com/abc123xyz';
+export const paymentReturnPath = `/payment/return?reference=${PAYMENT_REFERENCE}`;
+
+export const verification = (changes: Partial<PaymentVerification> = {}): PaymentVerification => ({
+  reference: PAYMENT_REFERENCE,
+  payment_status: 'success',
+  booking_id: DUGBE_BOOKING_ID,
+  booking_status: 'pending_provider',
   ...changes,
 });
