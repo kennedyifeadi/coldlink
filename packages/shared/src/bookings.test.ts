@@ -85,4 +85,9 @@ describe('farmerBookingSchema', () => {
     const keys = Object.keys(farmerBookingSchema.shape);
     expect(keys.filter((key) => /commission|payout/.test(key))).toEqual([]);
   });
+
+  it('keeps who moved the booking out of its status history', () => {
+    const keys = Object.keys(farmerBookingSchema.shape.status_history.element.shape);
+    expect(keys).toEqual(['status', 'at']);
+  });
 });

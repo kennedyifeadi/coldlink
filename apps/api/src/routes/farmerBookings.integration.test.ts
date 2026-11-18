@@ -415,6 +415,151 @@ describe.skipIf(noTestDatabase)('farmer booking endpoints against Postgres', () 
   });
 
   describe('GET /bookings/:id', () => {
+    async function detail(id: string): Promise<FarmerBooking> {
+      const response = await get(`/bookings/${id}`);
+      expect(response.status).toBe(200);
+      expect(response.headers['cache-control']).toBe('no-store');
+      return farmerBookingSchema.parse(response.body);
+    }
+
+    async function facilityPhone(providerId: string): Promise<string> {
+      const { phone } = await db()
+        .selectFrom('providers')
+        .select('phone')
+        .where('id', '=', providerId)
+        .executeTakeFirstOrThrow();
+      return phone;
+    }
+
+    // Every insert in the test's transaction shares now(), so each event is given its own time.
+    async function recordEvent(id: string, from: BookingStatus, to: BookingStatus, at: string) {
+      await db()
+        .insertInto('booking_events')
+        .values({
+          booking_id: id,
+          from_status: from,
+          to_status: to,
+          actor_type: 'provider',
+          actor_id: ownerId,
+          created_at: new Date(at),
+        })
+        .execute();
+    }
+
+    it('gives the status history, oldest first, with no actor or user ids', async () => {
+      const booking = await book({ provider_id: await provider() });
+      const created = (await eventRows(db(), booking.id))[0]?.created_at.toISOString();
+      await recordEvent(booking.id, 'payment_pending', 'pending_provider', '2099-01-01T10:00:00Z');
+      await recordEvent(booking.id, 'pending_provider', 'confirmed', '2099-01-01T11:30:00Z');
+
+      const response = await get(`/bookings/${booking.id}`);
+
+      expect(farmerBookingSchema.parse(response.body).status_history).toEqual([
+        { status: 'payment_pending', at: created },
+        { status: 'pending_provider', at: '2099-01-01T10:00:00.000Z' },
+        { status: 'confirmed', at: '2099-01-01T11:30:00.000Z' },
+      ]);
+      const text = JSON.stringify(response.body);
+      expect(text).not.toContain(farmerId);
+      expect(text).not.toContain(ownerId);
+    });
+
+    it.each<BookingStatus>([
+      'payment_pending',
+      'pending_provider',
+      'rejected',
+      'expired',
+      'cancelled',
+      'no_show',
+    ])('hides the facility phone while the booking is %s', async (status) => {
+      const booking = await book({ provider_id: await provider() });
+      await db()
+        .updateTable('bookings')
+        .set({ status, cancelled_by: status === 'cancelled' ? 'provider' : null })
+        .where('id', '=', booking.id)
+        .execute();
+
+      expect((await detail(booking.id)).provider.phone).toBeNull();
+    });
+
+    it.each<BookingStatus>(['confirmed', 'in_storage', 'completed'])(
+      'gives the facility phone once the booking is %s',
+      async (status) => {
+        const id = await provider();
+        const booking = await book({ provider_id: id });
+        await setStatus(booking.id, status);
+
+        expect((await detail(booking.id)).provider.phone).toBe(await facilityPhone(id));
+      },
+    );
+
+    it('never puts the facility phone in the list', async () => {
+      const id = await provider();
+      const booking = await book({ provider_id: id });
+      await setStatus(booking.id, 'confirmed');
+
+      expect(JSON.stringify((await get('/bookings')).body)).not.toContain(await facilityPhone(id));
+    });
+
+    it('cannot be cancelled while it awaits payment', async () => {
+      const booking = await book({ provider_id: await provider() });
+      expect((await detail(booking.id)).cancellation).toEqual({ allowed: false });
+    });
+
+    // Starts at 00:00 in Lagos on 12 November, which is 23:00 UTC on 11 November.
+    async function paidBooking(status: BookingStatus) {
+      await setConfig(db(), 'service_fee_kobo', 20_000);
+      const booking = await book({
+        provider_id: await provider({ pricePerUnitPerDayKobo: 50_000 }),
+        quantity: 10,
+        days: 10,
+        start_date: '2026-11-12',
+      });
+      await setStatus(booking.id, status);
+      return booking;
+    }
+
+    it('previews a full refund before the provider accepts', async () => {
+      const booking = await paidBooking('pending_provider');
+      expect((await detail(booking.id)).cancellation).toEqual({
+        allowed: true,
+        refund_kobo: 1_520_000,
+        deposit_refund_ends_at: null,
+      });
+    });
+
+    it("previews a confirmed booking's deposit refund and when it ends", async () => {
+      const booking = await paidBooking('confirmed');
+      expect((await detail(booking.id)).cancellation).toEqual({
+        allowed: true,
+        refund_kobo: 1_500_000,
+        deposit_refund_ends_at: '2026-11-10T23:00:00.000Z',
+      });
+    });
+
+    it.each<[string, BookingStatus, string]>([
+      ['before acceptance', 'pending_provider', '2026-11-11T22:00:00Z'],
+      ['well before the start', 'confirmed', '2026-11-10T08:00:00Z'],
+      ['exactly at the end of the free window', 'confirmed', '2026-11-10T23:00:00Z'],
+      ['after the free window', 'confirmed', '2026-11-10T23:00:00.001Z'],
+    ])('previews the refund the cancellation then makes, %s', async (_when, status, at) => {
+      const booking = await paidBooking(status);
+      const now = new Date(at);
+
+      const previewed = await request(buildApp(db(), { now }))
+        .get(`/api/v1/bookings/${booking.id}`)
+        .set('Authorization', farmerAuth);
+      const { cancellation } = farmerBookingSchema.parse(previewed.body);
+      const response = await cancel(booking.id, {}, now);
+
+      expect(response.status).toBe(200);
+      const result = cancelledBookingSchema.parse(response.body);
+      expect(cancellation).toMatchObject({ allowed: true, refund_kobo: result.refund_kobo });
+      expect(result.cancellation).toEqual({ allowed: false });
+      expect(result.provider.phone).toBeNull();
+      expect(result.status_history.at(-1)?.status).toBe('cancelled');
+    });
+
     it("is the same 404 for another farmer's booking as for an unknown id", async () => {
       const otherFarmer = await insertTestUser(db(), 'farmer');
       const theirs = await book(

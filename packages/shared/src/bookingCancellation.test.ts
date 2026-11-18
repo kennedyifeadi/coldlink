@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  depositRefundEndsAt,
   farmerCancellationRefundKobo,
   isFarmerCancellable,
   type FarmerCancellation,
@@ -57,6 +58,13 @@ describe('farmerCancellationRefundKobo', () => {
   it('allows a free cancellation up to the start when the window is 0 hours', () => {
     expect(farmerCancellationRefundKobo(confirmed, at('2026-11-30T23:00:00Z'), 0)).toBe(4_064_400);
     expect(farmerCancellationRefundKobo(confirmed, at('2026-11-30T23:00:00.001Z'), 0)).toBe(0);
+  });
+});
+
+describe('depositRefundEndsAt', () => {
+  it('is the free-cancel hours before 00:00 in Lagos on the start date', () => {
+    expect(depositRefundEndsAt('2026-12-01', 24).toISOString()).toBe('2026-11-29T23:00:00.000Z');
+    expect(depositRefundEndsAt('2026-12-01', 0).toISOString()).toBe('2026-11-30T23:00:00.000Z');
   });
 });
 

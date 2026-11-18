@@ -1,10 +1,7 @@
 import {
   bookingQuoteBodySchema,
-  bookingStatusSchema,
   cancelBookingBodySchema,
   createBookingBodySchema,
-  farmerCancellationRefundKobo,
-  isFarmerCancellable,
   type BookingQuote,
   type BookingQuoteInput,
   type CancelBookingInput,
@@ -19,19 +16,23 @@ import { generateBookingCode } from '../bookings/code.js';
 import type { TransitionHooks } from '../bookings/hooks.js';
 import { priceBooking, type PricedBooking } from '../bookings/pricing.js';
 import {
-  findFarmerBooking,
+  findFarmerBookingDetail,
   insertBooking,
   listFarmerBookings,
   lockFarmerBooking,
   recordBookingCreated,
-  requireFarmerBooking,
+  requireFarmerBookingDetail,
 } from '../bookings/store.js';
 import {
   BookingNotFoundError,
   runAfterCommitHooks,
   transitionBooking,
 } from '../bookings/transition.js';
-import { toFarmerBooking, toFarmerBookingSummary } from '../bookings/views.js';
+import {
+  farmerCancellationPreview,
+  toFarmerBooking,
+  toFarmerBookingSummary,
+} from '../bookings/views.js';
 import { inTransaction } from '../db/transaction.js';
 import { invalidBody } from '../errors.js';
 import {
@@ -150,9 +151,10 @@ export function bookingRoutes(deps: BookingRouteDependencies): Router {
           generateCode,
         );
         await recordBookingCreated(trx, id, farmerId);
-        return requireFarmerBooking(trx, farmerId, id);
+        return requireFarmerBookingDetail(trx, farmerId, id);
       });
-      res.status(201).set('Cache-Control', 'no-store').json(toFarmerBooking(booking));
+      const terms = { now: now(), freeCancelHours: config.farmer_free_cancel_hours };
+      res.status(201).set('Cache-Control', 'no-store').json(toFarmerBooking(booking, terms));
     },
   );
 
@@ -169,9 +171,11 @@ export function bookingRoutes(deps: BookingRouteDependencies): Router {
     validate({ params: bookingParamsSchema }),
     async (req, res) => {
       const { id } = req.params as BookingParams;
-      const booking = await findFarmerBooking(db, signedInUser(req).id, id);
+      const booking = await findFarmerBookingDetail(db, signedInUser(req).id, id);
       if (booking === undefined) throw new BookingNotFoundError(id);
-      res.set('Cache-Control', 'no-store').json(toFarmerBooking(booking));
+      const { farmer_free_cancel_hours } = await appConfig.get();
+      const terms = { now: now(), freeCancelHours: farmer_free_cancel_hours };
+      res.set('Cache-Control', 'no-store').json(toFarmerBooking(booking, terms));
     },
   );
 
@@ -185,15 +189,15 @@ export function bookingRoutes(deps: BookingRouteDependencies): Router {
       const reason = (req.body as CancelBookingInput | undefined)?.reason;
       const farmerId = signedInUser(req).id;
       const { farmer_free_cancel_hours } = await appConfig.get();
+      const terms = { now: now(), freeCancelHours: farmer_free_cancel_hours };
 
       const { result, booking, refundKobo } = await inTransaction(db, async (trx) => {
         const locked = await lockFarmerBooking(trx, farmerId, id);
         if (locked === undefined) throw new BookingNotFoundError(id);
-        const status = bookingStatusSchema.parse(locked.status);
+        // The same preview GET /bookings/:id shows, so the farmer gets the refund they were told.
+        const preview = farmerCancellationPreview(locked, terms);
         // transitionBooking refuses every other status with a 409, so this 0 is never stored.
-        const refund = isFarmerCancellable(status)
-          ? farmerCancellationRefundKobo({ ...locked, status }, now(), farmer_free_cancel_hours)
-          : 0;
+        const refund = preview.allowed ? preview.refund_kobo : 0;
         const transition = await transitionBooking(trx, hooks, {
           bookingId: id,
           to: 'cancelled',
@@ -203,13 +207,16 @@ export function bookingRoutes(deps: BookingRouteDependencies): Router {
         });
         return {
           result: transition,
-          booking: await requireFarmerBooking(trx, farmerId, id),
+          booking: await requireFarmerBookingDetail(trx, farmerId, id),
           refundKobo: refund,
         };
       });
       await runAfterCommitHooks(req.log, result);
 
-      const body: CancelledBooking = { ...toFarmerBooking(booking), refund_kobo: refundKobo };
+      const body: CancelledBooking = {
+        ...toFarmerBooking(booking, terms),
+        refund_kobo: refundKobo,
+      };
       res.set('Cache-Control', 'no-store').json(body);
     },
   );

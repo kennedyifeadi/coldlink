@@ -82,6 +82,7 @@ export const dugbeBooking = (changes: Partial<FarmerBooking> = {}): FarmerBookin
     lga: dugbeProvider.lga,
     address_text: dugbeProvider.address_text,
     landmark: dugbeProvider.landmark,
+    phone: null,
   },
   crop: { id: tomatoes.id, name: tomatoes.name },
   quantity: 10,
@@ -103,6 +104,8 @@ export const dugbeBooking = (changes: Partial<FarmerBooking> = {}): FarmerBookin
   cancelled_by: null,
   cancel_reason: null,
   created_at: '2026-11-10T09:00:00.000Z',
+  status_history: [{ status: 'payment_pending', at: '2026-11-10T09:00:00.000Z' }],
+  cancellation: { allowed: false },
   ...changes,
 });
 
@@ -111,6 +114,11 @@ export const paidDugbeBooking = (changes: Partial<FarmerBooking> = {}) =>
   dugbeBooking({
     status: 'pending_provider',
     provider_response_due_at: '2026-11-10T11:05:00.000Z',
+    status_history: [
+      { status: 'payment_pending', at: '2026-11-10T09:00:00.000Z' },
+      { status: 'pending_provider', at: '2026-11-10T09:05:00.000Z' },
+    ],
+    cancellation: { allowed: true, refund_kobo: 1_050_000, deposit_refund_ends_at: null },
     ...changes,
   });
 
