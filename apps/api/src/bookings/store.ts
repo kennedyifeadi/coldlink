@@ -1,4 +1,4 @@
-import type { AppConfig, CapacityUnit, PricingBreakdown } from '@coldlink/shared';
+import type { AppConfig, BookingStatus, CapacityUnit, PricingBreakdown } from '@coldlink/shared';
 import { sql, type InferResult, type QueryCreator } from 'kysely';
 import type { Database } from '../db/client.js';
 import type { DB } from '../db/schema.js';
@@ -115,7 +115,11 @@ const farmerBookingColumns = [
   'bookings.created_at',
 ] as const;
 
-// No commission, rate or payout column is read, so none can reach a farmer (decision 48).
+/** The statuses in which the farmer may see the facility's phone: once it has accepted. */
+const facilityPhoneStatuses: BookingStatus[] = ['confirmed', 'in_storage', 'completed'];
+
+// No commission, rate or payout column is read, so none can reach a farmer (decision 48), and the
+// facility's phone is only read once the facility has accepted the booking.
 function selectFarmerBookings(db: QueryCreator<DB>, farmerId: string) {
   return db
     .selectFrom('bookings')
@@ -129,6 +133,14 @@ function selectFarmerBookings(db: QueryCreator<DB>, farmerId: string) {
       'providers.landmark as provider_landmark',
       'crops.name as crop_name',
     ])
+    .select((eb) =>
+      eb
+        .case()
+        .when('bookings.status', 'in', facilityPhoneStatuses)
+        .then(eb.ref('providers.phone'))
+        .end()
+        .as('provider_phone'),
+    )
     .where('bookings.farmer_id', '=', farmerId);
 }
 
@@ -143,15 +155,47 @@ export function findFarmerBooking(
   return selectFarmerBookings(db, farmerId).where('bookings.id', '=', bookingId).executeTakeFirst();
 }
 
-/** For a booking the caller has just read or written; a missing one is a bug, not a 404. */
-export async function requireFarmerBooking(
+/** The statuses a booking has entered, oldest first, without who moved it. */
+function listBookingStatusHistory(db: Database, bookingId: string) {
+  // created_at is the transaction's start, so events written in one transaction tie; the creation
+  // (the only event with no from_status) comes first, and the random id only keeps the order stable.
+  return db
+    .selectFrom('booking_events')
+    .select(['to_status', 'created_at'])
+    .where('booking_id', '=', bookingId)
+    .orderBy('created_at')
+    .orderBy(sql`from_status is null`, 'desc')
+    .orderBy('id')
+    .execute();
+}
+
+export type BookingStatusChangeRow = Awaited<ReturnType<typeof listBookingStatusHistory>>[number];
+
+export interface FarmerBookingDetail {
+  booking: FarmerBookingRow;
+  history: BookingStatusChangeRow[];
+}
+
+/** The farmer's booking with its status history, or undefined as findFarmerBooking is. */
+export async function findFarmerBookingDetail(
   db: Database,
   farmerId: string,
   bookingId: string,
-): Promise<FarmerBookingRow> {
+): Promise<FarmerBookingDetail | undefined> {
   const booking = await findFarmerBooking(db, farmerId, bookingId);
-  if (booking === undefined) throw new Error(`Booking ${bookingId} not found`);
-  return booking;
+  if (booking === undefined) return undefined;
+  return { booking, history: await listBookingStatusHistory(db, bookingId) };
+}
+
+/** For a booking the caller has just read or written; a missing one is a bug, not a 404. */
+export async function requireFarmerBookingDetail(
+  db: Database,
+  farmerId: string,
+  bookingId: string,
+): Promise<FarmerBookingDetail> {
+  const detail = await findFarmerBookingDetail(db, farmerId, bookingId);
+  if (detail === undefined) throw new Error(`Booking ${bookingId} not found`);
+  return detail;
 }
 
 /** Every booking the farmer has made, newest first. */

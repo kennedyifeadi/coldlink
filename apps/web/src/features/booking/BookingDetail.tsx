@@ -1,0 +1,372 @@
+import React, { useState } from 'react';
+import { CircleCheck, SearchX } from 'lucide-react';
+import { useNavigate, useParams } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import * as z from 'zod';
+import type { CancelledBooking, FarmerBooking } from '@coldlink/shared';
+import { bookingKey, bookingQuery, cancelBooking, myBookingsKey } from '../../api/bookings';
+import { isApiError } from '../../api/client';
+import { describeApiError } from '../../api/describeError';
+import TopNavBar from '../../components/TopNavBar';
+import Card from '../../components/ui/Card';
+import CardTitle from '../../components/ui/CardTitle';
+import ErrorMessage from '../../components/ui/ErrorMessage';
+import SummaryRow from '../../components/ui/SummaryRow';
+import TextButton from '../../components/ui/TextButton';
+import { formatKobo, formatLagosTime } from '../../i18n/format';
+import { useSessionStore } from '../../session/sessionContext';
+import { MY_BOOKINGS_PATH } from '../../session/routes';
+import BookAgainButton from './BookAgainButton';
+import { canBookAgain } from './bookingStatus';
+import BookingCountdown from './BookingCountdown';
+import { BookingCode, BookingDetails } from './BookingFacts';
+import { LoadFailed, ProblemScreen } from './BookingStates';
+import StatusBadge from './StatusBadge';
+
+const lagosAt = (iso: string, t: ReturnType<typeof useTranslation>['t']) =>
+  t('booking.detail.at', formatLagosTime(iso));
+
+// Every figure is the API's, as it was booked; the screen adds nothing up (PRD 9.4).
+const PriceCard = ({ booking }: { booking: FarmerBooking }) => {
+  const { t } = useTranslation();
+
+  return (
+    <Card className="p-6 mb-4">
+      <CardTitle>{t('booking.detail.priceTitle')}</CardTitle>
+      <div className="flex flex-col gap-3">
+        <SummaryRow
+          label={t('booking.detail.unitPrice')}
+          value={t(`booking.details.pricePer.${booking.capacity_unit}`, {
+            price: formatKobo(booking.unit_price_kobo),
+          })}
+        />
+        <SummaryRow
+          label={t('booking.review.storage', { count: booking.duration_days })}
+          value={formatKobo(booking.storage_subtotal_kobo)}
+        />
+        <div className="h-[1px] bg-line-strong w-full"></div>
+        <SummaryRow label={t('booking.detail.deposit')} value={formatKobo(booking.deposit_kobo)} />
+        <SummaryRow
+          label={t('booking.detail.serviceFee')}
+          value={formatKobo(booking.service_fee_kobo)}
+        />
+        {booking.delivery_fee_kobo > 0 && (
+          <SummaryRow
+            label={t('booking.detail.delivery')}
+            value={formatKobo(booking.delivery_fee_kobo)}
+          />
+        )}
+        <SummaryRow
+          label={t('booking.detail.totalOnline')}
+          value={formatKobo(booking.total_charged_online_kobo)}
+          variant="highlight"
+        />
+        <SummaryRow
+          label={t('booking.detail.balance')}
+          value={formatKobo(booking.balance_due_kobo)}
+        />
+      </div>
+    </Card>
+  );
+};
+
+/** The deadlines and times that apply to the booking as it stands. */
+const timeRows = (booking: FarmerBooking, t: ReturnType<typeof useTranslation>['t']) =>
+  [
+    booking.status === 'payment_pending' && booking.payment_expires_at
+      ? { label: t('booking.detail.payBy'), value: lagosAt(booking.payment_expires_at, t) }
+      : undefined,
+    booking.status === 'pending_provider' && booking.provider_response_due_at
+      ? { label: t('booking.detail.answerBy'), value: lagosAt(booking.provider_response_due_at, t) }
+      : undefined,
+    booking.checked_in_at
+      ? { label: t('booking.detail.broughtIn'), value: lagosAt(booking.checked_in_at, t) }
+      : undefined,
+    booking.collected_at
+      ? { label: t('booking.detail.collected'), value: lagosAt(booking.collected_at, t) }
+      : undefined,
+    booking.cancelled_by
+      ? {
+          label: t('booking.detail.cancelledBy'),
+          value: t(`booking.detail.by.${booking.cancelled_by}`),
+        }
+      : undefined,
+    booking.cancel_reason
+      ? { label: t('booking.detail.reason'), value: booking.cancel_reason }
+      : undefined,
+  ].filter((row) => row !== undefined);
+
+const TimesCard = ({ booking }: { booking: FarmerBooking }) => {
+  const { t } = useTranslation();
+  const rows = timeRows(booking, t);
+  if (rows.length === 0) return null;
+
+  return (
+    <Card className="p-6 mb-4">
+      <CardTitle>{t('booking.detail.timesTitle')}</CardTitle>
+      <div className="flex flex-col gap-3">
+        {rows.map((row) => (
+          <SummaryRow key={row.label} label={row.label} value={row.value} />
+        ))}
+      </div>
+    </Card>
+  );
+};
+
+const HistoryCard = ({ booking }: { booking: FarmerBooking }) => {
+  const { t } = useTranslation();
+
+  return (
+    <Card className="p-6 mb-4">
+      <CardTitle>{t('booking.detail.historyTitle')}</CardTitle>
+      <ol className="flex flex-col">
+        {booking.status_history.map((change, index) => (
+          <li key={`${change.status}-${change.at}`} className="flex gap-4">
+            <div className="flex flex-col items-center" aria-hidden="true">
+              <span className="mt-1.5 w-2.5 h-2.5 rounded-full bg-primary shrink-0" />
+              {index < booking.status_history.length - 1 && (
+                <span className="w-px flex-grow bg-line-strong" />
+              )}
+            </div>
+            <div className="pb-4">
+              <p className="text-ink text-body font-semibold">
+                {t(`booking.status.${change.status}`)}
+              </p>
+              <p className="text-copy-muted text-label">{lagosAt(change.at, t)}</p>
+            </div>
+          </li>
+        ))}
+      </ol>
+    </Card>
+  );
+};
+
+/** PRD 6.6 in words, with the refund the API worked out for cancelling now. */
+const CancelPolicy = ({ booking }: { booking: FarmerBooking }) => {
+  const { t } = useTranslation();
+  const { cancellation } = booking;
+  if (!cancellation.allowed) return null;
+  const facility = booking.provider.display_name;
+  const policy =
+    cancellation.deposit_refund_ends_at === null
+      ? t('booking.detail.policyPending', { facility })
+      : t(
+          cancellation.refund_kobo > 0
+            ? 'booking.detail.policyDeposit'
+            : 'booking.detail.policyLate',
+          {
+            ...formatLagosTime(cancellation.deposit_refund_ends_at),
+          },
+        );
+
+  return (
+    <div className="flex flex-col gap-3 mb-5">
+      <p className="text-copy text-body leading-relaxed">{policy}</p>
+      <p className="font-heading font-bold text-title text-ink">
+        {t('booking.detail.refundNow', { amount: formatKobo(cancellation.refund_kobo) })}
+      </p>
+    </div>
+  );
+};
+
+const CancelledNotice = ({ result }: { result: CancelledBooking }) => {
+  const { t } = useTranslation();
+
+  return (
+    <div role="status" className="flex gap-3 bg-primary-faint rounded-2xl p-5 mb-4">
+      <CircleCheck size={22} className="text-primary-strong shrink-0 mt-0.5" aria-hidden="true" />
+      <div>
+        <h2 className="font-heading font-semibold text-ink text-subtitle mb-1">
+          {t('booking.detail.cancelledTitle')}
+        </h2>
+        <p className="text-copy text-body leading-relaxed">
+          {result.refund_kobo > 0
+            ? t('booking.detail.refunded', { amount: formatKobo(result.refund_kobo) })
+            : t('booking.detail.noRefund')}
+        </p>
+      </div>
+    </div>
+  );
+};
+
+interface CancelSectionProps {
+  booking: FarmerBooking;
+  refresh: () => Promise<unknown>;
+  onCancelled: (result: CancelledBooking) => void;
+}
+
+const CancelSection = ({ booking, refresh, onCancelled }: CancelSectionProps) => {
+  const { t } = useTranslation();
+  const store = useSessionStore();
+  const [confirming, setConfirming] = useState(false);
+  const [checking, setChecking] = useState(false);
+  const cancel = useMutation({
+    mutationFn: () => cancelBooking(store.authorizedRequest, booking.id),
+    onSuccess: onCancelled,
+    onError: (error) => {
+      setConfirming(false);
+      if (isApiError(error, 'conflict')) void refresh();
+    },
+  });
+
+  // The preview was worked out when the booking was read; read it again before asking.
+  const askToConfirm = async () => {
+    setChecking(true);
+    try {
+      await refresh();
+    } finally {
+      setChecking(false);
+    }
+    setConfirming(true);
+  };
+
+  const conflict = isApiError(cancel.error, 'conflict');
+  if (!booking.cancellation.allowed) {
+    return conflict ? (
+      <div className="mb-4">
+        <ErrorMessage>{t('booking.detail.notCancellable')}</ErrorMessage>
+      </div>
+    ) : null;
+  }
+
+  return (
+    <Card tone="muted" className="p-5 mb-4">
+      <h2 className="font-heading font-semibold text-ink text-subtitle mb-3">
+        {t('booking.detail.cancelTitle')}
+      </h2>
+      {confirming ? (
+        <>
+          <CancelPolicy booking={booking} />
+          <div className="flex flex-col gap-2">
+            <button
+              type="button"
+              onClick={() => cancel.mutate()}
+              disabled={cancel.isPending}
+              className="w-full min-h-12 py-3 rounded-lg font-medium text-lead bg-alert-strong text-white hover:bg-alert disabled:bg-disabled disabled:cursor-not-allowed transition-colors"
+            >
+              {cancel.isPending
+                ? t('booking.detail.cancelling')
+                : t('booking.detail.confirmCancel')}
+            </button>
+            <TextButton onClick={() => setConfirming(false)} disabled={cancel.isPending}>
+              {t('booking.detail.keep')}
+            </TextButton>
+          </div>
+        </>
+      ) : (
+        <>
+          {cancel.isError && !conflict && (
+            <div className="mb-3">
+              <ErrorMessage>{describeApiError(cancel.error, t)}</ErrorMessage>
+            </div>
+          )}
+          <TextButton onClick={() => void askToConfirm()} disabled={checking}>
+            {t('booking.detail.cancel')}
+          </TextButton>
+        </>
+      )}
+    </Card>
+  );
+};
+
+const BookingNotFound = () => {
+  const navigate = useNavigate();
+  const { t } = useTranslation();
+
+  return (
+    <ProblemScreen
+      navTitle={t('booking.detail.navTitle')}
+      icon={SearchX}
+      title={t('booking.confirmation.notFoundTitle')}
+      body={t('booking.confirmation.notFoundBody')}
+      action={t('booking.paymentReturn.goToBookings')}
+      onAction={() => void navigate(MY_BOOKINGS_PATH, { replace: true })}
+    />
+  );
+};
+
+const DetailSkeleton = () => {
+  const { t } = useTranslation();
+
+  return (
+    <div className="flex flex-col gap-4 px-5 pt-6">
+      <p role="status" className="text-copy-muted text-body text-center">
+        {t('common.loading')}
+      </p>
+      <div aria-hidden="true" className="flex flex-col gap-4">
+        <div className="h-24 rounded-2xl bg-surface-muted" />
+        <div className="h-36 rounded-2xl bg-surface-muted" />
+        <div className="h-64 rounded-2xl bg-surface-muted" />
+      </div>
+    </div>
+  );
+};
+
+/** One booking in full: every fact and amount, its history, and cancel and Book again. */
+const BookingDetail = () => {
+  const { t } = useTranslation();
+  const store = useSessionStore();
+  const queryClient = useQueryClient();
+  const bookingId = z.uuid().safeParse(useParams().bookingId).data;
+  const query = useQuery({
+    ...bookingQuery(store.authorizedRequest, bookingId ?? ''),
+    enabled: bookingId !== undefined,
+  });
+  const [cancelled, setCancelled] = useState<CancelledBooking>();
+
+  if (bookingId === undefined || isApiError(query.error, 'not_found')) return <BookingNotFound />;
+  if (query.isError && query.data === undefined) {
+    return (
+      <LoadFailed
+        navTitle={t('booking.detail.navTitle')}
+        title={t('booking.confirmation.failedTitle')}
+        error={query.error}
+        retry={() => void query.refetch()}
+        retrying={query.isFetching}
+      />
+    );
+  }
+  const booking = query.data;
+
+  const onCancelled = (result: CancelledBooking) => {
+    setCancelled(result);
+    queryClient.setQueryData(bookingKey(bookingId), result);
+    void queryClient.invalidateQueries({ queryKey: myBookingsKey });
+  };
+
+  return (
+    <div className="flex flex-col h-full min-h-screen bg-background relative pb-10">
+      <TopNavBar title={t('booking.detail.navTitle')} showBack={true} />
+
+      {booking ? (
+        <div className="flex flex-col px-5 pt-6">
+          <div className="flex flex-col items-start gap-3 mb-6">
+            <StatusBadge status={booking.status} />
+            <h1 className="font-heading text-headline font-bold text-ink">
+              {booking.provider.display_name}
+            </h1>
+            <BookingCountdown booking={booking} />
+          </div>
+
+          {cancelled && <CancelledNotice result={cancelled} />}
+          <BookingCode code={booking.code} />
+          <BookingDetails booking={booking} />
+          <PriceCard booking={booking} />
+          <TimesCard booking={booking} />
+          <HistoryCard booking={booking} />
+          <CancelSection
+            booking={booking}
+            refresh={() => query.refetch()}
+            onCancelled={onCancelled}
+          />
+          {canBookAgain(booking) && <BookAgainButton booking={booking} />}
+        </div>
+      ) : (
+        <DetailSkeleton />
+      )}
+    </div>
+  );
+};
+
+export default BookingDetail;

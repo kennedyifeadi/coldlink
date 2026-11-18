@@ -2,6 +2,7 @@ import * as z from 'zod';
 import { bookingQuoteBodySchema } from './bookingQuote.js';
 import { bookingStatusSchema, cancelledBySchema, capacityUnitSchema } from './enums.js';
 import { koboSchema } from './money.js';
+import { e164PhoneSchema } from './phone.js';
 
 // Request and response bodies of the farmer's booking endpoints (PRD 5.5, 8).
 
@@ -54,12 +55,34 @@ export const farmerBookingSummarySchema = z.strictObject({
 });
 export type FarmerBookingSummary = z.infer<typeof farmerBookingSummarySchema>;
 
+/** One status the booking has entered, and when; never who moved it. */
+export const bookingStatusChangeSchema = z.strictObject({
+  status: bookingStatusSchema,
+  at: z.iso.datetime(),
+});
+export type BookingStatusChange = z.infer<typeof bookingStatusChangeSchema>;
+
+/** What cancelling now would do, worked out by the API so the client does no money arithmetic. */
+export const farmerCancellationPreviewSchema = z.discriminatedUnion('allowed', [
+  z.strictObject({ allowed: z.literal(false) }),
+  z.strictObject({
+    allowed: z.literal(true),
+    /** What cancelling now refunds of the online payment (PRD 6.6). */
+    refund_kobo: amountSchema,
+    /** Once confirmed, the last moment cancelling refunds the deposit; null before acceptance. */
+    deposit_refund_ends_at: z.iso.datetime().nullable(),
+  }),
+]);
+export type FarmerCancellationPreview = z.infer<typeof farmerCancellationPreviewSchema>;
+
 export const farmerBookingSchema = z.strictObject({
   ...farmerBookingSummarySchema.shape,
   provider: z.strictObject({
     ...farmerBookingSummarySchema.shape.provider.shape,
     address_text: z.string(),
     landmark: z.string().nullable(),
+    /** Only once the facility has accepted: confirmed, in storage or completed. */
+    phone: e164PhoneSchema.nullable(),
   }),
   unit_price_kobo: koboSchema.positive(),
   storage_subtotal_kobo: amountSchema,
@@ -74,6 +97,9 @@ export const farmerBookingSchema = z.strictObject({
   collected_at: z.iso.datetime().nullable(),
   cancelled_by: cancelledBySchema.nullable(),
   cancel_reason: z.string().nullable(),
+  /** Every status the booking has entered, oldest first, starting with payment_pending. */
+  status_history: z.array(bookingStatusChangeSchema),
+  cancellation: farmerCancellationPreviewSchema,
 });
 export type FarmerBooking = z.infer<typeof farmerBookingSchema>;
 

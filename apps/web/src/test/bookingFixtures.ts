@@ -1,8 +1,11 @@
-import type {
-  BookingQuote,
-  FarmerBooking,
-  PaymentVerification,
-  PublicProvider,
+import * as z from 'zod';
+import {
+  farmerBookingSummarySchema,
+  type BookingQuote,
+  type FarmerBooking,
+  type FarmerBookingSummary,
+  type PaymentVerification,
+  type PublicProvider,
 } from '@coldlink/shared';
 import { bookingStepPath, type BookingIntent } from '../features/booking/bookingIntent';
 import { heldBookingPath } from '../features/booking/paymentFlow';
@@ -82,6 +85,7 @@ export const dugbeBooking = (changes: Partial<FarmerBooking> = {}): FarmerBookin
     lga: dugbeProvider.lga,
     address_text: dugbeProvider.address_text,
     landmark: dugbeProvider.landmark,
+    phone: null,
   },
   crop: { id: tomatoes.id, name: tomatoes.name },
   quantity: 10,
@@ -103,6 +107,8 @@ export const dugbeBooking = (changes: Partial<FarmerBooking> = {}): FarmerBookin
   cancelled_by: null,
   cancel_reason: null,
   created_at: '2026-11-10T09:00:00.000Z',
+  status_history: [{ status: 'payment_pending', at: '2026-11-10T09:00:00.000Z' }],
+  cancellation: { allowed: false },
   ...changes,
 });
 
@@ -111,8 +117,22 @@ export const paidDugbeBooking = (changes: Partial<FarmerBooking> = {}) =>
   dugbeBooking({
     status: 'pending_provider',
     provider_response_due_at: '2026-11-10T11:05:00.000Z',
+    status_history: [
+      { status: 'payment_pending', at: '2026-11-10T09:00:00.000Z' },
+      { status: 'pending_provider', at: '2026-11-10T09:05:00.000Z' },
+    ],
+    cancellation: { allowed: true, refund_kobo: 1_050_000, deposit_refund_ends_at: null },
     ...changes,
   });
+
+// Not strict, so the detail's extra fields are dropped rather than refused.
+const summaryFields = z.object(farmerBookingSummarySchema.shape);
+
+/** The booking as GET /bookings lists it. */
+export const summaryOf = (booking: FarmerBooking): FarmerBookingSummary => {
+  const { id, display_name, lga } = booking.provider;
+  return summaryFields.parse({ ...booking, provider: { id, display_name, lga } });
+};
 
 export const PAYMENT_REFERENCE = 'CLP-0123456789abcdef0123';
 export const CHECKOUT_URL = 'https://checkout.paystack.com/abc123xyz';

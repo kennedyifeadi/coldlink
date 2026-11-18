@@ -5,6 +5,7 @@ import { renderApp, SCREEN_TIMEOUT } from './test/renderApp';
 
 const signedOut = { 'POST /auth/refresh': errorResponse(401, 'unauthorized') };
 const signedIn = { 'POST /auth/refresh': jsonResponse(200, sessionFixture()) };
+const noBookings = { 'GET /bookings': jsonResponse(200, { data: [] }) };
 
 const findHeading = (name: string) => screen.findByRole('heading', { name }, SCREEN_TIMEOUT);
 
@@ -18,7 +19,7 @@ describe('app routes', () => {
 
   it('takes the user back to the start from the not-found page', async () => {
     mockApi(signedOut);
-    const user = renderApp('/bookings/123');
+    const user = renderApp('/no-such-page/123');
 
     await user.click(await screen.findByRole('button', { name: 'Go to start' }, SCREEN_TIMEOUT));
 
@@ -26,7 +27,7 @@ describe('app routes', () => {
   });
 
   it('opens farmer screens for a signed-in user after a reload', async () => {
-    mockApi(signedIn);
+    mockApi({ ...signedIn, ...noBookings });
     renderApp('/bookings');
 
     expect(await findHeading('My bookings')).toBeInTheDocument();
@@ -36,6 +37,7 @@ describe('app routes', () => {
   it('sends a signed-out user to sign in, then back to the screen they asked for', async () => {
     mockApi({
       ...signedOut,
+      ...noBookings,
       'POST /auth/otp/request': jsonResponse(200, {
         expires_in_seconds: 600,
         resend_after_seconds: 60,
@@ -71,6 +73,7 @@ describe('app routes', () => {
         () => Promise.reject(new TypeError('Failed to fetch')),
         jsonResponse(200, sessionFixture()),
       ],
+      ...noBookings,
     });
     const user = renderApp('/bookings');
 

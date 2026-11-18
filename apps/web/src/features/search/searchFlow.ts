@@ -62,5 +62,7 @@ export const readDraft = (draft: SearchDraft): ReadDraft => {
 };
 
 /** Router state that tells the first search step why the farmer was sent back to it. */
-export const searchNoticeStateSchema = z.object({ notice: z.literal('bookingLinkBroken') });
+export const searchNoticeStateSchema = z.object({
+  notice: z.enum(['bookingLinkBroken', 'bookAgainNoSpace', 'bookAgainGone']),
+});
 export type SearchNoticeState = z.infer<typeof searchNoticeStateSchema>;

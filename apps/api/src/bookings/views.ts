@@ -2,13 +2,17 @@ import {
   bookingStatusSchema,
   cancelledBySchema,
   capacityUnitSchema,
+  depositRefundEndsAt,
+  farmerCancellationRefundKobo,
+  isFarmerCancellable,
   type FarmerBooking,
   type FarmerBookingSummary,
+  type FarmerCancellationPreview,
   type ProviderBooking,
   type ProviderBookingRequest,
 } from '@coldlink/shared';
 import type { ProviderBookingRow } from './providerStore.js';
-import type { FarmerBookingRow } from './store.js';
+import type { FarmerBookingDetail, FarmerBookingRow } from './store.js';
 
 function isoOrNull(date: Date | null): string | null {
   return date?.toISOString() ?? null;
@@ -37,7 +41,37 @@ export function toFarmerBookingSummary(row: FarmerBookingRow): FarmerBookingSumm
   };
 }
 
-export function toFarmerBooking(row: FarmerBookingRow): FarmerBooking {
+export interface CancellationTerms {
+  now: Date;
+  freeCancelHours: number;
+}
+
+type CancellableFields = Pick<
+  FarmerBookingRow,
+  'status' | 'start_date' | 'deposit_kobo' | 'total_charged_online_kobo'
+>;
+
+/** What a farmer's cancellation refunds at `now` (PRD 6.6); the cancel route refunds this. */
+export function farmerCancellationPreview(
+  row: CancellableFields,
+  { now, freeCancelHours }: CancellationTerms,
+): FarmerCancellationPreview {
+  const status = bookingStatusSchema.parse(row.status);
+  if (!isFarmerCancellable(status)) return { allowed: false };
+  return {
+    allowed: true,
+    refund_kobo: farmerCancellationRefundKobo({ ...row, status }, now, freeCancelHours),
+    deposit_refund_ends_at:
+      status === 'confirmed'
+        ? depositRefundEndsAt(row.start_date, freeCancelHours).toISOString()
+        : null,
+  };
+}
+
+export function toFarmerBooking(
+  { booking: row, history }: FarmerBookingDetail,
+  terms: CancellationTerms,
+): FarmerBooking {
   const summary = toFarmerBookingSummary(row);
   return {
     ...summary,
@@ -45,6 +79,7 @@ export function toFarmerBooking(row: FarmerBookingRow): FarmerBooking {
       ...summary.provider,
       address_text: row.provider_address_text,
       landmark: row.provider_landmark,
+      phone: row.provider_phone,
     },
     unit_price_kobo: row.unit_price_kobo,
     storage_subtotal_kobo: row.storage_subtotal_kobo,
@@ -57,6 +92,11 @@ export function toFarmerBooking(row: FarmerBookingRow): FarmerBooking {
     collected_at: isoOrNull(row.collected_at),
     cancelled_by: row.cancelled_by === null ? null : cancelledBySchema.parse(row.cancelled_by),
     cancel_reason: row.cancel_reason,
+    status_history: history.map((event) => ({
+      status: bookingStatusSchema.parse(event.to_status),
+      at: event.created_at.toISOString(),
+    })),
+    cancellation: farmerCancellationPreview(row, terms),
   };
 }
 

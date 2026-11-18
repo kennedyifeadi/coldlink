@@ -28,6 +28,14 @@ export function farmerCancellationRefundKobo(
   freeCancelHours: number,
 ): number {
   if (booking.status === 'pending_provider') return booking.total_charged_online_kobo;
-  const msBeforeStart = startOfDayInLagos(booking.start_date).getTime() - now.getTime();
-  return msBeforeStart >= freeCancelHours * MS_PER_HOUR ? booking.deposit_kobo : 0;
+  const refundEndsAt = depositRefundEndsAt(booking.start_date, freeCancelHours);
+  return now.getTime() <= refundEndsAt.getTime() ? booking.deposit_kobo : 0;
+}
+
+/**
+ * The last moment a confirmed booking can be cancelled with its deposit refunded: `freeCancelHours`
+ * before 00:00 in Lagos on the start date, that moment included (PRD 6.6).
+ */
+export function depositRefundEndsAt(startDate: string, freeCancelHours: number): Date {
+  return new Date(startOfDayInLagos(startDate).getTime() - freeCancelHours * MS_PER_HOUR);
 }

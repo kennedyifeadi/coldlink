@@ -1,7 +1,9 @@
 import { queryOptions } from '@tanstack/react-query';
 import {
   bookingQuoteSchema,
+  cancelledBookingSchema,
   farmerBookingSchema,
+  farmerBookingsResponseSchema,
   initializedPaymentSchema,
   paymentVerificationSchema,
   publicProviderSchema,
@@ -38,6 +40,22 @@ export const bookingQuery = (request: AuthorizedRequest, bookingId: string) =>
         schema: farmerBookingSchema,
         signal,
       }),
+  });
+
+export const myBookingsKey = ['bookings'] as const;
+
+// Never cached as fresh, for the same reason as one booking.
+export const myBookingsQuery = (request: AuthorizedRequest) =>
+  queryOptions({
+    queryKey: myBookingsKey,
+    queryFn: ({ signal }) => request('/bookings', { schema: farmerBookingsResponseSchema, signal }),
+  });
+
+// No body: the reason is optional and the screen does not ask for one.
+export const cancelBooking = (request: AuthorizedRequest, bookingId: string) =>
+  request(`/bookings/${encodeURIComponent(bookingId)}/cancel`, {
+    method: 'POST',
+    schema: cancelledBookingSchema,
   });
 
 export const initializePayment = (request: AuthorizedRequest, bookingId: string) =>

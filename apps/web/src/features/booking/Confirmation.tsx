@@ -1,16 +1,5 @@
 import React from 'react';
-import {
-  CalendarDays,
-  CheckCircle2,
-  CircleDot,
-  Home,
-  Hourglass,
-  Leaf,
-  MapPin,
-  SearchX,
-  Share2,
-  type LucideIcon,
-} from 'lucide-react';
+import { CheckCircle2, CircleDot, Hourglass, SearchX, Share2 } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
@@ -26,27 +15,9 @@ import TextButton from '../../components/ui/TextButton';
 import { formatDate, formatKobo, formatLagosTime } from '../../i18n/format';
 import { useSessionStore } from '../../session/sessionContext';
 import { MY_BOOKINGS_PATH } from '../../session/routes';
-import { formatAmount } from '../search/units';
+import { BookingCode, BookingDetails } from './BookingFacts';
 import { LoadFailed, ProblemScreen } from './BookingStates';
 import { isPaidAndStanding, whatsappShareUrl } from './paymentFlow';
-
-const DetailRow = ({
-  icon: Icon,
-  label,
-  children,
-}: {
-  icon: LucideIcon;
-  label: string;
-  children: React.ReactNode;
-}) => (
-  <div className="flex items-start gap-4">
-    <Icon size={18} className="text-primary mt-0.5 shrink-0" aria-hidden="true" />
-    <div className="min-w-0">
-      <p className="text-ink text-label mb-0.5">{label}</p>
-      {children}
-    </div>
-  </div>
-);
 
 const StatusHeader = ({ booking }: { booking: FarmerBooking }) => {
   const { t } = useTranslation();
@@ -97,49 +68,6 @@ const shareText = (booking: FarmerBooking, t: ReturnType<typeof useTranslation>[
   return landmark
     ? t('booking.confirmation.shareTextNear', { ...terms, landmark })
     : t('booking.confirmation.shareText', terms);
-};
-
-const BookingDetails = ({ booking }: { booking: FarmerBooking }) => {
-  const { t } = useTranslation();
-  const { provider } = booking;
-
-  return (
-    <Card className="p-6 mb-4">
-      <h2 className="text-copy-muted text-label font-medium mb-5">
-        {t('booking.confirmation.detailsTitle')}
-      </h2>
-      <div className="flex flex-col gap-5">
-        <DetailRow icon={Home} label={t('booking.confirmation.coldRoom')}>
-          <p className="text-copy-muted text-body">{provider.display_name}</p>
-        </DetailRow>
-        <DetailRow icon={MapPin} label={t('booking.confirmation.address')}>
-          <p className="text-copy-muted text-body">{provider.address_text}</p>
-          {provider.landmark && (
-            <p className="text-copy-muted text-body">
-              {t('booking.details.near', { landmark: provider.landmark })}
-            </p>
-          )}
-        </DetailRow>
-        <DetailRow icon={Leaf} label={t('booking.confirmation.produce')}>
-          <p className="text-copy-muted text-body">
-            {t('booking.confirmation.produceValue', {
-              produce: booking.crop.name,
-              amount: formatAmount(booking.quantity, booking.capacity_unit, t),
-            })}
-          </p>
-        </DetailRow>
-        <DetailRow icon={CalendarDays} label={t('booking.confirmation.dates')}>
-          <p className="text-copy-muted text-body">
-            {t('booking.confirmation.datesValue', {
-              start: formatDate(booking.start_date),
-              end: formatDate(booking.end_date),
-              count: booking.duration_days,
-            })}
-          </p>
-        </DetailRow>
-      </div>
-    </Card>
-  );
 };
 
 const PaymentDetails = ({ booking }: { booking: FarmerBooking }) => {
@@ -239,15 +167,7 @@ const Confirmation = () => {
         <div className="flex flex-col px-5 pt-2 flex-grow">
           <StatusHeader booking={booking} />
 
-          <Card className="p-6 mb-4 text-center flex flex-col items-center">
-            <h2 className="text-copy-muted text-label font-medium tracking-widest uppercase mb-4">
-              {t('booking.confirmation.codeTitle')}
-            </h2>
-            <p className="border border-primary-soft text-primary-strong font-bold text-headline tracking-widest py-3 px-8 rounded-xl mb-4 inline-block bg-surface">
-              {booking.code}
-            </p>
-            <p className="text-copy-muted text-body">{t('booking.confirmation.codeHint')}</p>
-          </Card>
+          <BookingCode code={booking.code} />
 
           <BookingDetails booking={booking} />
           {isPaidAndStanding(booking.status) && <PaymentDetails booking={booking} />}
