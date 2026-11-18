@@ -7,8 +7,8 @@ import {
   type VerificationStatus,
 } from '@coldlink/shared';
 import { sql } from 'kysely';
-import { generateBookingCode } from '../bookings/code.js';
 import type { Database } from '../db/client.js';
+import { insertBookingRow } from './bookings.js';
 
 // Fixtures for the search tests and benchmark. Their phones use +234 800 6, the toll-free range, so
 // no SMS could reach a real person, clear of the dev seed (+234 800 0) and the other fixtures.
@@ -128,30 +128,26 @@ export async function insertOccupancy(db: Database, fixture: OccupancyFixture): 
     service_fee_kobo: 0,
   };
   const pricing = calculatePricing(terms);
-  await db
-    .insertInto('bookings')
-    .values({
-      code: generateBookingCode(),
-      farmer_id: fixture.farmerId,
-      provider_id: fixture.providerId,
-      crop_id: fixture.cropId,
-      quantity: fixture.quantity,
-      capacity_unit: fixture.capacityUnit ?? 'crates',
-      start_date: fixture.startDate,
-      duration_days: fixture.days,
-      end_date: addDays(fixture.startDate, fixture.days),
-      status: 'confirmed',
-      unit_price_kobo: terms.unit_price_kobo,
-      storage_subtotal_kobo: pricing.storage_subtotal_kobo,
-      commission_rate: terms.commission_rate,
-      commission_kobo: pricing.commission_kobo,
-      service_fee_kobo: pricing.service_fee_kobo,
-      deposit_percent: terms.deposit_percent,
-      deposit_kobo: pricing.deposit_kobo,
-      balance_due_kobo: pricing.balance_due_kobo,
-      total_charged_online_kobo: pricing.total_charged_online_kobo,
-    })
-    .execute();
+  await insertBookingRow(db, {
+    farmer_id: fixture.farmerId,
+    provider_id: fixture.providerId,
+    crop_id: fixture.cropId,
+    quantity: fixture.quantity,
+    capacity_unit: fixture.capacityUnit ?? 'crates',
+    start_date: fixture.startDate,
+    duration_days: fixture.days,
+    end_date: addDays(fixture.startDate, fixture.days),
+    status: 'confirmed',
+    unit_price_kobo: terms.unit_price_kobo,
+    storage_subtotal_kobo: pricing.storage_subtotal_kobo,
+    commission_rate: terms.commission_rate,
+    commission_kobo: pricing.commission_kobo,
+    service_fee_kobo: pricing.service_fee_kobo,
+    deposit_percent: terms.deposit_percent,
+    deposit_kobo: pricing.deposit_kobo,
+    balance_due_kobo: pricing.balance_due_kobo,
+    total_charged_online_kobo: pricing.total_charged_online_kobo,
+  });
 }
 
 export async function setConfig(db: Database, key: string, value: unknown): Promise<void> {
