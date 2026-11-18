@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import * as z from 'zod';
 import { captureLogs } from '../test/helpers.js';
 import {
   fakeSmsProvider,
@@ -11,6 +12,7 @@ import {
 import { processNotificationQueue } from './queue.js';
 import { MAX_SEND_ATTEMPTS } from './retryPolicy.js';
 import { sendNotification } from './send.js';
+import { linkTemplate } from './templates.js';
 
 const phone = '+2348031234567';
 const greeting = { template: 'greeting', params: { name: 'Ade' }, to: phone } as const;
@@ -120,5 +122,49 @@ describe('processNotificationQueue', () => {
     }
     await expect(processNotificationQueue(deps, 2)).resolves.toEqual({ ...nothingDone, sent: 2 });
     expect(sms.sent).toHaveLength(2);
+  });
+
+  describe('a message with a link', () => {
+    function linkSetup(relinked: string | undefined) {
+      const { deps, table, sms } = setup(retryableFailure());
+      const templates = {
+        ...deps.templates,
+        invite: linkTemplate({
+          stored: z.object({ name: z.string() }),
+          render: ({ name, link }) => `Hello ${name}: ${link}`,
+          relink: () => Promise.resolve(relinked),
+        }),
+      };
+      return { deps: { ...deps, templates }, table, sms };
+    }
+    const invite = {
+      template: 'invite',
+      params: { name: 'Ade', link: 'https://app.coldlink.test/a/first' },
+      to: phone,
+    } as const;
+
+    it('is resent with a fresh link, never the stored one', async () => {
+      const { deps, table, sms } = linkSetup('https://app.coldlink.test/a/second');
+      const { id } = await sendNotification(deps, invite);
+
+      await expect(processNotificationQueue(deps)).resolves.toEqual({ ...nothingDone, sent: 1 });
+      expect(sms.sent.map((message) => message.text)).toEqual([
+        'Hello Ade: https://app.coldlink.test/a/first',
+        'Hello Ade: https://app.coldlink.test/a/second',
+      ]);
+      expect(table.row(id).payload).toEqual({ name: 'Ade' });
+    });
+
+    it('fails without sending when no fresh link is given', async () => {
+      const { deps, table, sms } = linkSetup(undefined);
+      const { id } = await sendNotification(deps, invite);
+
+      await expect(processNotificationQueue(deps)).resolves.toEqual({ ...nothingDone, failed: 1 });
+      expect(sms.sent).toHaveLength(1);
+      expect(table.row(id)).toMatchObject({
+        status: 'failed',
+        error: 'The message no longer applies',
+      });
+    });
   });
 });
