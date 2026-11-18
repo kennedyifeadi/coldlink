@@ -7,6 +7,7 @@ import { createApp } from '../app.js';
 import type { AppConfigReader } from '../appConfig.js';
 import { createAccessTokens } from '../auth/tokens.js';
 import { createTransitionHooks } from '../bookings/hooks.js';
+import { appConfigValues } from '../test/auth.js';
 import { captureLogs, stubDatabase, testConfig } from '../test/helpers.js';
 import { bookingRoutes } from './bookings.js';
 
@@ -53,14 +54,19 @@ function bearer(roles: UserRole[]) {
   return tokens.sign({ sub: id, cid: coldlink_id, roles }).then((token) => `Bearer ${token}`);
 }
 
-function app(limit = 100, roles: UserRole[] = ['farmer']) {
+const appConfig: AppConfigReader = {
+  get: () => Promise.resolve(appConfigValues),
+  clear: () => undefined,
+};
+
+function app(limit = 100, roles: UserRole[] = ['farmer'], config = unusedConfig) {
   const db = stubDatabase({ users: [user(roles)] });
   const router = Router();
   router.use(
     bookingRoutes({
       db,
       tokens,
-      appConfig: unusedConfig,
+      appConfig: config,
       hooks: createTransitionHooks(),
       quoteIpLimit: { windowMs: 60_000, limit },
       now: lateEvening,
@@ -154,8 +160,8 @@ describe.each(farmerCalls)('%s', (_name, call) => {
 });
 
 describe('farmer booking requests', () => {
-  async function farmer() {
-    const agent = request.agent(app());
+  async function farmer(config = unusedConfig) {
+    const agent = request.agent(app(100, ['farmer'], config));
     agent.set('Authorization', await bearer(['farmer']));
     return agent;
   }
@@ -195,5 +201,11 @@ describe('farmer booking requests', () => {
       .post(`/api/v1/bookings/${bookingId}/cancel`)
       .send({ reason: '  ' });
     expect(issues(response).map((issue) => issue.path)).toEqual(['reason']);
+  });
+
+  it('needs no cancellation body, as the reason is optional', async () => {
+    // The stub database has no bookings, so getting as far as the lookup ends in a 404.
+    const response = await (await farmer(appConfig)).post(`/api/v1/bookings/${bookingId}/cancel`);
+    expect(response.status).toBe(404);
   });
 });

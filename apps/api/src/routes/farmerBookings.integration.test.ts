@@ -489,6 +489,16 @@ describe.skipIf(noTestDatabase)('farmer booking endpoints against Postgres', () 
       });
     });
 
+    it('needs no body, as the reason is optional', async () => {
+      const booking = await bookingIn('pending_provider');
+
+      const response = await request(buildApp(db()))
+        .post(`/api/v1/bookings/${booking.id}/cancel`)
+        .set('Authorization', farmerAuth);
+
+      expect(await cancelled(response)).toMatchObject({ status: 'cancelled', cancel_reason: null });
+    });
+
     it('cannot cancel a booking awaiting payment, which expires instead', async () => {
       const booking = await bookingIn('payment_pending');
       const before = await bookingRow(db(), booking.id);

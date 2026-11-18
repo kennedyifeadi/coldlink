@@ -179,10 +179,10 @@ export function bookingRoutes(deps: BookingRouteDependencies): Router {
   router.post(
     '/bookings/:id/cancel',
     ...farmerOnly,
-    validate({ params: bookingParamsSchema, body: cancelBookingBodySchema }),
+    validate({ params: bookingParamsSchema, body: cancelBookingBodySchema.optional() }),
     async (req, res) => {
       const { id } = req.params as BookingParams;
-      const { reason } = req.body as CancelBookingInput;
+      const reason = (req.body as CancelBookingInput | undefined)?.reason;
       const farmerId = signedInUser(req).id;
       const { farmer_free_cancel_hours } = await appConfig.get();
 
