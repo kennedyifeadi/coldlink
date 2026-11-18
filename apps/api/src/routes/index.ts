@@ -7,6 +7,11 @@ import type { Config } from '../config.js';
 import type { Database } from '../db/client.js';
 import { createTransitionHooks, type TransitionHooks } from '../bookings/hooks.js';
 import { checkDatabase } from '../db/health.js';
+import {
+  createProviderActionLinks,
+  registerBookingSmsHooks,
+} from '../notifications/bookingSmsHooks.js';
+import { createBookingSmsTemplates } from '../notifications/bookingTemplates.js';
 import { createNotificationStore, type NotificationStore } from '../notifications/store.js';
 import { smsTemplates } from '../notifications/templates.js';
 import { createSmsProvider } from '../sms/createSmsProvider.js';
@@ -70,6 +75,17 @@ export function apiRoutes({
 }: RouteDependencies): Router {
   registerPayoutHooks(bookingHooks);
   registerRefundHooks(bookingHooks, { db, gateway: paymentGateway, logger });
+  const links = createProviderActionLinks(db, config.webAppUrl);
+  const notifications = {
+    store: notificationStore,
+    sms,
+    logger,
+    templates: {
+      ...smsTemplates,
+      ...createBookingSmsTemplates({ relinkProvider: (bookingId) => links.reissue(bookingId) }),
+    },
+  };
+  registerBookingSmsHooks(bookingHooks, { db, notifications, links });
   const router = Router();
   router.get('/health', async (req, res) => {
     const database = await checkDatabase(db, req.log);
@@ -84,7 +100,7 @@ export function apiRoutes({
       corsOrigins: config.corsOrigins,
       appConfig,
       tokens,
-      notifications: { store: notificationStore, sms, logger, templates: smsTemplates },
+      notifications,
       tasks,
       ipLimits: authIpLimits,
     }),
