@@ -1,8 +1,11 @@
-import type {
-  BookingQuote,
-  FarmerBooking,
-  PaymentVerification,
-  PublicProvider,
+import * as z from 'zod';
+import {
+  farmerBookingSummarySchema,
+  type BookingQuote,
+  type FarmerBooking,
+  type FarmerBookingSummary,
+  type PaymentVerification,
+  type PublicProvider,
 } from '@coldlink/shared';
 import { bookingStepPath, type BookingIntent } from '../features/booking/bookingIntent';
 import { heldBookingPath } from '../features/booking/paymentFlow';
@@ -121,6 +124,15 @@ export const paidDugbeBooking = (changes: Partial<FarmerBooking> = {}) =>
     cancellation: { allowed: true, refund_kobo: 1_050_000, deposit_refund_ends_at: null },
     ...changes,
   });
+
+// Not strict, so the detail's extra fields are dropped rather than refused.
+const summaryFields = z.object(farmerBookingSummarySchema.shape);
+
+/** The booking as GET /bookings lists it. */
+export const summaryOf = (booking: FarmerBooking): FarmerBookingSummary => {
+  const { id, display_name, lga } = booking.provider;
+  return summaryFields.parse({ ...booking, provider: { id, display_name, lga } });
+};
 
 export const PAYMENT_REFERENCE = 'CLP-0123456789abcdef0123';
 export const CHECKOUT_URL = 'https://checkout.paystack.com/abc123xyz';

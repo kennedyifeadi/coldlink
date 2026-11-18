@@ -36,6 +36,7 @@ const Payment = lazyScreen(loadBooking, 'Payment');
 const PaymentReturn = lazyScreen(loadBooking, 'PaymentReturn');
 const Confirmation = lazyScreen(loadBooking, 'Confirmation');
 const MyBookings = lazyScreen(loadBooking, 'MyBookings');
+const BookingDetail = lazyScreen(loadBooking, 'BookingDetail');
 const Facilities = lazyScreen(loadProvider, 'Facilities');
 const ContactStep = lazyScreen(loadProvider, 'ContactStep');
 const LocationStep = lazyScreen(loadProvider, 'LocationStep');
@@ -69,6 +70,7 @@ const AppRoutes = () => (
       <Route element={<RequireSession />}>
         <Route path="/userid" element={<UserId />} />
         <Route path={MY_BOOKINGS_PATH} element={<MyBookings />} />
+        <Route path={`${MY_BOOKINGS_PATH}/:bookingId`} element={<BookingDetail />} />
         {/* Paystack's callback (decision 92); matched before /payment/:providerId. */}
         <Route path={PAYMENT_RETURN_PATH} element={<PaymentReturn />} />
         <Route path={`${CONFIRMATION_PATH}/:bookingId`} element={<Confirmation />} />
