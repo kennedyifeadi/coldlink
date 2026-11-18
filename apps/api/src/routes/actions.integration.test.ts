@@ -331,7 +331,6 @@ describe.skipIf(noTestDatabase)('the SMS link and the dashboard answering at onc
           : { status: 'rejected', linkUsed: false, refunds: 1 },
       );
     } finally {
-      await db.deleteFrom('action_tokens').where('subject_id', '=', fixture.bookingId).execute();
       await db.deleteFrom('payments').where('booking_id', '=', fixture.bookingId).execute();
       await deleteBooking(db, fixture);
     }

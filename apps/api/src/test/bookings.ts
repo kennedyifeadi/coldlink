@@ -87,23 +87,11 @@ export async function insertBooking(db: Database, status: BookingStatus): Promis
   return { bookingId, farmerId, ownerId, providerId };
 }
 
-/**
- * Deletes a committed fixture. booking_events is append-only (decision 27), so its guard trigger is
- * disabled for this one transaction, which no other session sees; this needs the table's owner,
- * as the test database's migrations user is.
- */
+/** Deletes a committed fixture, as deleteCommittedRows does. */
 export async function deleteBooking(db: Database, fixture: BookingFixture): Promise<void> {
-  await db.transaction().execute(async (trx) => {
-    await sql`alter table public.booking_events disable trigger booking_events_no_update_or_delete`.execute(
-      trx,
-    );
-    await trx.deleteFrom('booking_events').where('booking_id', '=', fixture.bookingId).execute();
-    await sql`alter table public.booking_events enable trigger booking_events_no_update_or_delete`.execute(
-      trx,
-    );
-    await trx.deleteFrom('bookings').where('id', '=', fixture.bookingId).execute();
-    await trx.deleteFrom('providers').where('id', '=', fixture.providerId).execute();
-    await trx.deleteFrom('users').where('id', 'in', [fixture.farmerId, fixture.ownerId]).execute();
+  await deleteCommittedRows(db, {
+    providerIds: [fixture.providerId],
+    userIds: [fixture.farmerId, fixture.ownerId],
   });
 }
 
@@ -113,8 +101,12 @@ export interface CommittedRows {
 }
 
 /**
- * Deletes committed providers and users with every booking and booking event made for those
- * providers, disabling the append-only trigger for this one transaction as deleteBooking does.
+ * Deletes committed providers and users with every booking made for those providers, and the
+ * booking events, action tokens and notifications the after-commit hooks left for them.
+ * booking_events is append-only (decision 27), so its guard trigger is disabled for this one
+ * transaction, which no other session sees; this needs the table's owner, as the test database's
+ * migrations user is. notifications.user_id is `on delete set null`, so deleting the users alone
+ * would leave their messages behind.
  */
 export async function deleteCommittedRows(db: Database, rows: CommittedRows): Promise<void> {
   await db.transaction().execute(async (trx) => {
@@ -122,6 +114,8 @@ export async function deleteCommittedRows(db: Database, rows: CommittedRows): Pr
       .selectFrom('bookings')
       .select('id')
       .where('provider_id', 'in', rows.providerIds);
+    await trx.deleteFrom('action_tokens').where('subject_id', 'in', bookingIds).execute();
+    await trx.deleteFrom('notifications').where('user_id', 'in', rows.userIds).execute();
     await sql`alter table public.booking_events disable trigger booking_events_no_update_or_delete`.execute(
       trx,
     );
