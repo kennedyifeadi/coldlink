@@ -273,12 +273,20 @@ describe.skipIf(noTestDatabase)('booking SMS hooks', () => {
       expect(logs.output()).toContain('SMS delivery failed');
     });
 
+    // notifications_set_updated_at would overwrite the backdated value. The disable is inside the
+    // test's transaction, so it rolls back with it.
     async function makeDue() {
+      await sql`alter table public.notifications disable trigger notifications_set_updated_at`.execute(
+        db(),
+      );
       await db()
         .updateTable('notifications')
         .set({ updated_at: sql<Date>`now() - interval '2 minutes'` })
         .where('user_id', '=', booking.ownerId)
         .execute();
+      await sql`alter table public.notifications enable trigger notifications_set_updated_at`.execute(
+        db(),
+      );
     }
 
     it('resends booking_received with a fresh token', async () => {
