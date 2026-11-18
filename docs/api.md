@@ -91,7 +91,7 @@ The provider's actions (PRD 6.4, 6.5, 7.2; decisions 97 to 100) move a booking f
 
 ## Action links
 
-The provider's SMS (#29) carries a link that answers a booking without signing in (PRD 5.13, 7.6; decisions 98, 101). The token in it is single use and lasts 12 hours. One link offers both accept and reject.
+The provider's `booking_received` SMS carries a link that answers a booking without signing in (PRD 5.13, 7.6; decisions 98, 101, 104). The token in it is single use and lasts 12 hours. One link offers both accept and reject. The link is `WEB_APP_URL` + `/a/<token>` (`providerActionPath` in `packages/shared`), a page of the web app that calls the two routes below with the token.
 
 - **`GET /actions/:token`** shows what the provider needs to decide (`providerBookingRequestSchema`): the facility name, crop, quantity and unit, dates and payout. Opening it does not use it.
 - **`POST /actions/:token`** with `{ "action": "accept" }` or `{ "action": "reject" }` answers the booking as the facility's owner and uses the link. It answers `{ status }`, `confirmed` or `rejected`. The same 409s as `POST /bookings/:id/accept` apply, and leave the link usable: a booking already answered from the dashboard, or past its deadline.

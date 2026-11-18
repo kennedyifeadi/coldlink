@@ -7,8 +7,9 @@ import type { TemplateRegistry } from './templates.js';
 export type QueueRunSummary = Record<NotificationStatus, number>;
 
 /**
- * Sends again the queued SMS whose retry delay has passed. A template that is not retryable, such
- * as `otp`, whose code was never stored, is marked failed instead (decision 29).
+ * Sends again the queued SMS whose retry delay has passed, rendered again by its template. A
+ * message the template refuses, such as an `otp`, whose code was never stored (decision 29), or a
+ * link for a booking that is no longer waiting, is marked failed instead.
  */
 export async function processNotificationQueue<Registry extends TemplateRegistry>(
   deps: NotificationDeps<Registry>,
@@ -31,15 +32,10 @@ async function resend<Registry extends TemplateRegistry>(
     await giveUp(deps, notification, 'Unknown template');
     return 'failed';
   }
-  if (!template.retryable) {
-    await giveUp(deps, notification, 'Not retryable: the message was never stored');
+  const rerendered = await template.rerender(payload);
+  if ('refused' in rerendered) {
+    await giveUp(deps, notification, rerendered.refused);
     return 'failed';
   }
-  const prepared = template.params.safeParse(payload);
-  if (!prepared.success) {
-    await giveUp(deps, notification, 'The stored payload no longer fits the template');
-    return 'failed';
-  }
-  const { text } = template.prepare(prepared.data);
-  return deliver(deps, { ...notification, retryable: true, text });
+  return deliver(deps, { ...notification, retryable: template.retryable, text: rerendered.text });
 }

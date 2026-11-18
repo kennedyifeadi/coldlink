@@ -60,3 +60,13 @@ export const providerLinkActionResultSchema = z.strictObject({
   status: z.enum(['confirmed', 'rejected']),
 });
 export type ProviderLinkActionResult = z.infer<typeof providerLinkActionResultSchema>;
+
+/**
+ * The web app's page that an SMS action link opens (decision 104), kept short because it rides in
+ * every booking_received SMS. The web route is `/a/:token`.
+ */
+export const PROVIDER_ACTION_ROUTE = '/a/:token';
+
+export function providerActionPath(token: string): string {
+  return PROVIDER_ACTION_ROUTE.replace(':token', () => token);
+}
