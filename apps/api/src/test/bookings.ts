@@ -1,8 +1,10 @@
 import { randomInt } from 'node:crypto';
 import type { BookingStatus } from '@coldlink/shared';
-import { sql } from 'kysely';
+import { sql, type Insertable } from 'kysely';
 import { generateBookingCode } from '../bookings/code.js';
+import { BOOKING_CODE_ATTEMPTS } from '../bookings/store.js';
 import type { Database } from '../db/client.js';
+import type { DB } from '../db/schema.js';
 
 function digits(count: number): string {
   return Array.from({ length: count }, () => randomInt(10)).join('');
@@ -12,6 +14,27 @@ function digits(count: number): string {
 // seed's owners (+2348000000001 upward).
 function testPhone(): string {
   return `+2348009${digits(6)}`;
+}
+
+/**
+ * Inserts a booking under a fresh code, retrying when the code is taken as insertBooking in
+ * bookings/store.ts does, so seeding thousands of bookings never trips bookings_code_key.
+ */
+export async function insertBookingRow(
+  db: Database,
+  values: Omit<Insertable<DB['bookings']>, 'code'>,
+  generateCode: () => string = generateBookingCode,
+): Promise<string> {
+  for (let attempt = 0; attempt < BOOKING_CODE_ATTEMPTS; attempt += 1) {
+    const row = await db
+      .insertInto('bookings')
+      .values({ ...values, code: generateCode() })
+      .onConflict((oc) => oc.column('code').doNothing())
+      .returning('id')
+      .executeTakeFirst();
+    if (row !== undefined) return row.id;
+  }
+  throw new Error(`No free booking code after ${BOOKING_CODE_ATTEMPTS} attempts`);
 }
 
 export interface BookingFixture {
@@ -59,31 +82,26 @@ export async function insertBooking(db: Database, status: BookingStatus): Promis
     .orderBy('name')
     .limit(1)
     .executeTakeFirstOrThrow();
-  const { id: bookingId } = await db
-    .insertInto('bookings')
-    .values({
-      code: generateBookingCode(),
-      farmer_id: farmerId,
-      provider_id: providerId,
-      crop_id: cropId,
-      quantity: 2,
-      capacity_unit: 'sqm',
-      start_date: '2026-12-01',
-      duration_days: 30,
-      end_date: '2026-12-31',
-      status,
-      unit_price_kobo: 225_800,
-      storage_subtotal_kobo: 13_548_000,
-      commission_rate: 0.075,
-      commission_kobo: 1_016_100,
-      service_fee_kobo: 0,
-      deposit_percent: 0.3,
-      deposit_kobo: 4_064_400,
-      balance_due_kobo: 9_483_600,
-      total_charged_online_kobo: 4_064_400,
-    })
-    .returning('id')
-    .executeTakeFirstOrThrow();
+  const bookingId = await insertBookingRow(db, {
+    farmer_id: farmerId,
+    provider_id: providerId,
+    crop_id: cropId,
+    quantity: 2,
+    capacity_unit: 'sqm',
+    start_date: '2026-12-01',
+    duration_days: 30,
+    end_date: '2026-12-31',
+    status,
+    unit_price_kobo: 225_800,
+    storage_subtotal_kobo: 13_548_000,
+    commission_rate: 0.075,
+    commission_kobo: 1_016_100,
+    service_fee_kobo: 0,
+    deposit_percent: 0.3,
+    deposit_kobo: 4_064_400,
+    balance_due_kobo: 9_483_600,
+    total_charged_online_kobo: 4_064_400,
+  });
   return { bookingId, farmerId, ownerId, providerId };
 }
 

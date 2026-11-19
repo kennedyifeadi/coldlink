@@ -6,7 +6,7 @@ import type { StoragePeriod } from '../storagePeriod.js';
 import { generateBookingCode } from './code.js';
 
 // 32^5 codes, so a code is taken twice in a row only once the table holds millions of bookings.
-const BOOKING_CODE_ATTEMPTS = 5;
+export const BOOKING_CODE_ATTEMPTS = 5;
 
 export interface NewBooking {
   farmerId: string;
