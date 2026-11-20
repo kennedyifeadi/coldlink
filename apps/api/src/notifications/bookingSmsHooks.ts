@@ -1,11 +1,12 @@
 import { capacityUnitSchema, providerActionPath } from '@coldlink/shared';
 import { sql } from 'kysely';
+import * as z from 'zod';
 import { issueProviderActionToken } from '../actions/tokens.js';
 import type { TransitionHooks } from '../bookings/hooks.js';
 import type { BookingTransition } from '../bookings/transition.js';
 import type { Database } from '../db/client.js';
 import { inTransaction } from '../db/transaction.js';
-import type { BookingSmsTemplates } from './bookingTemplates.js';
+import { bookingReceivedParams, type BookingSmsTemplates } from './bookingTemplates.js';
 import { sendNotification, type NotificationDeps } from './send.js';
 
 export interface ProviderActionLinks {
@@ -78,6 +79,25 @@ function responseDueAt({ provider_response_due_at: due }: BookingRow, bookingId:
   return due.toISOString();
 }
 
+/**
+ * Logs `booking_received` as queued with its stored params and nothing sent, for when no link
+ * could be issued. Without the row nothing would retry and the provider would never hear of the
+ * booking; the queue's resend issues a fresh link, and only while the booking still waits for the
+ * provider (decision 104).
+ */
+async function queueWithoutLink(
+  { store }: NotificationDeps<BookingSmsTemplates>,
+  { to, userId }: { to: string; userId: string },
+  params: z.input<typeof bookingReceivedParams>,
+): Promise<void> {
+  await store.insert({
+    userId,
+    recipientPhone: to,
+    template: 'booking_received',
+    payload: bookingReceivedParams.parse(params),
+  });
+}
+
 export interface BookingSmsDependencies {
   db: Database;
   notifications: NotificationDeps<BookingSmsTemplates>;
@@ -115,11 +135,22 @@ export function registerBookingSmsHooks(
         payout_kobo: booking.deposit_kobo - booking.commission_kobo,
         response_due_at: responseDueAt(booking, bookingId),
       };
+      const recipient = { to: booking.provider_phone, userId: booking.owner_user_id };
+      let link: string;
+      try {
+        link = await links.issue(bookingId);
+      } catch (err) {
+        await queueWithoutLink(notifications, recipient, params);
+        notifications.logger.error(
+          { err, bookingId },
+          'Provider action link failed; booking_received queued for a retry',
+        );
+        return;
+      }
       await sendNotification(notifications, {
         template: 'booking_received',
-        params: { ...params, link: await links.issue(bookingId) },
-        to: booking.provider_phone,
-        userId: booking.owner_user_id,
+        params: { ...params, link },
+        ...recipient,
       });
     },
   });

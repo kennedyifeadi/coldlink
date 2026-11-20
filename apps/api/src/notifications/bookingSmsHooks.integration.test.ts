@@ -67,9 +67,22 @@ describe.skipIf(noTestDatabase)('booking SMS hooks', () => {
   });
 
   function setup(...outcomes: FakeOutcome[]) {
+    return setupWith({ outcomes });
+  }
+
+  function setupWith({
+    outcomes = [],
+    failToIssueLinks = false,
+  }: {
+    outcomes?: FakeOutcome[];
+    failToIssueLinks?: boolean;
+  }) {
     const logs = captureLogs();
     const sms = recordingSms(logs.logger, outcomes);
-    const links = createProviderActionLinks(db(), testConfig.webAppUrl);
+    const real = createProviderActionLinks(db(), testConfig.webAppUrl);
+    const links = failToIssueLinks
+      ? { ...real, issue: () => Promise.reject(new Error('Could not issue the token')) }
+      : real;
     const notifications = {
       store: createNotificationStore(db()),
       sms: sms.provider,
@@ -307,6 +320,42 @@ describe.skipIf(noTestDatabase)('booking SMS hooks', () => {
       expect(rows).not.toContain(first);
       expect(rows).not.toContain(second);
       expect(logs.output()).not.toContain(second);
+    });
+
+    it('queues booking_received when no link could be issued, and the queue sends it', async () => {
+      const { move, sms, notifications, logs } = setupWith({ failToIssueLinks: true });
+      await pay(move);
+
+      expect((await bookingFacts()).status).toBe('pending_provider');
+      expect(sms.sent.map((message) => message.template)).toEqual(['booking_paid']);
+      const { code, responseDueAt } = await bookingFacts();
+      expect(await notificationRows()).toContainEqual(
+        expect.objectContaining({
+          template: 'booking_received',
+          recipient_phone: phones.provider,
+          user_id: booking.ownerId,
+          status: 'queued',
+          attempts: 0,
+          error: null,
+          payload: expect.objectContaining({
+            booking_id: booking.bookingId,
+            code,
+            response_due_at: responseDueAt,
+          }) as unknown,
+        }),
+      );
+      expect(logs.output()).toContain(
+        'Provider action link failed; booking_received queued for a retry',
+      );
+      expect(logs.output()).toContain('"level":50');
+
+      await makeDue();
+      await expect(processNotificationQueue(notifications)).resolves.toMatchObject({ sent: 1 });
+      const resent = sms.sent.at(-1);
+      expect(resent?.to).toBe(phones.provider);
+      await expect(findProviderToken(db(), tokenIn(resent))).resolves.toMatchObject({
+        bookingId: booking.bookingId,
+      });
     });
 
     it('does not resend booking_received once the booking has been answered', async () => {
