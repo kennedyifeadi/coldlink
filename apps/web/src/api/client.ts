@@ -99,12 +99,15 @@ export const apiRequest = async <T>(
   else if (body !== undefined) headers.set('Content-Type', 'application/json');
   if (accessToken !== undefined) headers.set('Authorization', `Bearer ${accessToken}`);
 
-  // The refresh cookie rides on every call; its Path keeps it to the auth routes.
+  // The refresh cookie rides on every call; its Path keeps it to the auth routes. The API never
+  // reads the Referer, and a page URL can hold a secret (a provider's action link, decision 108)
+  // that would otherwise reach the request log with every call the page makes.
   const response = await send(`${env.VITE_API_URL}${path}`, {
     method,
     headers,
     body: isRaw ? body : body === undefined ? undefined : JSON.stringify(body),
     credentials: 'include',
+    referrerPolicy: 'no-referrer',
     signal,
   });
   const json = await readJson(response);

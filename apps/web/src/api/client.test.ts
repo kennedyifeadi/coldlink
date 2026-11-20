@@ -31,6 +31,20 @@ describe('apiRequest', () => {
     expect(init?.body).toBe('{"phone":"+2348031234567"}');
   });
 
+  it('sends no Referer, so a secret in the page URL never reaches the API', async () => {
+    const fetchMock = mockApi({
+      'POST /auth/otp/request': jsonResponse(200, {
+        expires_in_seconds: 600,
+        resend_after_seconds: 60,
+      }),
+    });
+
+    await requestCode();
+
+    const [[, init] = []] = requestsTo(fetchMock, 'POST', '/auth/otp/request');
+    expect(init?.referrerPolicy).toBe('no-referrer');
+  });
+
   it('turns an error response into an ApiError with its code', async () => {
     mockApi({ 'POST /auth/otp/request': errorResponse(400, 'validation_failed') });
 
