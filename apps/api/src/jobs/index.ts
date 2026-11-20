@@ -1,6 +1,7 @@
 import type { Logger } from 'pino';
 import type { Database } from '../db/client.js';
 import type { BookingServices } from '../services.js';
+import { releaseHolds } from './releaseHolds.js';
 import type { ScheduledJob } from './runner.js';
 
 export interface JobDependencies {
@@ -10,7 +11,10 @@ export interface JobDependencies {
   now?: () => Date;
 }
 
-/** The scheduled jobs of PRD 7.13, each on its schedule (decision 108). */
-export function createJobs(_deps: JobDependencies): ScheduledJob[] {
-  return [];
+const EVERY_MINUTE = '* * * * *';
+
+/** The scheduled jobs of PRD 7.13, each on its schedule on the Lagos clock (decision 108). */
+export function createJobs({ db, logger, services }: JobDependencies): ScheduledJob[] {
+  const bookings = { db, hooks: services.hooks, logger };
+  return [{ name: 'release_holds', schedule: EVERY_MINUTE, run: () => releaseHolds(bookings) }];
 }
