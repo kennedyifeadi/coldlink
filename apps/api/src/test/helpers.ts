@@ -38,6 +38,7 @@ export const testConfig: Config = {
   storage: undefined,
   paystack: undefined,
   webAppUrl: 'https://app.coldlink.test',
+  jobsEnabled: false,
 };
 
 export type StubRows = Partial<Record<keyof DB, object[]>>;

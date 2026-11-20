@@ -51,6 +51,7 @@ describe('loadConfig', () => {
         OTP_PEPPER,
         AUTH_COOKIE_SAME_SITE: 'none',
         TRUST_PROXY_HOPS: '1',
+        JOBS_ENABLED: 'false',
         ...termii,
         ...supabase,
         ...productionPayments,
@@ -79,6 +80,7 @@ describe('loadConfig', () => {
       },
       paystack: { secretKey: 'sk_test_0000000000fake', publicKey: 'pk_test_0000000000fake' },
       webAppUrl: 'https://coldlink.ng',
+      jobsEnabled: false,
     });
   });
 
@@ -101,6 +103,7 @@ describe('loadConfig', () => {
       storage: undefined,
       paystack: undefined,
       webAppUrl: 'http://localhost:5173',
+      jobsEnabled: true,
     });
   });
 
@@ -340,6 +343,19 @@ describe('Paystack settings', () => {
   it('take WEB_APP_URL as an origin', () => {
     expect(configError({ ...required, WEB_APP_URL: 'https://coldlink.ng/app' }).issues).toEqual([
       expect.stringMatching(/^WEB_APP_URL: /),
+    ]);
+  });
+});
+
+describe('JOBS_ENABLED', () => {
+  it('turns the scheduled jobs off only for false', () => {
+    expect(loadConfig({ ...required, JOBS_ENABLED: 'true' }).jobsEnabled).toBe(true);
+    expect(loadConfig({ ...required, JOBS_ENABLED: 'false' }).jobsEnabled).toBe(false);
+  });
+
+  it.each(['0', 'no', 'FALSE', ''])('refuses %j', (value) => {
+    expect(configError({ ...required, JOBS_ENABLED: value }).issues).toEqual([
+      'JOBS_ENABLED: Must be true or false',
     ]);
   });
 });

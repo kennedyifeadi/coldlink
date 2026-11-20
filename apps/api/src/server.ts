@@ -2,9 +2,13 @@ import { createApp } from './app.js';
 import { createBackgroundTasks } from './backgroundTasks.js';
 import { ConfigError, loadConfig, type Config } from './config.js';
 import { createDatabase } from './db/client.js';
+import { createJobs } from './jobs/index.js';
+import { runJob } from './jobs/runner.js';
+import { createScheduler } from './jobs/scheduler.js';
 import { createLogger } from './logger.js';
-
-const SHUTDOWN_TIMEOUT_MS = 10_000;
+import { apiRoutes } from './routes/index.js';
+import { createBookingServices } from './services.js';
+import { createShutdown } from './shutdown.js';
 
 function readConfig(): Config {
   try {
@@ -22,40 +26,35 @@ const config = readConfig();
 const logger = createLogger(config.logLevel);
 const db = createDatabase(config, logger);
 const tasks = createBackgroundTasks();
+// One set of hooks, so a job's transitions refund and text exactly as a route's do.
+const services = createBookingServices({ db, config, logger });
+const routes = apiRoutes({ db, config, logger, tasks, services });
+const scheduler = createScheduler({
+  jobs: createJobs({ db, logger, services }),
+  logger,
+  run: (job) => runJob(db, logger, job),
+});
 
-const server = createApp(config, { db, logger, tasks }).listen(config.port, (error) => {
+const server = createApp(config, { db, logger, tasks, routes }).listen(config.port, (error) => {
   if (error) {
     logger.fatal({ err: error }, 'API failed to start');
     process.exit(1);
   }
   logger.info({ port: config.port, env: config.nodeEnv }, 'API listening');
+  if (config.jobsEnabled) {
+    scheduler.start();
+  } else {
+    logger.info('Scheduled jobs are off (JOBS_ENABLED=false)');
+  }
 });
 
-function shutdown(signal: NodeJS.Signals): void {
-  logger.info({ signal }, 'Shutting down');
-  server.close((error) => {
-    if (error) {
-      logger.error({ err: error }, 'Shutdown failed');
-      process.exit(1);
-    }
-    // In-flight SMS sends finish before the pool they write to closes.
-    tasks
-      .drain()
-      .then(() => db.destroy())
-      .then(
-        () => process.exit(0),
-        (err: unknown) => {
-          logger.error({ err }, 'Closing the database pool failed');
-          process.exit(1);
-        },
-      );
-  });
-  server.closeIdleConnections();
-  setTimeout(() => {
-    logger.error('Shutdown timed out, forcing exit');
-    process.exit(1);
-  }, SHUTDOWN_TIMEOUT_MS).unref();
-}
-
+const shutdown = createShutdown({
+  server,
+  scheduler,
+  tasks,
+  db,
+  logger,
+  exit: (code) => process.exit(code),
+});
 process.once('SIGTERM', shutdown);
 process.once('SIGINT', shutdown);
