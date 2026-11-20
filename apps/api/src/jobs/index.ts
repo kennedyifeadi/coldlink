@@ -4,6 +4,7 @@ import { processNotificationQueue } from '../notifications/queue.js';
 import { retryFailedRefunds } from '../payments/refundRetry.js';
 import type { BookingServices } from '../services.js';
 import { expireUnanswered } from './expireUnanswered.js';
+import { flagNoShowCandidates } from './noShowCandidates.js';
 import { releaseHolds } from './releaseHolds.js';
 import { sendReminders } from './reminders.js';
 import type { ScheduledJob } from './runner.js';
@@ -43,6 +44,12 @@ export function createJobs({ db, logger, services, now }: JobDependencies): Sche
           notifications: services.notifications,
           ...(now === undefined ? {} : { now }),
         }),
+    },
+    // Just after Lagos midnight, once yesterday's start days have all passed.
+    {
+      name: 'no_show_candidates',
+      schedule: '5 0 * * *',
+      run: () => flagNoShowCandidates({ db, ...(now === undefined ? {} : { now }) }),
     },
   ];
 }
