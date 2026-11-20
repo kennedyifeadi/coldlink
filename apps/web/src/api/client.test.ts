@@ -94,6 +94,18 @@ describe('apiRequest', () => {
     await expect(requestCode()).rejects.toMatchObject({ code: 'unexpected_response' });
   });
 
+  // A path can hold a secret, such as a provider's action link token.
+  it('keeps the path out of the error message', async () => {
+    mockApi({ 'GET /actions/secret-token': jsonResponse(200, { unexpected: true }) });
+
+    const error: unknown = await apiRequest('/actions/secret-token', {
+      schema: otpRequestResponseSchema,
+    }).catch((caught: unknown) => caught);
+
+    expect(error).toMatchObject({ code: 'unexpected_response', status: 200 });
+    expect(String(error)).not.toContain('secret-token');
+  });
+
   it('parses a 204 as no body', async () => {
     mockApi({ 'POST /auth/logout': new Response(null, { status: 204 }) });
 

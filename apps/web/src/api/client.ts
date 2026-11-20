@@ -112,9 +112,11 @@ export const apiRequest = async <T>(
 
   const parsed = schema.safeParse(json);
   if (!parsed.success) {
-    throw new ApiError('unexpected_response', `Response from ${path} did not match its schema`, {
-      status: response.status,
-    });
+    throw new ApiError(
+      'unexpected_response',
+      `Response did not match its schema (${response.status})`,
+      { status: response.status },
+    );
   }
   return parsed.data;
 };
