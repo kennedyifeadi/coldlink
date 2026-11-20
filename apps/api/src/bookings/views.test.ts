@@ -1,7 +1,13 @@
-import { bookingStatuses, farmerBookingSchema, isFarmerCancellable } from '@coldlink/shared';
+import {
+  bookingStatuses,
+  farmerBookingSchema,
+  isFarmerCancellable,
+  providerBookingRequestSchema,
+} from '@coldlink/shared';
 import { describe, expect, it } from 'vitest';
+import type { ProviderBookingRow } from './providerStore.js';
 import type { FarmerBookingRow } from './store.js';
-import { farmerCancellationPreview, toFarmerBooking } from './views.js';
+import { farmerCancellationPreview, toFarmerBooking, toProviderBookingRequest } from './views.js';
 
 // Starts at 00:00 in Lagos on 12 November 2026, which is 23:00 UTC on 11 November.
 const row: FarmerBookingRow = {
@@ -94,5 +100,48 @@ describe('toFarmerBooking', () => {
     const hidden = toFarmerBooking({ booking: { ...row, provider_phone: null }, history }, terms);
     expect(shown.provider.phone).toBe('+2348006000001');
     expect(hidden.provider.phone).toBeNull();
+  });
+});
+
+describe('toProviderBookingRequest', () => {
+  const providerRow: ProviderBookingRow = {
+    id: row.id,
+    code: row.code,
+    status: 'pending_provider',
+    provider_id: row.provider_id,
+    crop_id: row.crop_id,
+    quantity: row.quantity,
+    capacity_unit: row.capacity_unit,
+    start_date: row.start_date,
+    duration_days: row.duration_days,
+    end_date: row.end_date,
+    balance_due_kobo: row.balance_due_kobo,
+    deposit_kobo: row.deposit_kobo,
+    commission_kobo: 150_000,
+    provider_response_due_at: row.provider_response_due_at,
+    checked_in_at: null,
+    collected_at: null,
+    provider_display_name: row.provider_display_name,
+    crop_name: row.crop_name,
+  };
+
+  it('gives the code, the deadline and the payout the provider decides on', () => {
+    expect(providerBookingRequestSchema.parse(toProviderBookingRequest(providerRow))).toEqual({
+      code: 'CL-7K3Q9',
+      facility_name: 'Bodija Cold Room',
+      crop_name: 'Tomatoes',
+      quantity: 10,
+      capacity_unit: 'crates',
+      start_date: '2026-11-12',
+      duration_days: 10,
+      end_date: '2026-11-22',
+      payout_kobo: 1_350_000,
+      response_due_at: '2026-11-10T10:05:00.000Z',
+    });
+  });
+
+  it('gives a null deadline when the booking has none', () => {
+    const view = toProviderBookingRequest({ ...providerRow, provider_response_due_at: null });
+    expect(view.response_due_at).toBeNull();
   });
 });

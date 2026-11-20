@@ -85,7 +85,9 @@ describe.skipIf(noTestDatabase)('provider action links against Postgres', () => 
       const response = await open().response;
       expect(response.status).toBe(200);
       expect(response.headers['cache-control']).toBe('no-store');
+      const row = await bookingRow(db(), booking.bookingId);
       expect(providerBookingRequestSchema.parse(response.body)).toEqual({
+        code: row.code,
         facility_name: 'Booking test cold room',
         crop_name: expect.any(String) as string,
         quantity: 2,
@@ -94,6 +96,7 @@ describe.skipIf(noTestDatabase)('provider action links against Postgres', () => 
         duration_days: 30,
         end_date: '2026-12-31',
         payout_kobo: WORKED_EXAMPLE.payoutKobo,
+        response_due_at: row.provider_response_due_at?.toISOString(),
       });
       const farmer = await db()
         .selectFrom('users')

@@ -45,6 +45,7 @@ export type ProviderLinkActionBody = z.infer<typeof providerLinkActionBodySchema
 
 /** Only what the provider needs to decide from the SMS link. */
 export const providerBookingRequestSchema = z.strictObject({
+  code: bookingCodeSchema,
   facility_name: z.string(),
   crop_name: z.string(),
   quantity: z.number().positive(),
@@ -53,6 +54,8 @@ export const providerBookingRequestSchema = z.strictObject({
   duration_days: z.int().positive(),
   end_date: z.iso.date(),
   payout_kobo: amountSchema,
+  /** `bookings.provider_response_due_at`: after it the link can no longer answer. */
+  response_due_at: z.iso.datetime().nullable(),
 });
 export type ProviderBookingRequest = z.infer<typeof providerBookingRequestSchema>;
 
