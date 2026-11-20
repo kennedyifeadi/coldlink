@@ -1,5 +1,7 @@
 import { sql } from 'kysely';
 import type { Database } from '../db/client.js';
+import { createJobs } from '../jobs/index.js';
+import type { ScheduledJob } from '../jobs/runner.js';
 import { createBookingServices } from '../services.js';
 import { captureLogs, testConfig } from './helpers.js';
 import { fakeSmsProvider } from './notifications.js';
@@ -20,13 +22,39 @@ export function jobServices(db: Database) {
     sms: sms.provider,
     gateway: payments.gateway,
   });
+  const jobs = createJobs({ db, logger: logs.logger, services });
+  function job(name: string): ScheduledJob {
+    const found = jobs.find((scheduled) => scheduled.name === name);
+    if (found === undefined) throw new Error(`No job ${name}`);
+    return found;
+  }
   return {
     logs,
     sms,
     payments,
     services,
+    job,
     deps: { db, hooks: services.hooks, logger: logs.logger },
   };
+}
+
+/**
+ * Backdates the users' queued notifications so the queue's retry delay has passed.
+ * notifications_set_updated_at would overwrite the value, so it is disabled around the update,
+ * inside the test's transaction, which rolls the disable back with everything else.
+ */
+export async function makeNotificationsDue(db: Database, userIds: string[]): Promise<void> {
+  await sql`alter table public.notifications disable trigger notifications_set_updated_at`.execute(
+    db,
+  );
+  await db
+    .updateTable('notifications')
+    .set({ updated_at: sql<Date>`now() - interval '2 minutes'` })
+    .where('user_id', 'in', userIds)
+    .execute();
+  await sql`alter table public.notifications enable trigger notifications_set_updated_at`.execute(
+    db,
+  );
 }
 
 /** Sets a booking deadline `seconds` from the database's now; 0 for exactly now. */

@@ -1,5 +1,6 @@
 import type { Logger } from 'pino';
 import type { Database } from '../db/client.js';
+import { processNotificationQueue } from '../notifications/queue.js';
 import type { BookingServices } from '../services.js';
 import { expireUnanswered } from './expireUnanswered.js';
 import { releaseHolds } from './releaseHolds.js';
@@ -20,5 +21,11 @@ export function createJobs({ db, logger, services }: JobDependencies): Scheduled
   return [
     { name: 'release_holds', schedule: EVERY_MINUTE, run: () => releaseHolds(bookings) },
     { name: 'expire_unanswered', schedule: EVERY_MINUTE, run: () => expireUnanswered(bookings) },
+    // retryPolicy.ts counts its delays from a run every minute.
+    {
+      name: 'sms_queue',
+      schedule: EVERY_MINUTE,
+      run: () => processNotificationQueue(services.notifications),
+    },
   ];
 }
