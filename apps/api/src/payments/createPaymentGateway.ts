@@ -9,7 +9,13 @@ const NOT_CONFIGURED =
 // webhook is accepted, since none can be verified.
 function unconfiguredPaymentGateway(): PaymentGateway {
   const fail = () => Promise.reject(new PaymentGatewayError(NOT_CONFIGURED));
-  return { initialize: fail, verify: fail, refund: fail, isSignedWebhook: () => false };
+  return {
+    initialize: fail,
+    verify: fail,
+    refund: fail,
+    listRefunds: fail,
+    isSignedWebhook: () => false,
+  };
 }
 
 export function createPaymentGateway(config: PaystackConfig | undefined): PaymentGateway {

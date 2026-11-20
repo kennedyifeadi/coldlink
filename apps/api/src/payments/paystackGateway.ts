@@ -42,6 +42,18 @@ const refundDataSchema = z.object({
   status: z.string().min(1),
 });
 
+// A refund in List Refunds. Paystack's OpenAPI spec gives `transaction` as the charge's numeric id.
+const listedRefundSchema = z.object({
+  id: z.union([z.number(), z.string()]),
+  status: z.string().min(1),
+  amount: z.int().nonnegative(),
+  transaction: z.union([z.number(), z.string()]).nullish(),
+  transaction_reference: z.string().nullish(),
+});
+
+// The most refunds one charge could have; ColdLink makes at most one per booking (decision 95).
+const REFUNDS_PAGE_SIZE = 100;
+
 const chargeEventSchema = z.object({
   event: z.literal('charge.success'),
   data: chargeDataSchema,
@@ -156,6 +168,32 @@ export function createPaystackGateway(
         amount: amountKobo,
       });
       return { refundId: String(data.id), status: data.status };
+    },
+
+    // List Refunds may ignore a filter it does not support, so each refund is also matched to the
+    // charge here, by its id or its reference.
+    async listRefunds({ chargeReference, transactionId, since }) {
+      const query = new URLSearchParams({
+        perPage: String(REFUNDS_PAGE_SIZE),
+        from: since.toISOString(),
+      });
+      if (transactionId !== null) query.set('transaction', transactionId);
+      const refunds = await call(
+        'list refunds',
+        `/refund?${query.toString()}`,
+        z.array(listedRefundSchema),
+      );
+      return refunds
+        .filter(
+          (refund) =>
+            refund.transaction_reference === chargeReference ||
+            (transactionId !== null && String(refund.transaction) === transactionId),
+        )
+        .map((refund) => ({
+          refundId: String(refund.id),
+          status: refund.status,
+          amountKobo: refund.amount,
+        }));
     },
 
     isSignedWebhook(rawBody, signature) {

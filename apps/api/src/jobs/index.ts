@@ -1,6 +1,7 @@
 import type { Logger } from 'pino';
 import type { Database } from '../db/client.js';
 import { processNotificationQueue } from '../notifications/queue.js';
+import { retryFailedRefunds } from '../payments/refundRetry.js';
 import type { BookingServices } from '../services.js';
 import { expireUnanswered } from './expireUnanswered.js';
 import { releaseHolds } from './releaseHolds.js';
@@ -26,6 +27,11 @@ export function createJobs({ db, logger, services }: JobDependencies): Scheduled
       name: 'sms_queue',
       schedule: EVERY_MINUTE,
       run: () => processNotificationQueue(services.notifications),
+    },
+    {
+      name: 'refund_retry',
+      schedule: '*/5 * * * *',
+      run: () => retryFailedRefunds({ db, gateway: services.gateway, logger }),
     },
   ];
 }
