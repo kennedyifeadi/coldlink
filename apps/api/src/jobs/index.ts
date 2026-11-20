@@ -5,6 +5,7 @@ import { retryFailedRefunds } from '../payments/refundRetry.js';
 import type { BookingServices } from '../services.js';
 import { expireUnanswered } from './expireUnanswered.js';
 import { releaseHolds } from './releaseHolds.js';
+import { sendReminders } from './reminders.js';
 import type { ScheduledJob } from './runner.js';
 
 export interface JobDependencies {
@@ -17,7 +18,7 @@ export interface JobDependencies {
 const EVERY_MINUTE = '* * * * *';
 
 /** The scheduled jobs of PRD 7.13, each on its schedule on the Lagos clock (decision 108). */
-export function createJobs({ db, logger, services }: JobDependencies): ScheduledJob[] {
+export function createJobs({ db, logger, services, now }: JobDependencies): ScheduledJob[] {
   const bookings = { db, hooks: services.hooks, logger };
   return [
     { name: 'release_holds', schedule: EVERY_MINUTE, run: () => releaseHolds(bookings) },
@@ -32,6 +33,16 @@ export function createJobs({ db, logger, services }: JobDependencies): Scheduled
       name: 'refund_retry',
       schedule: '*/5 * * * *',
       run: () => retryFailedRefunds({ db, gateway: services.gateway, logger }),
+    },
+    {
+      name: 'reminders',
+      schedule: '0 * * * *',
+      run: () =>
+        sendReminders({
+          db,
+          notifications: services.notifications,
+          ...(now === undefined ? {} : { now }),
+        }),
     },
   ];
 }

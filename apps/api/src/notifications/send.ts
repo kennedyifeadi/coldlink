@@ -44,6 +44,31 @@ export interface Delivery {
 }
 
 /**
+ * Logs an SMS to `notifications` as queued, without sending it, and returns what `deliver` sends.
+ * A caller that must log the message in its own transaction passes a store on that transaction
+ * and delivers after the commit; if it never does, the queue sends the message a minute later.
+ * Throws for a caller's mistake (an unknown template, bad params, a malformed number) or a
+ * database error.
+ */
+export async function queueNotification<
+  Registry extends TemplateRegistry,
+  Name extends keyof Registry & string,
+>(
+  deps: Pick<NotificationDeps<Registry>, 'store' | 'templates'>,
+  { template: name, params, to, userId = null }: NotificationRequest<Registry, Name>,
+): Promise<Delivery> {
+  const template: SmsTemplate | undefined = Object.hasOwn(deps.templates, name)
+    ? deps.templates[name]
+    : undefined;
+  if (template === undefined) throw new Error(`Unknown SMS template: ${name}`);
+  // The message never echoes the number, which is personal data.
+  if (!RECIPIENT_PHONE.test(to)) throw new Error('The recipient must be +234 and ten digits');
+  const { text, payload } = template.prepare(params);
+  const id = await deps.store.insert({ userId, recipientPhone: to, template: name, payload });
+  return { id, template: name, retryable: template.retryable, to, text, attempts: 0 };
+}
+
+/**
  * Logs an SMS to `notifications` and sends it once. A send the provider fails is recorded, queued
  * for a retry or alerted, but never thrown: a failed SMS must not fail the caller's request
  * (PRD 11). It throws only for a caller's mistake (an unknown template, bad params, a malformed
@@ -54,25 +79,10 @@ export async function sendNotification<
   Name extends keyof Registry & string,
 >(
   deps: NotificationDeps<Registry>,
-  { template: name, params, to, userId = null }: NotificationRequest<Registry, Name>,
+  request: NotificationRequest<Registry, Name>,
 ): Promise<NotificationResult> {
-  const template: SmsTemplate | undefined = Object.hasOwn(deps.templates, name)
-    ? deps.templates[name]
-    : undefined;
-  if (template === undefined) throw new Error(`Unknown SMS template: ${name}`);
-  // The message never echoes the number, which is personal data.
-  if (!RECIPIENT_PHONE.test(to)) throw new Error('The recipient must be +234 and ten digits');
-  const { text, payload } = template.prepare(params);
-  const id = await deps.store.insert({ userId, recipientPhone: to, template: name, payload });
-  const status = await deliver(deps, {
-    id,
-    template: name,
-    retryable: template.retryable,
-    to,
-    text,
-    attempts: 0,
-  });
-  return { id, status };
+  const delivery = await queueNotification(deps, request);
+  return { id: delivery.id, status: await deliver(deps, delivery) };
 }
 
 async function trySend(

@@ -11,7 +11,7 @@ import { fakePaymentGateway } from './payments.js';
  * The services a job runs with, as server.ts builds them, but with a fake SMS provider and payment
  * gateway so nothing reaches Termii or Paystack.
  */
-export function jobServices(db: Database) {
+export function jobServices(db: Database, now?: () => Date) {
   const logs = captureLogs();
   const sms = fakeSmsProvider();
   const payments = fakePaymentGateway();
@@ -22,7 +22,12 @@ export function jobServices(db: Database) {
     sms: sms.provider,
     gateway: payments.gateway,
   });
-  const jobs = createJobs({ db, logger: logs.logger, services });
+  const jobs = createJobs({
+    db,
+    logger: logs.logger,
+    services,
+    ...(now === undefined ? {} : { now }),
+  });
   function job(name: string): ScheduledJob {
     const found = jobs.find((scheduled) => scheduled.name === name);
     if (found === undefined) throw new Error(`No job ${name}`);
