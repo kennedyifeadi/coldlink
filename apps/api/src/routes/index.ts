@@ -59,7 +59,7 @@ export function apiRoutes({
   config,
   logger,
   appConfig = createAppConfigReader(db),
-  sms = createSmsProvider(config.sms, logger),
+  sms = createSmsProvider(config.sms, logger, { showText: config.auth.devOtp }),
   notificationStore = createNotificationStore(db),
   tasks = createBackgroundTasks(),
   tokens = createAccessTokens(config.auth.jwtSecret),
