@@ -12,8 +12,8 @@ exist. Everything runs on the dev database with Paystack test keys (decisions 11
 - **Public link:** in Render, choose New, then Blueprint, and pick this repository; `render.yaml`
   makes the `coldlink-api` service. Enter the values it asks for (`DATABASE_URL`, the Supabase
   and Paystack keys from `apps/api/.env`, and the Vercel site's URL as both `WEB_APP_URL` and
-  `CORS_ORIGINS`). Once the service is up, its URL goes into the `/api/` rewrite in
-  `apps/web/vercel.json`. In Paystack's test dashboard, set the webhook URL to the Vercel site +
+  `CORS_ORIGINS`). The service is `https://coldlink-api.onrender.com`, which the `/api/` rewrite
+  in `apps/web/vercel.json` points at. In Paystack's test dashboard, set the webhook URL to the Vercel site +
   `/api/v1/webhooks/paystack`.
 - Render's free service sleeps when idle: open the site two minutes before presenting.
 
