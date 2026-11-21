@@ -11,7 +11,8 @@ services:
     buildCommand: >-
       corepack enable && pnpm install --frozen-lockfile &&
       pnpm --filter @coldlink/shared build && pnpm --filter @coldlink/api build
-    startCommand: pnpm --filter @coldlink/api start
+    # Node directly: going through pnpm downloads it again on every start, slowing each wake-up.
+    startCommand: cd apps/api && node dist/server.js
     healthCheckPath: /api/v1/health
     envVars:
       - key: NODE_ENV
