@@ -38,6 +38,7 @@ import {
   type ProviderRecord,
 } from '../providers/store.js';
 import { photoPath, toOwnProvider, toPublicProvider } from '../providers/views.js';
+import { visibleStatuses } from '../providers/visibility.js';
 import type { PhotoStorage } from '../storage/photoStorage.js';
 
 export interface ProviderRouteDependencies extends AuthDependencies {
@@ -163,8 +164,11 @@ export function providerRoutes(deps: ProviderRouteDependencies): Router {
   router.get('/providers/:id', validate({ params: providerParamsSchema }), async (req, res) => {
     const { id } = req.params as ProviderParams;
     const provider = await findProvider(db, id);
-    // Pending, suspended and rejected facilities are not open to farmers; owners see them on /mine.
-    if (provider?.verification_status !== 'approved') throw providerNotFound();
+    // The same facilities search shows (decision 72); owners see every status on /mine.
+    const visible = visibleStatuses(await appConfig.get());
+    if (provider === undefined || !visible.includes(provider.verification_status)) {
+      throw providerNotFound();
+    }
     res.json(toPublicProvider(provider, storage));
   });
 
