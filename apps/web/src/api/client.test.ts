@@ -31,6 +31,20 @@ describe('apiRequest', () => {
     expect(init?.body).toBe('{"phone":"+2348031234567"}');
   });
 
+  it('sends no Referer, so a secret in the page URL never reaches the API', async () => {
+    const fetchMock = mockApi({
+      'POST /auth/otp/request': jsonResponse(200, {
+        expires_in_seconds: 600,
+        resend_after_seconds: 60,
+      }),
+    });
+
+    await requestCode();
+
+    const [[, init] = []] = requestsTo(fetchMock, 'POST', '/auth/otp/request');
+    expect(init?.referrerPolicy).toBe('no-referrer');
+  });
+
   it('turns an error response into an ApiError with its code', async () => {
     mockApi({ 'POST /auth/otp/request': errorResponse(400, 'validation_failed') });
 
@@ -92,6 +106,18 @@ describe('apiRequest', () => {
     mockApi({ 'POST /auth/otp/request': jsonResponse(200, { expires_in_seconds: 'soon' }) });
 
     await expect(requestCode()).rejects.toMatchObject({ code: 'unexpected_response' });
+  });
+
+  // A path can hold a secret, such as a provider's action link token.
+  it('keeps the path out of the error message', async () => {
+    mockApi({ 'GET /actions/secret-token': jsonResponse(200, { unexpected: true }) });
+
+    const error: unknown = await apiRequest('/actions/secret-token', {
+      schema: otpRequestResponseSchema,
+    }).catch((caught: unknown) => caught);
+
+    expect(error).toMatchObject({ code: 'unexpected_response', status: 200 });
+    expect(String(error)).not.toContain('secret-token');
   });
 
   it('parses a 204 as no body', async () => {

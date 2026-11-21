@@ -127,6 +127,7 @@ export function toProviderBooking(row: ProviderBookingRow): ProviderBooking {
 
 export function toProviderBookingRequest(row: ProviderBookingRow): ProviderBookingRequest {
   return {
+    code: row.code,
     facility_name: row.provider_display_name,
     crop_name: row.crop_name,
     quantity: row.quantity,
@@ -135,5 +136,6 @@ export function toProviderBookingRequest(row: ProviderBookingRow): ProviderBooki
     duration_days: row.duration_days,
     end_date: row.end_date,
     payout_kobo: payoutKobo(row),
+    response_due_at: isoOrNull(row.provider_response_due_at),
   };
 }
