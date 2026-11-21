@@ -3,6 +3,7 @@ import {
   maskDatabaseUrls,
   maskPhoneNumbers,
   redact,
+  redactReferer,
   redactUrl,
   REDACTED,
   REDACTED_DATABASE_URL,
@@ -151,4 +152,21 @@ describe('redactUrl', () => {
       `/api/v1/%E0%A4%A/${REDACTED_PHONE}?q=%ZZ&r=${REDACTED_PHONE}`,
     );
   });
+});
+
+describe('redactReferer', () => {
+  it.each([
+    ['https://coldlink.ng/a/Hk3_q-9ZxYv0LmN2pQrStUvWxYz0123456789abcDE', 'https://coldlink.ng'],
+    ['http://localhost:5173/bookings?phone=08031234567#top', 'http://localhost:5173'],
+    ['https://coldlink.ng', 'https://coldlink.ng'],
+  ])('keeps only the origin of %s', (referer, expected) => {
+    expect(redactReferer(referer)).toBe(expected);
+  });
+
+  it.each(['/a/Hk3_q-9ZxYv0LmN2pQrStUvWxYz0123456789abcDE', 'file:///a/abc', 'not a url', ''])(
+    'hides a referer that is not an absolute URL: %j',
+    (referer) => {
+      expect(redactReferer(referer)).toBe(REDACTED);
+    },
+  );
 });
