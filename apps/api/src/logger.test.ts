@@ -64,6 +64,20 @@ describe('logger', () => {
     expect(text).not.toContain(linkToken);
   });
 
+  it('logs only the origin of the Referer, which can carry an action link token', async () => {
+    const { app, logs } = testApp();
+    const linkToken = 'Hk3_q-9ZxYv0LmN2pQrStUvWxYz0123456789abcDE';
+    await request(app)
+      .get('/api/v1/health')
+      .set('Referer', `https://coldlink.ng/a/${linkToken}`)
+      .set('User-Agent', 'test-agent');
+
+    const text = logs.output();
+    expect(text).toContain('"referer":"https://coldlink.ng"');
+    expect(text).toContain('"user-agent":"test-agent"');
+    expect(text).not.toContain(linkToken);
+  });
+
   it.each(['/api/v1/users/8012345678', '/api/v1/y?q=%2B234%20801%20234%205678'])(
     'masks the phone number in the request log for %s',
     async (url) => {

@@ -102,3 +102,13 @@ export function redactUrl(url: string): string {
     .join('&');
   return `${maskedPath}?${query}`;
 }
+
+/**
+ * The origin of a Referer, the only part worth logging: the page's path can be a secret itself,
+ * such as an action link `/a/:token` (decision 104). Anything that is not an absolute URL is hidden.
+ */
+export function redactReferer(referer: string): string {
+  if (!URL.canParse(referer)) return REDACTED;
+  const { origin } = new URL(referer);
+  return origin === 'null' ? REDACTED : origin;
+}

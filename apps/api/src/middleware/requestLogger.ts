@@ -1,7 +1,7 @@
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import type { Logger } from 'pino';
 import { pinoHttp } from 'pino-http';
-import { redact, redactUrl } from '../redact.js';
+import { redact, redactReferer, redactUrl } from '../redact.js';
 
 // Request bodies are never logged: they carry phone numbers and OTPs.
 export function requestLogger(logger: Logger) {
@@ -18,7 +18,11 @@ export function requestLogger(logger: Logger) {
         id: req.id,
         method: req.method,
         url: redactUrl(req.url ?? ''),
-        headers: redact(req.headers),
+        headers: redact(
+          req.headers.referer === undefined
+            ? req.headers
+            : { ...req.headers, referer: redactReferer(req.headers.referer) },
+        ),
       }),
       res: (res: ServerResponse) => ({ statusCode: res.statusCode }),
       err: (err: object) => redact({ ...err }),
