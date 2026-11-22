@@ -4,7 +4,9 @@ import type { BackgroundTasks } from './backgroundTasks.js';
 import type { Database } from './db/client.js';
 import type { Scheduler } from './jobs/scheduler.js';
 
-export const SHUTDOWN_TIMEOUT_MS = 10_000;
+// A job finishes the row in hand first: up to two 10 s Paystack calls, or a refund and an SMS. A run
+// killed after a transition's commit would lose that booking's refund. Render allows 30 s.
+export const SHUTDOWN_TIMEOUT_MS = 25_000;
 
 export interface ShutdownDependencies {
   server: Pick<Server, 'close' | 'closeIdleConnections'>;

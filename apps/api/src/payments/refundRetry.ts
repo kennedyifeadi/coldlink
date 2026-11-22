@@ -27,6 +27,8 @@ export interface RefundRetryDependencies {
   db: Database;
   gateway: PaymentGateway;
   logger: Logger;
+  /** Set while shutting down: the row in hand finishes and no other is started. */
+  signal?: AbortSignal | undefined;
 }
 
 export type RefundRetryOutcome = 'refunded' | 'found' | 'failed' | 'needs_attention';
@@ -164,7 +166,7 @@ export async function retryFailedRefunds(
     needs_attention: 0,
   };
   const tried: string[] = [];
-  while (tried.length < limit) {
+  while (!deps.signal?.aborted && tried.length < limit) {
     const outcome = await inTransaction(deps.db, async (trx) => {
       const refund = await claimFailedRefund(trx, tried);
       if (refund === undefined) return undefined;

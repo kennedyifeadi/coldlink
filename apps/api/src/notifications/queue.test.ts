@@ -32,6 +32,24 @@ function setup(...outcomes: FakeOutcome[]) {
 }
 
 describe('processNotificationQueue', () => {
+  it('leaves the rest queued once stopping', async () => {
+    const { deps, table, sms } = setup();
+    for (const name of ['Ade', 'Bola']) {
+      await table.store.insert({
+        userId: null,
+        recipientPhone: phone,
+        template: 'greeting',
+        payload: { name },
+      });
+    }
+
+    await expect(processNotificationQueue(deps, undefined, AbortSignal.abort())).resolves.toEqual(
+      nothingDone,
+    );
+    expect(sms.sent).toEqual([]);
+    expect(table.rows().map((row) => row.status)).toEqual(['queued', 'queued']);
+  });
+
   it('sends a message that failed inline on the next run', async () => {
     const { deps, table, sms } = setup(retryableFailure(), 'ok');
     const { id } = await sendNotification(deps, greeting);

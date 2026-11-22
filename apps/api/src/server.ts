@@ -32,7 +32,7 @@ const routes = apiRoutes({ db, config, logger, tasks, services });
 const scheduler = createScheduler({
   jobs: createJobs({ db, logger, services }),
   logger,
-  run: (job) => runJob(db, logger, job),
+  run: (job, signal) => runJob(db, logger, job, { signal }),
 });
 
 const server = createApp(config, { db, logger, tasks, routes }).listen(config.port, (error) => {

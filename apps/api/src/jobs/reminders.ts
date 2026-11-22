@@ -62,6 +62,8 @@ export interface ReminderDependencies {
   db: Database;
   notifications: NotificationDeps<SmsTemplateRegistry>;
   now?: () => Date;
+  /** Set while shutting down: the row in hand finishes and no other is started. */
+  signal?: AbortSignal | undefined;
 }
 
 async function claimBooking(
@@ -197,7 +199,7 @@ export async function sendReminders(
   const due = remindersDue(todayInLagos(now));
   for (const kind of bookingReminderKinds) {
     const tried: string[] = [];
-    while (tried.length < limit) {
+    while (!deps.signal?.aborted && tried.length < limit) {
       const outcome = await recordReminder(deps, kind, due[kind], tried);
       if (outcome === 'none_due') break;
       if (outcome === 'already_sent') continue;

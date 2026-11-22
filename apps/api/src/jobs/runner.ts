@@ -10,7 +10,8 @@ export interface ScheduledJob {
   name: string;
   /** A cron pattern on the Lagos clock. */
   schedule: string;
-  run: () => Promise<JobCounts>;
+  /** `signal` aborts at shutdown: the run finishes the row in hand and starts no other. */
+  run: (signal?: AbortSignal) => Promise<JobCounts>;
 }
 
 export type JobOutcome = 'ran' | 'skipped' | 'failed';
@@ -19,6 +20,7 @@ export interface RunOptions {
   /** Milliseconds, for the logged duration. */
   clock?: () => number;
   lock?: typeof withJobLock;
+  signal?: AbortSignal;
 }
 
 /**
@@ -29,12 +31,12 @@ export async function runJob(
   db: Database,
   logger: Logger,
   job: ScheduledJob,
-  { clock = performance.now.bind(performance), lock = withJobLock }: RunOptions = {},
+  { clock = performance.now.bind(performance), lock = withJobLock, signal }: RunOptions = {},
 ): Promise<JobOutcome> {
   const started = clock();
   const durationMs = () => Math.round(clock() - started);
   try {
-    const run = await lock(db, job.name, job.run);
+    const run = await lock(db, job.name, () => job.run(signal));
     if (!run.ran) {
       logger.debug({ job: job.name }, 'Job skipped: another run holds its lock');
       return 'skipped';

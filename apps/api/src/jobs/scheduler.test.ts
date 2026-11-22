@@ -65,6 +65,27 @@ describe('createScheduler', () => {
     expect(events).toEqual(['started', 'finished', 'stopped']);
   });
 
+  it('tells a run in progress that it is stopping', async () => {
+    let seen: AbortSignal | undefined;
+    const release = deferred();
+    const scheduler = createScheduler({
+      jobs: [job],
+      logger: captureLogs().logger,
+      run: async (_job, signal) => {
+        seen = signal;
+        await release.promise;
+      },
+    });
+    scheduler.start();
+    await waitFor(() => seen !== undefined);
+    expect(seen?.aborted).toBe(false);
+
+    const stopped = scheduler.stop();
+    expect(seen?.aborted).toBe(true);
+    release.resolve();
+    await stopped;
+  });
+
   it('does not overlap a run that outlasts its interval', async () => {
     const release = deferred();
     let runs = 0;

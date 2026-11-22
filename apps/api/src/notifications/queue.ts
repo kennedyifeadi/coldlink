@@ -9,14 +9,17 @@ export type QueueRunSummary = Record<NotificationStatus, number>;
 /**
  * Sends again the queued SMS whose retry delay has passed, rendered again by its template. A
  * message the template refuses, such as an `otp`, whose code was never stored (decision 29), or a
- * link for a booking that is no longer waiting, is marked failed instead.
+ * link for a booking that is no longer waiting, is marked failed instead. Once `signal` aborts
+ * the rest are left queued for a later run.
  */
 export async function processNotificationQueue<Registry extends TemplateRegistry>(
   deps: NotificationDeps<Registry>,
   limit = QUEUE_BATCH_SIZE,
+  signal?: AbortSignal,
 ): Promise<QueueRunSummary> {
   const summary: QueueRunSummary = { queued: 0, sent: 0, failed: 0 };
   for (const notification of await deps.store.claimDue(limit)) {
+    if (signal?.aborted) break;
     summary[await resend(deps, notification)] += 1;
   }
   return summary;

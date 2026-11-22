@@ -17,6 +17,8 @@ export interface DueBookingDependencies {
   db: Database;
   hooks: TransitionHooks;
   logger: Logger;
+  /** Set while shutting down: the row in hand finishes and no other is started. */
+  signal?: AbortSignal | undefined;
 }
 
 export interface DueBookingMove {
@@ -36,12 +38,12 @@ export interface DueBookingMove {
  * transition. A booking that fails is logged and left for the next run.
  */
 export async function moveDueBookings(
-  { db, hooks, logger }: DueBookingDependencies,
+  { db, hooks, logger, signal }: DueBookingDependencies,
   { job, claim, request, limit = DUE_BOOKINGS_BATCH_SIZE }: DueBookingMove,
 ): Promise<{ moved: number; failed: number }> {
   const failed: string[] = [];
   let moved = 0;
-  while (moved + failed.length < limit) {
+  while (!signal?.aborted && moved + failed.length < limit) {
     let claimed: string | undefined;
     try {
       const result = await inTransaction(db, async (trx) => {

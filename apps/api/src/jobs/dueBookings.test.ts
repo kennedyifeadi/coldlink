@@ -56,6 +56,31 @@ describe('moveDueBookings', () => {
     expect(claims).toBe(3);
   });
 
+  it('finishes the booking in hand and claims no other once stopping', async () => {
+    const stopping = new AbortController();
+    let claims = 0;
+    const result = await moveDueBookings(
+      {
+        db: stubDatabase(),
+        hooks: createTransitionHooks(),
+        logger: captureLogs().logger,
+        signal: stopping.signal,
+      },
+      {
+        job: 'release_holds',
+        claim: () => {
+          claims += 1;
+          stopping.abort();
+          return Promise.resolve(`booking-${claims}`);
+        },
+        request,
+      },
+    );
+
+    expect(result).toEqual({ moved: 0, failed: 1 });
+    expect(claims).toBe(1);
+  });
+
   it('fails the run when nothing could be claimed', async () => {
     await expect(
       moveDueBookings(

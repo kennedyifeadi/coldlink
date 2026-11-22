@@ -7,7 +7,10 @@ const LAGOS = 'Africa/Lagos';
 export interface Scheduler {
   /** Starts each job on its schedule. Calling it again does nothing. */
   start(): void;
-  /** Starts no more runs and resolves once every run in progress has finished. */
+  /**
+   * Starts no more runs, tells those in progress to end after the row in hand, and resolves once
+   * they have.
+   */
   stop(): Promise<void>;
 }
 
@@ -15,7 +18,7 @@ export interface SchedulerOptions {
   jobs: readonly ScheduledJob[];
   logger: Logger;
   /** Runs one job; `runJob` with the process's database, which logs it and never throws. */
-  run: (job: ScheduledJob) => Promise<unknown>;
+  run: (job: ScheduledJob, signal: AbortSignal) => Promise<unknown>;
 }
 
 /**
@@ -25,9 +28,10 @@ export interface SchedulerOptions {
 export function createScheduler({ jobs, logger, run }: SchedulerOptions): Scheduler {
   const crons: Cron[] = [];
   const running = new Set<Promise<void>>();
+  const stopping = new AbortController();
 
   function track(job: ScheduledJob): Promise<void> {
-    const current = run(job)
+    const current = run(job, stopping.signal)
       .then(() => undefined)
       .finally(() => running.delete(current));
     running.add(current);
@@ -49,6 +53,7 @@ export function createScheduler({ jobs, logger, run }: SchedulerOptions): Schedu
 
     async stop() {
       for (const cron of crons.splice(0)) cron.stop();
+      stopping.abort();
       while (running.size > 0) await Promise.allSettled(running);
       logger.info('Scheduler stopped');
     },

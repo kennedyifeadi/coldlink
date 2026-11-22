@@ -22,25 +22,34 @@ const EVERY_MINUTE = '* * * * *';
 export function createJobs({ db, logger, services, now }: JobDependencies): ScheduledJob[] {
   const bookings = { db, hooks: services.hooks, logger };
   return [
-    { name: 'release_holds', schedule: EVERY_MINUTE, run: () => releaseHolds(bookings) },
-    { name: 'expire_unanswered', schedule: EVERY_MINUTE, run: () => expireUnanswered(bookings) },
+    {
+      name: 'release_holds',
+      schedule: EVERY_MINUTE,
+      run: (signal) => releaseHolds({ ...bookings, signal }),
+    },
+    {
+      name: 'expire_unanswered',
+      schedule: EVERY_MINUTE,
+      run: (signal) => expireUnanswered({ ...bookings, signal }),
+    },
     // retryPolicy.ts counts its delays from a run every minute.
     {
       name: 'sms_queue',
       schedule: EVERY_MINUTE,
-      run: () => processNotificationQueue(services.notifications),
+      run: (signal) => processNotificationQueue(services.notifications, undefined, signal),
     },
     {
       name: 'refund_retry',
       schedule: '*/5 * * * *',
-      run: () => retryFailedRefunds({ db, gateway: services.gateway, logger }),
+      run: (signal) => retryFailedRefunds({ db, gateway: services.gateway, logger, signal }),
     },
     {
       name: 'reminders',
       schedule: '0 * * * *',
-      run: () =>
+      run: (signal) =>
         sendReminders({
           db,
+          signal,
           notifications: services.notifications,
           ...(now === undefined ? {} : { now }),
         }),
