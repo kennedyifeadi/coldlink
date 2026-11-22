@@ -5,8 +5,8 @@ interface DevCodeHintProps {
   onUse: (code: string) => void;
 }
 
-// Local development only (decision 57): callers render it behind import.meta.env.DEV, so a
-// production build drops it. Not translated, since no farmer ever sees it.
+// Local development, or the hosted demo with VITE_SHOW_DEV_CODE (decisions 57, 113). Not
+// translated, since no real farmer ever sees it.
 /* eslint-disable i18next/no-literal-string */
 const DevCodeHint = ({ code, onUse }: DevCodeHintProps) => (
   <div className="flex items-center justify-between gap-3 mb-6 px-4 py-3 rounded-lg border border-dashed border-line-strong bg-surface-muted text-label text-copy-muted">

@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { act, screen, within } from '@testing-library/react';
 import type { UserEvent } from '@testing-library/user-event';
 import type { ErrorCode } from '@coldlink/shared';
@@ -11,6 +11,7 @@ import {
   sessionFixture,
 } from '../../test/api';
 import { renderApp, SCREEN_TIMEOUT } from '../../test/renderApp';
+import { env } from '../../env';
 
 const codeSent = (resendAfterSeconds = 60) =>
   jsonResponse(200, { expires_in_seconds: 600, resend_after_seconds: resendAfterSeconds });
@@ -375,5 +376,35 @@ describe('privacy notice', () => {
       expect(within(main).getByRole('heading', { name: heading })).toBeInTheDocument();
     }
     expect(main).toHaveTextContent('Nigeria Data Protection Act 2023');
+  });
+});
+
+describe('dev code in a production build', () => {
+  afterEach(() => {
+    vi.unstubAllEnvs();
+    env.VITE_SHOW_DEV_CODE = false;
+  });
+
+  it.each([
+    { flag: true, devCode: '482913', shown: true },
+    { flag: false, devCode: '482913', shown: false },
+    { flag: true, devCode: undefined, shown: false },
+  ])('shows $shown with the flag $flag and code $devCode', async ({ flag, devCode, shown }) => {
+    vi.stubEnv('DEV', false);
+    env.VITE_SHOW_DEV_CODE = flag;
+    mockApi({
+      ...signedOut,
+      'POST /auth/otp/request': jsonResponse(200, {
+        expires_in_seconds: 600,
+        resend_after_seconds: 60,
+        ...(devCode && { dev_code: devCode }),
+      }),
+    });
+    const user = renderApp('/onboarding');
+
+    await enterPhone(user);
+    await screen.findByRole('heading', { name: 'Enter your code' }, SCREEN_TIMEOUT);
+
+    expect(screen.queryByText(/Dev code/) !== null).toBe(shown);
   });
 });

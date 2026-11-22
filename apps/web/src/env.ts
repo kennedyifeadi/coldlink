@@ -11,6 +11,12 @@ const apiUrlSchema = z
 const envSchema = z.object({
   // Defaults to the same origin, which the Vite dev proxy forwards to the API.
   VITE_API_URL: apiUrlSchema.default('/api/v1'),
+  // Shows the dev sign-in code in a production build, for the hosted demo (decision 113). The API
+  // sends one only in development with the console SMS provider (decision 57).
+  VITE_SHOW_DEV_CODE: z
+    .enum(['true', 'false'])
+    .default('false')
+    .transform((value) => value === 'true'),
 });
 
 export type Env = z.infer<typeof envSchema>;
