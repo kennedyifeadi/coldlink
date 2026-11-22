@@ -32,6 +32,34 @@ function setup(...outcomes: FakeOutcome[]) {
 }
 
 describe('processNotificationQueue', () => {
+  it('keeps a message that throws queued and still sends the others', async () => {
+    const { deps, table, sms, logs } = setup();
+    const unlinked = linkTemplate({
+      stored: z.object({ name: z.string() }),
+      render: ({ link }) => link,
+      relink: () => Promise.reject(new Error('Could not issue the token')),
+    });
+    const stuck = await table.store.insert({
+      userId: null,
+      recipientPhone: phone,
+      template: 'unlinked',
+      payload: { name: 'Ade' },
+    });
+    await table.store.insert({
+      userId: null,
+      recipientPhone: phone,
+      template: 'greeting',
+      payload: { name: 'Bola' },
+    });
+
+    await expect(
+      processNotificationQueue({ ...deps, templates: { ...testTemplates, unlinked } }),
+    ).resolves.toEqual({ ...nothingDone, queued: 1, sent: 1 });
+    expect(table.row(stuck)).toMatchObject({ status: 'queued', attempts: 0 });
+    expect(sms.sent.map((message) => message.template)).toEqual(['greeting']);
+    expect(logs.output()).toContain('Queued SMS could not be resent');
+  });
+
   it('leaves the rest queued once stopping', async () => {
     const { deps, table, sms } = setup();
     for (const name of ['Ade', 'Bola']) {
