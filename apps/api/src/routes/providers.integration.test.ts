@@ -260,7 +260,8 @@ describe.skipIf(noTestDatabase)('provider endpoints against Postgres', () => {
       expect(provider).toMatchObject({ verification_status: 'pending' });
       await setApproval(db(), false);
 
-      const response = await request(app).get(`/api/v1/providers/${provider.id}`);
+      // A fresh app, since the first has cached app_config for 60 seconds.
+      const response = await request(setup().app).get(`/api/v1/providers/${provider.id}`);
       expect(response.status).toBe(200);
       expect(publicProviderSchema.parse(response.body).id).toBe(provider.id);
     });
