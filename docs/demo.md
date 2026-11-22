@@ -15,13 +15,18 @@ exist. Everything runs on the dev database with Paystack test keys (decisions 11
   `CORS_ORIGINS`). The service is `https://coldlink-api.onrender.com`, which the `/api/` rewrite
   in `apps/web/vercel.json` points at. In Paystack's test dashboard, set the webhook URL to the Vercel site +
   `/api/v1/webhooks/paystack`.
+- In Vercel, set `VITE_SHOW_DEV_CODE` to `true` for Production and redeploy, or the public site
+  hides the sign-in code (decision 113).
+- The demo API gives the sign-in code for any number to whoever asks, so anyone can sign in as any
+  account on the dev database. Use made-up 0800 numbers, and keep real people's numbers and
+  details out of it.
 - Render's free service sleeps when idle: open the site two minutes before presenting.
 
 ## The flow
 
 1. **Farmer finds storage.** Home, Find cold storage, pick a place, the produce and how much.
    Results show the nearest cold rooms with space and the price.
-2. **Farmer books.** Open a cold room, Book. Sign in with any Nigerian number: the code is shown
+2. **Farmer books.** Open a cold room, Book. Sign in with a made-up 0800 number: the code is shown
    on screen. Review the booking and Pay. Paystack's test checkout opens; pay with one of
    Paystack's published test cards. The app returns to the confirmation.
 3. **Provider accepts.** The provider's SMS is not sent, so read it from the API's log (the
