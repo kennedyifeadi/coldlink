@@ -1,7 +1,6 @@
 # Demo runbook
 
-How to show ColdLink before the provider dashboard, admin screens, scheduled jobs and real SMS
-exist. Everything runs on the dev database with Paystack test keys (decisions 111, 112).
+How to show ColdLink before the provider dashboard, admin screens and real SMS exist. Everything runs on the dev database with Paystack test keys (decisions 111, 112).
 
 ## Before the day
 
@@ -21,6 +20,10 @@ exist. Everything runs on the dev database with Paystack test keys (decisions 11
   account on the dev database. Use made-up 0800 numbers, and keep real people's numbers and
   details out of it.
 - Render's free service sleeps when idle: open the site two minutes before presenting.
+- The scheduled jobs run in every API on the dev database unless it sets `JOBS_ENABLED=false`
+  (decision 114). An unpaid booking expires when its hold ends and an unanswered one when the
+  provider's deadline passes, with a test refund, so make the bookings to show on the day. While
+  Render sleeps its jobs wait until it wakes.
 
 ## The flow
 
@@ -40,5 +43,5 @@ exist. Everything runs on the dev database with Paystack test keys (decisions 11
 
 ## Not built yet
 
-Provider dashboard (#38), admin screens (#42+), ratings (#36), reminders and automatic expiry
-(#30), delivery, real SMS (Termii) and the production deployment (#52).
+Provider dashboard (#38), admin screens (#42+), ratings (#36),
+delivery, real SMS (Termii) and the production deployment (#52).
