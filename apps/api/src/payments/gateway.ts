@@ -45,10 +45,8 @@ export interface ExistingRefund extends GatewayRefund {
 export interface RefundLookup {
   /** The reference of the charge the refunds are for. */
   chargeReference: string;
-  /** The gateway's own id for the charge, from its verify or webhook record, when known. */
-  transactionId: string | null;
-  /** Refunds created before this are not looked at. */
-  since: Date;
+  /** The gateway's own id for the charge, from its verify or webhook record. */
+  transactionId: string;
 }
 
 export interface PaymentGateway {

@@ -170,14 +170,14 @@ export function createPaystackGateway(
       return { refundId: String(data.id), status: data.status };
     },
 
-    // List Refunds may ignore a filter it does not support, so each refund is also matched to the
-    // charge here, by its id or its reference.
-    async listRefunds({ chargeReference, transactionId, since }) {
+    // List Refunds filters on the charge's numeric id only: given a reference it answers with an
+    // empty list, which would read as "never refunded". It has no time window, so a refund made
+    // earlier, from the dashboard say, is seen too.
+    async listRefunds({ chargeReference, transactionId }) {
       const query = new URLSearchParams({
         perPage: String(REFUNDS_PAGE_SIZE),
-        from: since.toISOString(),
+        transaction: transactionId,
       });
-      if (transactionId !== null) query.set('transaction', transactionId);
       const refunds = await call(
         'list refunds',
         `/refund?${query.toString()}`,
@@ -187,7 +187,7 @@ export function createPaystackGateway(
         .filter(
           (refund) =>
             refund.transaction_reference === chargeReference ||
-            (transactionId !== null && String(refund.transaction) === transactionId),
+            String(refund.transaction) === transactionId,
         )
         .map((refund) => ({
           refundId: String(refund.id),

@@ -149,17 +149,15 @@ describe('Paystack gateway', () => {
   });
 
   describe('listing refunds', () => {
-    const since = new Date('2026-11-10T07:00:00.000Z');
     const listed = (refunds: object[]) =>
       respond(200, { status: true, data: refunds, meta: { total: refunds.length } });
 
-    it("asks for the charge's refunds since a time", async () => {
+    it("asks for all the charge's refunds by its id", async () => {
       const fetchFn = listed([]);
 
       await gatewayWith(fetchFn).listRefunds({
         chargeReference: reference,
         transactionId: '4099260516',
-        since,
       });
 
       const sent = sentRequest(fetchFn);
@@ -168,7 +166,6 @@ describe('Paystack gateway', () => {
       expect(url.origin + url.pathname).toBe('https://api.paystack.co/refund');
       expect(Object.fromEntries(url.searchParams)).toEqual({
         perPage: '100',
-        from: '2026-11-10T07:00:00.000Z',
         transaction: '4099260516',
       });
     });
@@ -184,7 +181,6 @@ describe('Paystack gateway', () => {
         gatewayWith(fetchFn).listRefunds({
           chargeReference: reference,
           transactionId: '4099260516',
-          since,
         }),
       ).resolves.toEqual([
         { refundId: '1', status: 'processed', amountKobo: 4_064_400 },
@@ -192,28 +188,11 @@ describe('Paystack gateway', () => {
       ]);
     });
 
-    it('matches by reference alone when the charge id is unknown', async () => {
-      const fetchFn = listed([
-        { id: 1, status: 'processed', amount: 100, transaction: 4_099_260_516 },
-        { id: 2, status: 'pending', amount: 500, transaction_reference: reference },
-      ]);
-
-      await expect(
-        gatewayWith(fetchFn).listRefunds({
-          chargeReference: reference,
-          transactionId: null,
-          since,
-        }),
-      ).resolves.toEqual([{ refundId: '2', status: 'pending', amountKobo: 500 }]);
-      expect(new URL(String(sentRequest(fetchFn).url)).searchParams.has('transaction')).toBe(false);
-    });
-
     it('reports an unexpected answer without the key', async () => {
       const error = await gatewayError(
         gatewayWith(respond(200, { status: true, data: { id: 1 } })).listRefunds({
           chargeReference: reference,
-          transactionId: null,
-          since,
+          transactionId: '4099260516',
         }),
       );
 

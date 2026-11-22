@@ -1,3 +1,4 @@
+import { sql } from 'kysely';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { insertBooking, type BookingFixture } from '../test/bookings.js';
 import { noTestDatabase, useTestTransaction } from '../test/integration.js';
@@ -5,6 +6,7 @@ import { jobServices } from '../test/jobs.js';
 import { insertCharge, paymentRows } from '../test/payments.js';
 import { refundBooking } from './refunds.js';
 import { MAX_REFUND_RETRIES, retryFailedRefunds } from './refundRetry.js';
+import { mergePayload } from './store.js';
 
 // insertBooking's PRD 6.1 worked example: everything paid online is the deposit.
 const TOTAL = 4_064_400;
@@ -22,7 +24,25 @@ describe.skipIf(noTestDatabase)('refund retry', () => {
       status: 'success',
       amountKobo: TOTAL,
     });
+    // As confirmCharge stores it.
+    await db()
+      .updateTable('payments')
+      .set({ paystack_payload: mergePayload({ charge: { id: '4099260516' } }) })
+      .where('provider_ref', '=', reference)
+      .execute();
   });
+
+  // payments_set_updated_at would overwrite the backdated value; the disable rolls back with the
+  // test's transaction.
+  async function letRefundSettle() {
+    await sql`alter table public.payments disable trigger payments_set_updated_at`.execute(db());
+    await db()
+      .updateTable('payments')
+      .set({ updated_at: sql<Date>`now() - interval '2 minutes'` })
+      .where('booking_id', '=', booking.bookingId)
+      .execute();
+    await sql`alter table public.payments enable trigger payments_set_updated_at`.execute(db());
+  }
 
   /** The refund hook's own attempt, which fails as `state` says. */
   async function failFirstAttempt(services: ReturnType<typeof jobServices>) {
@@ -36,12 +56,14 @@ describe.skipIf(noTestDatabase)('refund retry', () => {
     services.payments.state.loseRefundResponses = false;
   }
 
-  const retry = (services: ReturnType<typeof jobServices>) =>
-    retryFailedRefunds({
+  async function retry(services: ReturnType<typeof jobServices>) {
+    await letRefundSettle();
+    return retryFailedRefunds({
       db: db(),
       gateway: services.payments.gateway,
       logger: services.logs.logger,
     });
+  }
 
   async function rows() {
     const all = await paymentRows(db(), booking.bookingId);
@@ -56,6 +78,7 @@ describe.skipIf(noTestDatabase)('refund retry', () => {
     services.payments.state.failRefunds = true;
     await failFirstAttempt(services);
 
+    await letRefundSettle();
     await expect(services.job('refund_retry').run()).resolves.toEqual({
       ...NOTHING,
       refunded: 1,
@@ -111,6 +134,57 @@ describe.skipIf(noTestDatabase)('refund retry', () => {
 
     await expect(retry(services)).resolves.toEqual({ ...NOTHING, refunded: 1 });
     expect(services.payments.refunds).toHaveLength(2);
+  });
+
+  it('waits a minute, so a call that timed out can land before it is looked for', async () => {
+    const services = jobServices(db());
+    services.payments.state.loseRefundResponses = true;
+    await failFirstAttempt(services);
+
+    await expect(services.job('refund_retry').run()).resolves.toEqual(NOTHING);
+    expect(services.payments.refunds).toHaveLength(1);
+  });
+
+  it('records a refund of another amount as made, and asks for attention', async () => {
+    const services = jobServices(db());
+    services.payments.state.failRefunds = true;
+    await failFirstAttempt(services);
+    services.payments.held.push({
+      refundId: 'refund-by-admin',
+      status: 'processed',
+      amountKobo: 100_000,
+      chargeReference: reference,
+    });
+
+    await expect(retry(services)).resolves.toEqual({ ...NOTHING, needs_attention: 1 });
+    expect(services.payments.refunds).toHaveLength(1);
+    const { charge, refunds } = await rows();
+    expect(refunds).toEqual([
+      expect.objectContaining({
+        status: 'success',
+        amount_kobo: 100_000,
+        paystack_payload: expect.objectContaining({
+          paystack_refund_id: 'refund-by-admin',
+          requested_amount_kobo: TOTAL,
+        }) as unknown,
+      }),
+    ]);
+    expect(charge?.status).toBe('partially_refunded');
+    expect(services.logs.output()).toContain('Refund needs attention');
+  });
+
+  it('does not resend when the charge has no id to look its refunds up by', async () => {
+    const services = jobServices(db());
+    services.payments.state.failRefunds = true;
+    await failFirstAttempt(services);
+    await db()
+      .updateTable('payments')
+      .set({ paystack_payload: mergePayload({ charge: {} }) })
+      .where('provider_ref', '=', reference)
+      .execute();
+
+    await expect(retry(services)).resolves.toEqual({ ...NOTHING, failed: 1 });
+    expect(services.payments.refunds).toHaveLength(1);
   });
 
   it('changes nothing on a second run', async () => {

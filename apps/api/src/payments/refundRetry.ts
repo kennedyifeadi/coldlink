@@ -17,9 +17,9 @@ export const MAX_REFUND_RETRIES = 6;
 /** How many failed refunds one run retries; each holds its row while it waits on Paystack. */
 export const REFUND_RETRY_BATCH_SIZE = 10;
 
-// The refund's row is written just before Paystack is asked, so any refund Paystack made for it
-// was created after this much before the row.
-const LOOKUP_MARGIN_MS = 60 * 60 * 1000;
+// A call that timed out here can still be finishing at Paystack, and until it does the lookup
+// would not see its refund.
+const SETTLE_SECONDS = 60;
 
 const retries = sql<number>`coalesce((paystack_payload ->> 'retry_attempts')::int, 0)`;
 
@@ -39,13 +39,13 @@ async function claimFailedRefund(trx: Transaction<DB>, skip: readonly string[]) 
       'booking_id',
       'provider_ref',
       'amount_kobo',
-      'created_at',
       sql<string>`paystack_payload ->> 'charge_reference'`.as('charge_reference'),
       retries.as('retry_attempts'),
     ])
     .where('purpose', '=', 'refund')
     .where('status', '=', 'failed')
     .where(retries, '<', MAX_REFUND_RETRIES)
+    .where('updated_at', '<=', sql<Date>`now() - make_interval(secs => ${SETTLE_SECONDS})`)
     .$if(skip.length > 0, (query) => query.where('id', 'not in', skip))
     .orderBy('created_at')
     .limit(1)
@@ -72,39 +72,41 @@ function chargeOf(trx: Transaction<DB>, refund: FailedRefund) {
 /**
  * Resends one failed refund, or records the refund Paystack already made for it. A failed call
  * may still have reached Paystack (a timeout, say), so Paystack's refunds for the charge are read
- * first and a resend happens only when none of them stands. The same row is retried, never a new
- * one (decision 95), and its row lock is held throughout so no other worker retries it meanwhile.
+ * first and a resend happens only when none of them stands; without the charge's id they cannot
+ * be read, so nothing is sent. A standing refund of another amount is recorded at the amount
+ * Paystack made and raised for an admin. The same row is retried, never a new one (decision 95),
+ * and its row lock is held throughout so no other worker retries it meanwhile.
  */
 async function retryRefund(
   { gateway, logger }: RefundRetryDependencies,
   trx: Transaction<DB>,
   refund: FailedRefund,
 ): Promise<RefundRetryOutcome> {
-  const charge = await chargeOf(trx, refund);
-  const record = {
-    id: refund.id,
-    amountKobo: refund.amount_kobo,
-    charge: { id: charge.id, amountKobo: charge.amount_kobo },
-  };
   const log = { bookingId: refund.booking_id, reference: maskReference(refund.provider_ref) };
 
+  let charge: Awaited<ReturnType<typeof chargeOf>>;
   let made: GatewayRefund;
+  let amountKobo = refund.amount_kobo;
   let outcome: 'refunded' | 'found';
   try {
-    const existing = await gateway.listRefunds({
-      chargeReference: refund.charge_reference,
-      transactionId: charge.transaction_id,
-      since: new Date(refund.created_at.getTime() - LOOKUP_MARGIN_MS),
-    });
-    const standing = existing.find((candidate) => candidate.status !== 'failed');
-    if (standing === undefined) {
-      made = await gateway.refund({
+    charge = await chargeOf(trx, refund);
+    if (charge.transaction_id === null) {
+      throw new Error('The charge has no Paystack id to look its refunds up by');
+    }
+    const standing = (
+      await gateway.listRefunds({
         chargeReference: refund.charge_reference,
-        amountKobo: refund.amount_kobo,
-      });
+        transactionId: charge.transaction_id,
+      })
+    ).filter((candidate) => candidate.status !== 'failed');
+    const existing =
+      standing.find((candidate) => candidate.amountKobo === amountKobo) ?? standing[0];
+    if (existing === undefined) {
+      made = await gateway.refund({ chargeReference: refund.charge_reference, amountKobo });
       outcome = 'refunded';
     } else {
-      made = standing;
+      made = existing;
+      amountKobo = existing.amountKobo;
       outcome = 'found';
     }
   } catch (err) {
@@ -123,9 +125,28 @@ async function retryRefund(
     return 'failed';
   }
 
-  await recordRefundSuccess(trx, record, made);
+  await recordRefundSuccess(
+    trx,
+    { id: refund.id, amountKobo, charge: { id: charge.id, amountKobo: charge.amount_kobo } },
+    made,
+  );
+  if (amountKobo !== refund.amount_kobo) {
+    await trx
+      .updateTable('payments')
+      .set({
+        amount_kobo: amountKobo,
+        paystack_payload: mergePayload({ requested_amount_kobo: refund.amount_kobo }),
+      })
+      .where('id', '=', refund.id)
+      .execute();
+    logger.error(
+      { ...log, amountKobo, requestedAmountKobo: refund.amount_kobo },
+      'Refund needs attention',
+    );
+    return 'needs_attention';
+  }
   logger.info(
-    { ...log, amountKobo: refund.amount_kobo, outcome },
+    { ...log, amountKobo, outcome },
     outcome === 'found' ? 'Refund found at Paystack and recorded' : 'Refund made on retry',
   );
   return outcome;
