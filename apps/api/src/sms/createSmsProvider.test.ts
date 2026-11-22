@@ -19,6 +19,19 @@ describe('createSmsProvider', () => {
     expect(output()).toContain('SMS not sent');
   });
 
+  it.each([
+    [true, true],
+    [false, false],
+  ])('logs the console text only when showText is %s', async (showText, shown) => {
+    const { logger, output } = captureLogs();
+    await createSmsProvider({ provider: 'console' }, logger, { showText }).send({
+      to: '+2348031234567',
+      text: 'Your ColdLink code is 482913.',
+      template: 'otp',
+    });
+    expect(output().includes('482913')).toBe(shown);
+  });
+
   it('sends through Termii when configured', async () => {
     const fetchSpy = vi
       .spyOn(globalThis, 'fetch')

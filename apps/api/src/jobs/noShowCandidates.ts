@@ -12,7 +12,7 @@ export interface NoShowDependencies {
 
 /**
  * Flags, once, each confirmed booking whose whole start day in Lagos has passed with no check-in,
- * so the admin screens can list it (decision 110). It moves nothing, refunds nothing and texts
+ * so the admin screens can list it (decision 116). It moves nothing, refunds nothing and texts
  * nobody: whether the deposit is forfeit is an admin's call (PRD 6.5). Works in batches, each in
  * a transaction of its own.
  */

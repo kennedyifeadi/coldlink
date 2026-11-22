@@ -1,0 +1,44 @@
+# The demo API on Render (decision 112). It runs in development mode on the dev database with
+# Paystack test keys and no real SMS, so sign-in codes are shown on screen. #52 replaces it with
+# staging and production services.
+services:
+  - type: web
+    name: coldlink-api
+    runtime: node
+    plan: free
+    region: frankfurt
+    branch: main
+    buildCommand: >-
+      corepack enable && pnpm install --frozen-lockfile &&
+      pnpm --filter @coldlink/shared build && pnpm --filter @coldlink/api build
+    # Node directly: going through pnpm downloads it again on every start, slowing each wake-up.
+    startCommand: cd apps/api && node dist/server.js
+    healthCheckPath: /api/v1/health
+    envVars:
+      - key: NODE_ENV
+        value: development
+      - key: NODE_VERSION
+        value: '24'
+      - key: LOG_LEVEL
+        value: info
+      # Vercel's rewrite of /api, then Render's own proxy.
+      - key: TRUST_PROXY_HOPS
+        value: '2'
+      - key: JWT_SECRET
+        generateValue: true
+      - key: OTP_PEPPER
+        generateValue: true
+      - key: WEB_APP_URL
+        sync: false
+      - key: CORS_ORIGINS
+        sync: false
+      - key: DATABASE_URL
+        sync: false
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false
+      - key: PAYSTACK_SECRET_KEY
+        sync: false
+      - key: PAYSTACK_PUBLIC_KEY
+        sync: false

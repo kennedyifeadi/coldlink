@@ -254,6 +254,18 @@ describe.skipIf(noTestDatabase)('provider endpoints against Postgres', () => {
       expect(text).not.toContain(owner.id);
     });
 
+    it('shows a pending provider once approval is not required, as search does', async () => {
+      const { app } = setup();
+      const provider = await createProvider(app, await insertUser(db(), ['farmer']));
+      expect(provider).toMatchObject({ verification_status: 'pending' });
+      await setApproval(db(), false);
+
+      // A fresh app, since the first has cached app_config for 60 seconds.
+      const response = await request(setup().app).get(`/api/v1/providers/${provider.id}`);
+      expect(response.status).toBe(200);
+      expect(publicProviderSchema.parse(response.body).id).toBe(provider.id);
+    });
+
     it.each(['suspended', 'rejected'])('hides a %s provider', async (status) => {
       await setApproval(db(), false);
       const { app } = setup();

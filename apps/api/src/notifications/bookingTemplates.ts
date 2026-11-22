@@ -153,7 +153,7 @@ export function createBookingSmsTemplates({ relinkProvider }: BookingSmsTemplate
         );
       },
     }),
-    // The reminders of PRD 7.6, from the reminder job (decision 110). end_date is the day the
+    // The reminders of PRD 7.6, from the reminder job (decision 116). end_date is the day the
     // produce must be collected (decision 107's "Collect today").
     expiry_reminder: retryableTemplate({
       params: z.object({

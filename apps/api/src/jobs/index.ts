@@ -18,7 +18,7 @@ export interface JobDependencies {
 
 const EVERY_MINUTE = '* * * * *';
 
-/** The scheduled jobs of PRD 7.13, each on its schedule on the Lagos clock (decision 108). */
+/** The scheduled jobs of PRD 7.13, each on its schedule on the Lagos clock (decision 114). */
 export function createJobs({ db, logger, services, now }: JobDependencies): ScheduledJob[] {
   const bookings = { db, hooks: services.hooks, logger };
   return [

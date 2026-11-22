@@ -1,5 +1,6 @@
 import React, { lazy, type ComponentType } from 'react';
 import { Routes, Route } from 'react-router-dom';
+import { PROVIDER_ACTION_ROUTE } from '@coldlink/shared';
 import AppLayout from './components/AppLayout';
 import NotFound from './components/NotFound';
 import { RedirectIfSignedIn, RequireSession } from './session/guards';
@@ -19,6 +20,7 @@ const loadAuth = () => import('./features/auth');
 const loadSearch = () => import('./features/search');
 const loadBooking = () => import('./features/booking');
 const loadProvider = () => import('./features/provider');
+const loadProviderLink = () => import('./features/providerLink');
 
 const Onboarding = lazyScreen(loadAuth, 'Onboarding');
 const OtpEntry = lazyScreen(loadAuth, 'OtpEntry');
@@ -44,6 +46,7 @@ const CapacityStep = lazyScreen(loadProvider, 'CapacityStep');
 const ProduceStep = lazyScreen(loadProvider, 'ProduceStep');
 const PhotosStep = lazyScreen(loadProvider, 'PhotosStep');
 const Outcome = lazyScreen(loadProvider, 'Outcome');
+const ActionLink = lazyScreen(loadProviderLink, 'ActionLink');
 
 // Provider and admin screens (later issues) go under <RequireSession roles={[...]} />.
 const AppRoutes = () => (
@@ -56,6 +59,8 @@ const AppRoutes = () => (
       <Route path="/onboarding/code" element={<OtpEntry />} />
       <Route path="/onboarding/consent" element={<Consent />} />
       <Route path="/privacy" element={<PrivacyNotice />} />
+      {/* Opened from the provider's SMS without signing in (PRD 7.6, decision 104). */}
+      <Route path={PROVIDER_ACTION_ROUTE} element={<ActionLink />} />
       {/* Anyone can search; signing in waits until Book (PRD 7.3, decision 70). */}
       <Route path={SEARCH_STEPS.place} element={<Location />} />
       <Route path={SEARCH_STEPS.crop} element={<Produce />} />

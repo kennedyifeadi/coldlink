@@ -94,7 +94,7 @@ The provider's actions (PRD 6.4, 6.5, 7.2; decisions 97 to 100) move a booking f
 
 The provider's `booking_received` SMS carries a link that answers a booking without signing in (PRD 5.13, 7.6; decisions 98, 101, 104). The token in it is single use and lasts 12 hours. One link offers both accept and reject. The link is `WEB_APP_URL` + `/a/<token>` (`providerActionPath` in `packages/shared`), a page of the web app that calls the two routes below with the token.
 
-- **`GET /actions/:token`** shows what the provider needs to decide (`providerBookingRequestSchema`): the facility name, crop, quantity and unit, dates and payout. Opening it does not use it.
+- **`GET /actions/:token`** shows what the provider needs to decide (`providerBookingRequestSchema`): the booking code, facility name, crop, quantity and unit, dates, payout and the deadline to answer (`response_due_at`, the booking's `provider_response_due_at`). Never the farmer's name or phone. Opening it does not use it.
 - **`POST /actions/:token`** with `{ "action": "accept" }` or `{ "action": "reject" }` answers the booking as the facility's owner and uses the link. It answers `{ status }`, `confirmed` or `rejected`. The same 409s as `POST /bookings/:id/accept` apply, and leave the link usable: a booking already answered from the dashboard, or past its deadline.
 - **A link that is unknown, used or expired** is always the same 404, "This link has expired or has already been used", for both routes.
 - The token is never written to the request log.
@@ -2318,6 +2318,7 @@ components:
       type: object
       description: What a provider's SMS link shows, and nothing more.
       required:
+        - code
         - facility_name
         - crop_name
         - quantity
@@ -2326,8 +2327,12 @@ components:
         - duration_days
         - end_date
         - payout_kobo
+        - response_due_at
       additionalProperties: false
       properties:
+        code:
+          type: string
+          pattern: '^CL-[A-HJ-NP-Z2-9]{5}$'
         facility_name:
           type: string
         crop_name:
@@ -2349,6 +2354,10 @@ components:
           format: date
         payout_kobo:
           type: integer
+        response_due_at:
+          type: [string, 'null']
+          format: date-time
+          description: When the provider must answer by; after it the link can only get a 409.
     ProviderLinkAction:
       type: object
       required: [action]

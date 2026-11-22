@@ -42,7 +42,7 @@ export function createBookingServices({
   db,
   config,
   logger,
-  sms = createSmsProvider(config.sms, logger),
+  sms = createSmsProvider(config.sms, logger, { showText: config.auth.devOtp }),
   notificationStore = createNotificationStore(db),
   hooks = createTransitionHooks(),
   gateway = createPaymentGateway(config.paystack),
