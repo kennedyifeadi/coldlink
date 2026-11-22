@@ -16,12 +16,11 @@ export interface JobDependencies {
   now?: () => Date;
 }
 
-// Six fields, seconds first. Each job holds a connection for its lock and another for its work,
-// so they start ten seconds apart rather than taking the whole pool from requests at once.
-
 /** The scheduled jobs of PRD 7.13, each on its schedule on the Lagos clock (decision 114). */
 export function createJobs({ db, logger, services, now }: JobDependencies): ScheduledJob[] {
   const bookings = { db, hooks: services.hooks, logger };
+  // Six fields, seconds first. Each job holds a connection for its lock and another for its work,
+  // so they start ten seconds apart rather than taking the whole pool from requests at once.
   return [
     {
       name: 'release_holds',
