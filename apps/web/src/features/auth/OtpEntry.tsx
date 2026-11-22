@@ -9,6 +9,7 @@ import ErrorMessage from '../../components/ui/ErrorMessage';
 import { requestOtp, verifyOtp } from '../../api/auth';
 import { isApiError } from '../../api/client';
 import { describeApiError } from '../../api/describeError';
+import { env } from '../../env';
 import { SIGN_IN_PATH } from '../../session/routes';
 import { useSignInFlow, type PendingSignIn } from './signInFlow';
 import { useCountdown } from './useCountdown';
@@ -129,7 +130,7 @@ const OtpEntryForm = ({ pending }: { pending: PendingSignIn }) => {
       </div>
 
       <form onSubmit={handleSubmit} noValidate className="w-full mt-12 pb-8">
-        {import.meta.env.DEV && pending.devCode && (
+        {(import.meta.env.DEV || env.VITE_SHOW_DEV_CODE) && pending.devCode && (
           <DevCodeHint code={pending.devCode} onUse={setCode} />
         )}
 
