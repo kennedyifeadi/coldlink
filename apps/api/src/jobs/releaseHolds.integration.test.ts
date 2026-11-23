@@ -100,6 +100,22 @@ describe.skipIf(noTestDatabase)('release holds job', () => {
       );
     });
 
+    it('confirms a lapsed hold Paystack was paid for before ColdLink heard of it', async () => {
+      const services = jobServices(db());
+      const reference = await insertCharge(db(), {
+        bookingId: booking.bookingId,
+        status: 'initiated',
+        amountKobo: TOTAL,
+      });
+      await setDeadline(db(), booking.bookingId, 'payment_expires_at', -60);
+      services.payments.pay(reference, TOTAL);
+
+      await releaseHolds(services.deps);
+
+      expect((await bookingRow(db(), booking.bookingId)).status).toBe('pending_provider');
+      expect(services.payments.refunds).toEqual([]);
+    });
+
     it('leaves alone a lapsed hold that was paid before the job reached it', async () => {
       const services = jobServices(db());
       const reference = await insertCharge(db(), {
