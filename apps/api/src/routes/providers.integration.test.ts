@@ -1,5 +1,6 @@
 import { randomInt } from 'node:crypto';
 import {
+  bookingQuoteSchema,
   errorResponseSchema,
   MAX_PROVIDER_PHOTO_BYTES,
   ownProviderSchema,
@@ -453,6 +454,49 @@ describe.skipIf(noTestDatabase)('provider endpoints against Postgres', () => {
 
       expect(await amounts()).toEqual(before);
       expect(before.unit_price_kobo).toBe(225_800);
+    });
+
+    // The settings screen sends only what changed, often the space and the price together.
+    it('keeps old bookings at their price and quotes new ones at the new price', async () => {
+      const { app } = setup();
+      const fixture = await insertBooking(db(), 'confirmed');
+      const owner = await db()
+        .selectFrom('users')
+        .select(['id', 'phone', 'coldlink_id', 'roles'])
+        .where('id', '=', fixture.ownerId)
+        .executeTakeFirstOrThrow();
+      const booking = () =>
+        db()
+          .selectFrom('bookings')
+          .selectAll()
+          .where('id', '=', fixture.bookingId)
+          .executeTakeFirstOrThrow();
+      const before = await booking();
+
+      const response = await patch(
+        app,
+        { ...owner, token: await bearer(owner) },
+        fixture.providerId,
+        {
+          capacity_total: 40,
+          price_per_unit_per_day_kobo: 300_000,
+        },
+      );
+      expect(response.status).toBe(200);
+      expect(ownProviderSchema.parse(response.body)).toMatchObject({
+        capacity_total: 40,
+        price_per_unit_per_day_kobo: 300_000,
+      });
+
+      expect(await booking()).toEqual(before);
+      const quote = await request(app)
+        .post('/api/v1/bookings/quote')
+        .send({ provider_id: fixture.providerId, quantity: 1, capacity_unit: 'sqm', days: 2 });
+      expect(quote.status).toBe(200);
+      expect(bookingQuoteSchema.parse(quote.body)).toMatchObject({
+        unit_price_kobo: 300_000,
+        storage_subtotal_kobo: 600_000,
+      });
     });
   });
 
