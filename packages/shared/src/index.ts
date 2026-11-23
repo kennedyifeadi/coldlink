@@ -13,6 +13,7 @@ export * from './phone.js';
 export * from './pricing.js';
 export * from './providerBookings.js';
 export * from './providerDashboard.js';
+export * from './providerPayouts.js';
 export * from './providers.js';
 export * from './referenceData.js';
 export * from './search.js';
