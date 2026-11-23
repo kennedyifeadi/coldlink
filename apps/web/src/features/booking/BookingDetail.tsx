@@ -23,6 +23,7 @@ import BookingCountdown from './BookingCountdown';
 import { BookingCode, BookingDetails } from './BookingFacts';
 import { LoadFailed, ProblemScreen } from './BookingStates';
 import StatusBadge from './StatusBadge';
+import StatusHistory from './StatusHistory';
 
 const lagosAt = (iso: string, t: ReturnType<typeof useTranslation>['t']) =>
   t('booking.detail.at', formatLagosTime(iso));
@@ -110,34 +111,6 @@ const TimesCard = ({ booking }: { booking: FarmerBooking }) => {
           <SummaryRow key={row.label} label={row.label} value={row.value} />
         ))}
       </div>
-    </Card>
-  );
-};
-
-const HistoryCard = ({ booking }: { booking: FarmerBooking }) => {
-  const { t } = useTranslation();
-
-  return (
-    <Card className="p-6 mb-4">
-      <CardTitle>{t('booking.detail.historyTitle')}</CardTitle>
-      <ol className="flex flex-col">
-        {booking.status_history.map((change, index) => (
-          <li key={`${change.status}-${change.at}`} className="flex gap-4">
-            <div className="flex flex-col items-center" aria-hidden="true">
-              <span className="mt-1.5 w-2.5 h-2.5 rounded-full bg-primary shrink-0" />
-              {index < booking.status_history.length - 1 && (
-                <span className="w-px flex-grow bg-line-strong" />
-              )}
-            </div>
-            <div className="pb-4">
-              <p className="text-ink text-body font-semibold">
-                {t(`booking.status.${change.status}`)}
-              </p>
-              <p className="text-copy-muted text-label">{lagosAt(change.at, t)}</p>
-            </div>
-          </li>
-        ))}
-      </ol>
     </Card>
   );
 };
@@ -354,7 +327,7 @@ const BookingDetail = () => {
           <BookingDetails booking={booking} />
           <PriceCard booking={booking} />
           <TimesCard booking={booking} />
-          <HistoryCard booking={booking} />
+          <StatusHistory history={booking.status_history} />
           <CancelSection
             booking={booking}
             refresh={() => query.refetch()}

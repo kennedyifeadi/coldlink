@@ -21,6 +21,7 @@ import { bookingRoutes, defaultQuoteIpLimit } from './bookings.js';
 import { meRoutes } from './me.js';
 import { paymentRoutes } from './payments.js';
 import { providerBookingRoutes } from './providerBookings.js';
+import { providerDashboardRoutes } from './providerDashboard.js';
 import { providerRoutes } from './providers.js';
 import { referenceDataRoutes } from './referenceData.js';
 import { defaultSearchIpLimit, searchRoutes } from './search.js';
@@ -97,6 +98,7 @@ export function apiRoutes({
   );
   router.use(meRoutes({ db, tokens }));
   router.use(providerRoutes({ db, tokens, appConfig, storage }));
+  router.use(providerDashboardRoutes({ db, tokens, ...(now === undefined ? {} : { now }) }));
   router.use(
     searchRoutes({
       db,

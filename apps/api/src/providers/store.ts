@@ -120,6 +120,15 @@ export async function toProviderRecords(
   return rows.map((row) => toRecord(row, categories.get(row.id) ?? []));
 }
 
+/** The facility's name, unit and owner, for a check of who may read its bookings. */
+export function findProviderSummary(db: Database, id: string) {
+  return db
+    .selectFrom('providers')
+    .select(['id', 'display_name', 'capacity_unit', 'owner_user_id'])
+    .where('id', '=', id)
+    .executeTakeFirst();
+}
+
 export async function findProvider(db: Database, id: string): Promise<ProviderRecord | undefined> {
   const row = await selectProviders(db).where('id', '=', id).executeTakeFirst();
   if (row === undefined) return undefined;

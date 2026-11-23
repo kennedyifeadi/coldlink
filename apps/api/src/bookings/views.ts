@@ -8,14 +8,24 @@ import {
   type FarmerBooking,
   type FarmerBookingSummary,
   type FarmerCancellationPreview,
+  type BookingStatusChange,
   type ProviderBooking,
+  type ProviderBookingDetail,
   type ProviderBookingRequest,
 } from '@coldlink/shared';
-import type { ProviderBookingRow } from './providerStore.js';
-import type { FarmerBookingDetail, FarmerBookingRow } from './store.js';
+import type { ProviderBookingDetailRows, ProviderBookingRow } from './providerStore.js';
+import type { BookingStatusChangeRow, FarmerBookingDetail, FarmerBookingRow } from './store.js';
 
 function isoOrNull(date: Date | null): string | null {
   return date?.toISOString() ?? null;
+}
+
+/** When the booking entered each status, never who moved it (decision 106). */
+function toStatusHistory(history: BookingStatusChangeRow[]): BookingStatusChange[] {
+  return history.map((event) => ({
+    status: bookingStatusSchema.parse(event.to_status),
+    at: event.created_at.toISOString(),
+  }));
 }
 
 // The database checks hold the text columns to these values; parsing narrows their types.
@@ -92,10 +102,7 @@ export function toFarmerBooking(
     collected_at: isoOrNull(row.collected_at),
     cancelled_by: row.cancelled_by === null ? null : cancelledBySchema.parse(row.cancelled_by),
     cancel_reason: row.cancel_reason,
-    status_history: history.map((event) => ({
-      status: bookingStatusSchema.parse(event.to_status),
-      at: event.created_at.toISOString(),
-    })),
+    status_history: toStatusHistory(history),
     cancellation: farmerCancellationPreview(row, terms),
   };
 }
@@ -123,6 +130,13 @@ export function toProviderBooking(row: ProviderBookingRow): ProviderBooking {
     checked_in_at: isoOrNull(row.checked_in_at),
     collected_at: isoOrNull(row.collected_at),
   };
+}
+
+export function toProviderBookingDetail({
+  booking,
+  history,
+}: ProviderBookingDetailRows): ProviderBookingDetail {
+  return { ...toProviderBooking(booking), status_history: toStatusHistory(history) };
 }
 
 export function toProviderBookingRequest(row: ProviderBookingRow): ProviderBookingRequest {

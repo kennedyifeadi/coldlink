@@ -9,7 +9,7 @@ import {
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import type { BookingStatus } from '@coldlink/shared';
-import { STATUS_TONES, type StatusTone } from './bookingStatus';
+import { STATUS_TONES, statusLabelKey, type StatusTone, type StatusViewer } from './bookingStatus';
 
 const toneClasses: Record<StatusTone, string> = {
   waiting: 'bg-accent-faint text-accent-ink',
@@ -31,7 +31,7 @@ const statusIcons: Record<BookingStatus, LucideIcon> = {
 };
 
 // The status in words and an icon as well as the colour, so it never relies on colour alone.
-const StatusBadge = ({ status }: { status: BookingStatus }) => {
+const StatusBadge = ({ status, viewer }: { status: BookingStatus; viewer?: StatusViewer }) => {
   const { t } = useTranslation();
   const Icon = statusIcons[status];
 
@@ -41,7 +41,7 @@ const StatusBadge = ({ status }: { status: BookingStatus }) => {
       className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-label font-semibold ${toneClasses[STATUS_TONES[status]]}`}
     >
       <Icon size={14} strokeWidth={2.5} aria-hidden="true" />
-      {t(`booking.status.${status}`)}
+      {t(statusLabelKey(status, viewer))}
     </span>
   );
 };
