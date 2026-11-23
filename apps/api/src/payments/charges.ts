@@ -226,7 +226,7 @@ async function canTakePayment(
  * provider's response clock starts at `paid_at` (decision 93); a late one is left as it is.
  */
 async function confirmCharge(
-  { db, appConfig, hooks }: ChargeDependencies,
+  { db, appConfig, hooks }: SettleDependencies,
   charge: GatewayCharge,
 ): Promise<ChargeOutcome> {
   const { provider_response_minutes } = await appConfig.get();
@@ -292,9 +292,12 @@ export interface SettledCharge {
   afterCommit: () => Promise<void>;
 }
 
+/** What confirming a paid charge needs: the web app's address is only for starting one. */
+export type SettleDependencies = Omit<ChargeDependencies, 'config'> & { logger: Logger };
+
 /** Confirms a paid charge in one transaction; the caller runs `afterCommit` once it returns. */
 export async function settleCharge(
-  deps: ChargeDependencies & { logger: Logger },
+  deps: SettleDependencies,
   charge: GatewayCharge,
 ): Promise<SettledCharge> {
   const outcome = await confirmCharge(deps, charge);

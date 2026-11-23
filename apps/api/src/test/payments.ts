@@ -109,18 +109,23 @@ export function fakePaymentGateway() {
     },
   };
 
-  /** Makes verify report the charge as paid. */
-  function pay(reference: string, amountKobo: number, currency = 'NGN'): void {
+  /** Makes verify report the charge with Paystack's `status`, such as `abandoned` or `ongoing`. */
+  function report(reference: string, status: string, amountKobo: number, currency = 'NGN'): void {
     charges.set(reference, {
       reference,
-      status: 'success',
+      status,
       amountKobo,
       currency,
-      record: { id: '4099260516', status: 'success', amount: amountKobo, currency },
+      record: { id: '4099260516', status, amount: amountKobo, currency },
     });
   }
 
-  return { gateway, charges, initialized, refunds, held, state, pay };
+  /** Makes verify report the charge as paid. */
+  function pay(reference: string, amountKobo: number, currency = 'NGN'): void {
+    report(reference, 'success', amountKobo, currency);
+  }
+
+  return { gateway, charges, initialized, refunds, held, state, pay, report };
 }
 
 export interface ChargeFixture {
