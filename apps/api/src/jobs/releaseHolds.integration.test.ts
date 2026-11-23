@@ -147,6 +147,19 @@ describe.skipIf(noTestDatabase)('release holds job', () => {
       await expect(releaseHolds(services.deps)).resolves.toEqual(counts({ expired: 1 }));
     });
 
+    it('expires a hold Paystack still cannot be asked about once the grace has passed', async () => {
+      const services = jobServices(db());
+      await setDeadline(
+        db(),
+        booking.bookingId,
+        'payment_expires_at',
+        -(IN_PROGRESS_GRACE_MINUTES * 60 + 1),
+      );
+
+      await expect(releaseHolds(services.deps)).resolves.toEqual(counts({ expired: 1 }));
+      expect((await bookingRow(db(), booking.bookingId)).status).toBe('expired');
+    });
+
     it('waits for a payment still in progress, until the grace after the hold has passed', async () => {
       const services = jobServices(db());
       services.payments.report(reference, 'ongoing', TOTAL);

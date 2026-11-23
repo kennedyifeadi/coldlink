@@ -51,7 +51,8 @@ type ChargeCheck = 'paid' | 'unpaid' | 'waiting' | 'unchecked';
 /**
  * Asks Paystack about a lapsed hold's open charge and confirms one it took, as the webhook would
  * have (decision 94): ColdLink may not have heard yet, because the webhook is late or the farmer
- * never came back from checkout. A charge Paystack cannot be asked about is left for the next run.
+ * never came back from checkout. A charge Paystack cannot be asked about is left for the next run
+ * until the grace has passed.
  */
 async function checkOpenCharge(
   deps: HoldReleaseDependencies,
@@ -61,11 +62,13 @@ async function checkOpenCharge(
   try {
     charge = await deps.gateway.verify(reference);
   } catch (err) {
+    // Past the grace the hold expires anyway, or a charge Paystack never saw, from a start that
+    // crashed, would keep it forever.
     deps.logger.warn(
-      { err, bookingId, reference: maskReference(reference) },
-      'Could not ask Paystack about a lapsed hold; it expires on a later run',
+      { err, bookingId, reference: maskReference(reference), expiring: overdue },
+      'Could not ask Paystack about a lapsed hold',
     );
-    return 'unchecked';
+    return overdue ? 'unpaid' : 'unchecked';
   }
   if (charge.status !== 'success') {
     return IN_PROGRESS.has(charge.status) && !overdue ? 'waiting' : 'unpaid';
