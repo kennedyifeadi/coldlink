@@ -16,6 +16,8 @@ export const bookingDetailPath = (bookingId: string) =>
 export const PROVIDER_FACILITY_PATH = '/provider/facilities/:providerId';
 export const PROVIDER_BOOKINGS_PATH = `${PROVIDER_FACILITY_PATH}/bookings`;
 export const PROVIDER_BOOKING_PATH = `${PROVIDER_BOOKINGS_PATH}/:bookingId`;
+export const PROVIDER_SETTINGS_PATH = `${PROVIDER_FACILITY_PATH}/settings`;
+export const PROVIDER_EARNINGS_PATH = `${PROVIDER_FACILITY_PATH}/earnings`;
 
 export const providerDashboardPath = (providerId: string) =>
   `/provider/facilities/${encodeURIComponent(providerId)}`;
@@ -25,3 +27,9 @@ export const providerBookingsPath = (providerId: string, group?: string) =>
 
 export const providerBookingPath = (providerId: string, bookingId: string) =>
   `${providerDashboardPath(providerId)}/bookings/${encodeURIComponent(bookingId)}`;
+
+export const providerSettingsPath = (providerId: string) =>
+  `${providerDashboardPath(providerId)}/settings`;
+
+export const providerEarningsPath = (providerId: string) =>
+  `${providerDashboardPath(providerId)}/earnings`;

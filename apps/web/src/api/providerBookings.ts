@@ -4,6 +4,7 @@ import {
   providerBookingSchema,
   providerBookingsResponseSchema,
   providerDashboardSchema,
+  providerPayoutsResponseSchema,
   type ProviderBookingGroup,
 } from '@coldlink/shared';
 import type { SessionStore } from '../session/sessionStore';
@@ -39,6 +40,20 @@ export const providerBookingsQuery = (
       if (pageParam !== undefined) query.set('cursor', pageParam);
       return request(`${facilityPath(providerId)}/bookings?${query.toString()}`, {
         schema: providerBookingsResponseSchema,
+        signal,
+      });
+    },
+    getNextPageParam: (page) => page.next_cursor ?? undefined,
+  });
+
+export const providerPayoutsQuery = (request: AuthorizedRequest, providerId: string) =>
+  infiniteQueryOptions({
+    queryKey: [...facilityKey(providerId), 'payouts'] as const,
+    initialPageParam: undefined as string | undefined,
+    queryFn: ({ pageParam, signal }) => {
+      const query = pageParam === undefined ? '' : `?cursor=${encodeURIComponent(pageParam)}`;
+      return request(`${facilityPath(providerId)}/payouts${query}`, {
+        schema: providerPayoutsResponseSchema,
         signal,
       });
     },
