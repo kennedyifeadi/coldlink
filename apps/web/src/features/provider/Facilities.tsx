@@ -1,6 +1,6 @@
 import React from 'react';
-import { MapPin } from 'lucide-react';
-import { Navigate, useNavigate } from 'react-router-dom';
+import { ChevronRight, MapPin } from 'lucide-react';
+import { Link, Navigate, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
 import type { OwnProvider } from '@coldlink/shared';
@@ -13,6 +13,7 @@ import TextButton from '../../components/ui/TextButton';
 import { describeApiError } from '../../api/describeError';
 import { ownProvidersQuery } from '../../api/providers';
 import { useSessionStore } from '../../session/sessionContext';
+import { providerDashboardPath } from '../../session/routes';
 import { facilityTypeIcons } from '../search/facilityTypeIcons';
 import {
   ONBOARDING_STEPS,
@@ -34,7 +35,10 @@ const FacilityCard = ({ provider }: { provider: OwnProvider }) => {
 
   return (
     <Card className="p-5">
-      <div className="flex items-start gap-4">
+      <Link
+        to={providerDashboardPath(provider.id)}
+        className="group flex items-start gap-4 rounded-lg focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-primary-strong"
+      >
         <div className="w-12 h-12 rounded-full bg-primary-soft text-primary-strong flex items-center justify-center shrink-0">
           <TypeIcon size={24} aria-hidden="true" />
         </div>
@@ -55,7 +59,12 @@ const FacilityCard = ({ provider }: { provider: OwnProvider }) => {
             <VerificationBadge status={provider.verification_status} />
           </div>
         </div>
-      </div>
+        <ChevronRight
+          size={20}
+          className="text-copy-subtle shrink-0 mt-1 transition-transform group-hover:translate-x-0.5"
+          aria-hidden="true"
+        />
+      </Link>
     </Card>
   );
 };
@@ -70,7 +79,7 @@ const FacilitiesSkeleton = () => (
 
 /**
  * The way into onboarding. A user with no facility goes straight to the wizard; one who has
- * facilities sees them here and can list another (the full dashboard is #38).
+ * facilities sees them here, each opening its dashboard, and can list another.
  */
 const Facilities = () => {
   const { t } = useTranslation();

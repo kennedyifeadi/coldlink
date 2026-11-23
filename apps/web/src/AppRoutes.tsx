@@ -4,7 +4,14 @@ import { PROVIDER_ACTION_ROUTE } from '@coldlink/shared';
 import AppLayout from './components/AppLayout';
 import NotFound from './components/NotFound';
 import { RedirectIfSignedIn, RequireSession } from './session/guards';
-import { MY_BOOKINGS_PATH, PROVIDER_ONBOARDING_PATH, SIGN_IN_PATH } from './session/routes';
+import {
+  MY_BOOKINGS_PATH,
+  PROVIDER_BOOKING_PATH,
+  PROVIDER_BOOKINGS_PATH,
+  PROVIDER_FACILITY_PATH,
+  PROVIDER_ONBOARDING_PATH,
+  SIGN_IN_PATH,
+} from './session/routes';
 import { SEARCH_STEPS } from './features/search/searchFlow';
 import { BOOKING_STEPS, paymentReturnPath } from './features/booking/bookingIntent';
 import { CONFIRMATION_PATH, PAYMENT_RETURN_PATH } from './features/booking/paymentFlow';
@@ -21,6 +28,7 @@ const loadSearch = () => import('./features/search');
 const loadBooking = () => import('./features/booking');
 const loadProvider = () => import('./features/provider');
 const loadProviderLink = () => import('./features/providerLink');
+const loadProviderDashboard = () => import('./features/providerDashboard');
 
 const Onboarding = lazyScreen(loadAuth, 'Onboarding');
 const OtpEntry = lazyScreen(loadAuth, 'OtpEntry');
@@ -47,8 +55,11 @@ const ProduceStep = lazyScreen(loadProvider, 'ProduceStep');
 const PhotosStep = lazyScreen(loadProvider, 'PhotosStep');
 const Outcome = lazyScreen(loadProvider, 'Outcome');
 const ActionLink = lazyScreen(loadProviderLink, 'ActionLink');
+const Dashboard = lazyScreen(loadProviderDashboard, 'Dashboard');
+const ProviderBookings = lazyScreen(loadProviderDashboard, 'ProviderBookings');
+const ProviderBookingDetail = lazyScreen(loadProviderDashboard, 'ProviderBookingDetail');
 
-// Provider and admin screens (later issues) go under <RequireSession roles={[...]} />.
+// Provider and admin screens go under <RequireSession roles={[...]} />.
 const AppRoutes = () => (
   <Routes>
     <Route element={<AppLayout />}>
@@ -87,6 +98,12 @@ const AppRoutes = () => (
         <Route path={ONBOARDING_STEPS.produce} element={<ProduceStep />} />
         <Route path={ONBOARDING_STEPS.photos} element={<PhotosStep />} />
         <Route path={ONBOARDING_STEPS.done} element={<Outcome />} />
+      </Route>
+      {/* A facility's own screens (PRD 9.5); the API also checks the facility is the user's. */}
+      <Route element={<RequireSession roles={['provider']} />}>
+        <Route path={PROVIDER_FACILITY_PATH} element={<Dashboard />} />
+        <Route path={PROVIDER_BOOKINGS_PATH} element={<ProviderBookings />} />
+        <Route path={PROVIDER_BOOKING_PATH} element={<ProviderBookingDetail />} />
       </Route>
       <Route path="*" element={<NotFound />} />
     </Route>

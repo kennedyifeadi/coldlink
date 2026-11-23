@@ -4,6 +4,8 @@ import type { ErrorCode, SessionResponse, UserRole } from '@coldlink/shared';
 export interface MockRequest {
   body: unknown;
   headers: Headers;
+  /** The query string, which routes leave out: "?group=past", or "". */
+  search: string;
 }
 
 type Reply = Response | ((request: MockRequest) => Response | Promise<Response>);
@@ -53,7 +55,7 @@ export const sessionFixture = ({
   },
 });
 
-const urlOf = (input: RequestInfo | URL) =>
+export const urlOf = (input: RequestInfo | URL) =>
   typeof input === 'string' ? input : input instanceof URL ? input.href : input.url;
 
 const jsonBody = (body: BodyInit | null | undefined): unknown =>
@@ -86,7 +88,8 @@ const copyOf = async (response: Response) => {
 export const mockApi = (routes: Record<string, Reply | Reply[]>) => {
   const callCounts = new Map<string, number>();
   const fetchMock = vi.fn(async (input: RequestInfo | URL, init: RequestInit = {}) => {
-    const path = new URL(urlOf(input), 'http://localhost').pathname.replace(/^\/api\/v1/, '');
+    const url = new URL(urlOf(input), 'http://localhost');
+    const path = url.pathname.replace(/^\/api\/v1/, '');
     const key = `${init.method ?? 'GET'} ${path}`;
     const route = routes[key];
     if (route === undefined) throw new Error(`Unexpected request: ${key}`);
@@ -96,6 +99,7 @@ export const mockApi = (routes: Record<string, Reply | Reply[]>) => {
     const request = {
       body: jsonBody(init.body),
       headers: new Headers(init.headers),
+      search: url.search,
     };
     const response = typeof reply === 'function' ? await reply(request) : reply;
     return copyOf(response!);

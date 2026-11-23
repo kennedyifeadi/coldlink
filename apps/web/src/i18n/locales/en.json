@@ -658,6 +658,110 @@
       "temperatureInvalid": "Enter a temperature between -40 and 40 °C, or leave it empty.",
       "temperatureOrder": "The highest temperature can't be below the lowest.",
       "categoriesMissing": "Pick at least one kind of produce you can store."
+    },
+    "bookingStatus": {
+      "payment_pending": "Waiting for payment",
+      "pending_provider": "Waiting for your answer",
+      "confirmed": "Confirmed",
+      "rejected": "Rejected",
+      "expired": "Expired",
+      "in_storage": "In storage",
+      "cancelled": "Cancelled",
+      "no_show": "Not brought in",
+      "completed": "Collected"
+    },
+    "groups": {
+      "requests": "To answer",
+      "upcoming": "Coming in",
+      "in_storage": "In storage",
+      "past": "Past"
+    },
+    "empty": {
+      "requests": "No bookings are waiting for your answer.",
+      "upcoming": "No confirmed bookings are coming in.",
+      "in_storage": "No produce is in storage.",
+      "past": "No past bookings yet."
+    },
+    "card": {
+      "produce": "{{produce}}, {{amount}}",
+      "dates": "{{start}} to {{end}}",
+      "answerBy": "Answer by {{time}}, {{day}}",
+      "toCollect": "Collect {{amount}} from the farmer"
+    },
+    "dashboard": {
+      "navTitle": "Dashboard",
+      "occupancyTitle": "Space booked today, {{date}}",
+      "occupancyValue": "{{used}} of {{total}}",
+      "occupancyHint": "Counts bookings in storage, confirmed, waiting for your answer, and being paid for now.",
+      "seeAll": "See all {{total}}",
+      "earningsTitle": "Earnings",
+      "owed": "ColdLink owes you",
+      "paid": "ColdLink has paid you",
+      "earningsHint": "A booking's payout is owed once you check its produce in.",
+      "allBookings": "All bookings",
+      "loading": "Loading your dashboard...",
+      "failedTitle": "Couldn't load your dashboard",
+      "notFoundTitle": "Facility not found",
+      "notFoundBody": "This facility isn't one of yours, or it no longer exists.",
+      "backToFacilities": "Your facilities"
+    },
+    "bookings": {
+      "navTitle": "Bookings",
+      "title": "Bookings",
+      "groupsLabel": "Booking groups",
+      "loading": "Loading bookings...",
+      "showMore": "Show more",
+      "loadingMore": "Loading...",
+      "failedTitle": "Couldn't load your bookings"
+    },
+    "booking": {
+      "navTitle": "Booking",
+      "codeLabel": "Booking",
+      "produce": "Produce",
+      "dates": "Dates",
+      "datesValue_one": "{{start}} to {{end}} ({{count}} day)",
+      "datesValue_other": "{{start}} to {{end}} ({{count}} days)",
+      "moneyTitle": "Money",
+      "payout": "ColdLink pays you",
+      "balance": "The farmer pays you at the facility",
+      "payoutHint": "ColdLink owes you the payout once you check the produce in.",
+      "timesTitle": "Times",
+      "answerByLabel": "Answer by",
+      "checkedIn": "Checked in",
+      "collected": "Collected",
+      "answerBy": "Answer by {{time}}, {{day}}",
+      "answerByHint": "If you don't answer by then, the booking is cancelled and the farmer is refunded.",
+      "accept": "Accept booking",
+      "accepting": "Accepting...",
+      "reject": "Reject booking",
+      "rejectQuestion": "Reject this booking? The farmer will get a full refund.",
+      "confirmReject": "Yes, reject it",
+      "rejecting": "Rejecting...",
+      "keep": "Don't reject",
+      "checkInTitle": "Check in the produce",
+      "checkInBody": "Check the produce in when the farmer brings it. Check-in opens on {{date}}.",
+      "checkIn": "Check in produce",
+      "checkingIn": "Checking in...",
+      "collectLabel": "Collect from the farmer",
+      "collectBody": "Mark the booking collected once the farmer has paid you and taken their produce.",
+      "collect": "Mark collected",
+      "collecting": "Marking collected...",
+      "done": {
+        "accept": "Booking accepted. We've sent the farmer your address.",
+        "reject": "Booking rejected. The farmer will get a full refund.",
+        "check-in": "Produce checked in. ColdLink now owes you the payout.",
+        "collect": "Booking marked collected."
+      },
+      "conflict": {
+        "answer": "This booking can no longer be answered. It was answered already, or the time to answer has passed.",
+        "checkInEarly": "Check-in opens on {{date}}. Check the produce in then.",
+        "checkIn": "This booking can no longer be checked in.",
+        "collect": "This booking can no longer be marked collected."
+      },
+      "notFoundTitle": "Booking not found",
+      "notFoundBody": "It isn't one of this facility's bookings.",
+      "backToBookings": "Back to bookings",
+      "failedTitle": "Couldn't load this booking"
     }
   },
   "actionLink": {
