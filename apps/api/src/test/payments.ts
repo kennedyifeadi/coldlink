@@ -3,6 +3,7 @@ import type { Database } from '../db/client.js';
 import {
   PaymentGatewayError,
   type ChargeRequest,
+  type ExistingRefund,
   type GatewayCharge,
   type PaymentGateway,
   type RefundRequest,
@@ -40,14 +41,22 @@ export function chargeSuccessEvent(charge: {
 }
 
 /**
- * An in-memory gateway. `charges` is what verify answers, by reference; a refund fails while
- * `failRefunds` is set. Every call is recorded.
+ * An in-memory gateway. `charges` is what verify answers, by reference, and `held` the refunds
+ * Paystack has made, which listRefunds answers. A refund is refused before it is made while
+ * `failRefunds` is set, and made but answered with a timeout while `loseRefundResponses` is, as
+ * when Paystack's answer never arrives. Every refund call is recorded in `refunds`.
  */
 export function fakePaymentGateway() {
   const charges = new Map<string, GatewayCharge>();
   const initialized: ChargeRequest[] = [];
   const refunds: RefundRequest[] = [];
-  const state = { failRefunds: false, failInitialize: false };
+  const held: (ExistingRefund & { chargeReference: string })[] = [];
+  const state = {
+    failRefunds: false,
+    failInitialize: false,
+    loseRefundResponses: false,
+    failListRefunds: false,
+  };
   let refundCount = 0;
 
   const gateway: PaymentGateway = {
@@ -74,25 +83,49 @@ export function fakePaymentGateway() {
         return Promise.reject(new PaymentGatewayError('Paystack refund returned HTTP 400'));
       }
       refundCount += 1;
-      return Promise.resolve({ refundId: `refund-${refundCount}`, status: 'pending' });
+      const made = { refundId: `refund-${refundCount}`, status: 'pending' };
+      held.push({
+        ...made,
+        amountKobo: refund.amountKobo,
+        chargeReference: refund.chargeReference,
+      });
+      if (state.loseRefundResponses) {
+        return Promise.reject(new PaymentGatewayError('Paystack refund timed out after 10000 ms'));
+      }
+      return Promise.resolve(made);
+    },
+    listRefunds({ chargeReference }) {
+      if (state.failListRefunds) {
+        return Promise.reject(new PaymentGatewayError('Paystack list refunds returned HTTP 503'));
+      }
+      return Promise.resolve(
+        held
+          .filter((refund) => refund.chargeReference === chargeReference)
+          .map(({ refundId, status, amountKobo }) => ({ refundId, status, amountKobo })),
+      );
     },
     isSignedWebhook(rawBody, signature) {
       return signature === paystackSignature(FAKE_PAYSTACK_SECRET, rawBody);
     },
   };
 
-  /** Makes verify report the charge as paid. */
-  function pay(reference: string, amountKobo: number, currency = 'NGN'): void {
+  /** Makes verify report the charge with Paystack's `status`, such as `abandoned` or `ongoing`. */
+  function report(reference: string, status: string, amountKobo: number, currency = 'NGN'): void {
     charges.set(reference, {
       reference,
-      status: 'success',
+      status,
       amountKobo,
       currency,
-      record: { id: '4099260516', status: 'success', amount: amountKobo, currency },
+      record: { id: '4099260516', status, amount: amountKobo, currency },
     });
   }
 
-  return { gateway, charges, initialized, refunds, state, pay };
+  /** Makes verify report the charge as paid. */
+  function pay(reference: string, amountKobo: number, currency = 'NGN'): void {
+    report(reference, 'success', amountKobo, currency);
+  }
+
+  return { gateway, charges, initialized, refunds, held, state, pay, report };
 }
 
 export interface ChargeFixture {

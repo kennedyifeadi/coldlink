@@ -8,7 +8,7 @@ import {
   testTemplates,
   type FakeOutcome,
 } from '../test/notifications.js';
-import { sendNotification } from './send.js';
+import { deliver, queueNotification, sendNotification } from './send.js';
 
 const phone = '+2348031234567';
 const code = '482913';
@@ -28,6 +28,26 @@ function setup(...outcomes: FakeOutcome[]) {
 
 const otp = { template: 'otp', params: { code, expires_in_minutes: 10 }, to: phone } as const;
 const greeting = { template: 'greeting', params: { name: 'Ade' }, to: phone } as const;
+
+describe('queueNotification', () => {
+  it('logs the SMS as queued and sends nothing, leaving deliver to send it', async () => {
+    const { deps, table, sms } = setup('ok');
+    const delivery = await queueNotification(deps, greeting);
+
+    expect(sms.sent).toEqual([]);
+    expect(table.row(delivery.id)).toMatchObject({ status: 'queued', attempts: 0 });
+    expect(delivery).toEqual({
+      id: delivery.id,
+      template: 'greeting',
+      retryable: true,
+      to: phone,
+      text: 'Hello Ade, this is ColdLink.',
+      attempts: 0,
+    });
+    await expect(deliver(deps, delivery)).resolves.toBe('sent');
+    expect(table.row(delivery.id)).toMatchObject({ status: 'sent', attempts: 1 });
+  });
+});
 
 describe('sendNotification', () => {
   it('logs the SMS, sends it and marks it sent', async () => {

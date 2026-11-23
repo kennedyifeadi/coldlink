@@ -1,8 +1,9 @@
-import { sql } from 'kysely';
+import { sql, type Transaction } from 'kysely';
 import type { Logger } from 'pino';
 import type { Database } from '../db/client.js';
+import type { DB } from '../db/schema.js';
 import { inTransaction } from '../db/transaction.js';
-import { maskReference, type PaymentGateway } from './gateway.js';
+import { maskReference, type GatewayRefund, type PaymentGateway } from './gateway.js';
 import { generatePaymentReference, mergePayload } from './store.js';
 
 export interface RefundDependencies {
@@ -85,6 +86,43 @@ async function startRefund(db: Database, order: RefundOrder): Promise<StartedRef
   });
 }
 
+export interface RefundRecord {
+  /** The refund's `payments` row. */
+  id: string;
+  amountKobo: number;
+  charge: { id: string; amountKobo: number };
+}
+
+/**
+ * Marks the refund `success` with the gateway's refund, and its charge `refunded`, or
+ * `partially_refunded` for less than all of it.
+ */
+export async function recordRefundSuccess(
+  trx: Transaction<DB>,
+  refund: RefundRecord,
+  result: GatewayRefund,
+): Promise<void> {
+  await trx
+    .updateTable('payments')
+    .set({
+      status: 'success',
+      paid_at: sql<Date>`now()`,
+      paystack_payload: mergePayload({
+        paystack_refund_id: result.refundId,
+        paystack_status: result.status,
+      }),
+    })
+    .where('id', '=', refund.id)
+    .execute();
+  await trx
+    .updateTable('payments')
+    .set({
+      status: refund.amountKobo < refund.charge.amountKobo ? 'partially_refunded' : 'refunded',
+    })
+    .where('id', '=', refund.charge.id)
+    .execute();
+}
+
 /**
  * Refunds a booking's charge through the gateway and records it as a `refund` payment that ends
  * `success` or `failed` (decision 95). A gateway failure is recorded for the retry job and logged,
@@ -115,27 +153,7 @@ export async function refundBooking(
     return 'failed';
   }
 
-  await inTransaction(db, async (trx) => {
-    await trx
-      .updateTable('payments')
-      .set({
-        status: 'success',
-        paid_at: sql<Date>`now()`,
-        paystack_payload: mergePayload({
-          paystack_refund_id: result.refundId,
-          paystack_status: result.status,
-        }),
-      })
-      .where('id', '=', refund.id)
-      .execute();
-    await trx
-      .updateTable('payments')
-      .set({
-        status: refund.amountKobo < refund.charge.amountKobo ? 'partially_refunded' : 'refunded',
-      })
-      .where('id', '=', refund.charge.id)
-      .execute();
-  });
+  await inTransaction(db, (trx) => recordRefundSuccess(trx, refund, result));
   logger.info({ ...log, amountKobo: refund.amountKobo, reason: order.reason }, 'Refund made');
   return 'refunded';
 }

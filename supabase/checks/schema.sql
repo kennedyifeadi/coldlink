@@ -1098,7 +1098,7 @@ declare
   e public.booking_events;
 begin
   select * into b from public.bookings where code = 'CL-7K3Q9';
-  if b.id is null or b.delivery_fee_kobo <> 0 then
+  if b.id is null or b.delivery_fee_kobo <> 0 or b.no_show_flagged_at is not null then
     raise exception 'bookings defaults are wrong: %', row_to_json(b);
   end if;
 

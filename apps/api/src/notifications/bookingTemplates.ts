@@ -100,7 +100,7 @@ export interface BookingSmsTemplateDependencies {
   relinkProvider: (bookingId: string) => Promise<string | undefined>;
 }
 
-/** The booking SMS of PRD 7.6, plus `booking_paid` (decision 105). */
+/** The booking SMS and reminders of PRD 7.6, plus `booking_paid` (decision 105). */
 export function createBookingSmsTemplates({ relinkProvider }: BookingSmsTemplateDependencies) {
   return {
     booking_received: linkTemplate({
@@ -152,6 +152,29 @@ export function createBookingSmsTemplates({ relinkProvider }: BookingSmsTemplate
           `Your refund of ${formatNgn(p.refund_kobo)} is on its way.`
         );
       },
+    }),
+    // The reminders of PRD 7.6, from the reminder job (decision 116). end_date is the day the
+    // produce must be collected (decision 107's "Collect today").
+    expiry_reminder: retryableTemplate({
+      params: z.object({
+        code,
+        facility_name: z.string(),
+        end_date: z.iso.date(),
+        kind: z.enum(['expiry_two_days_before', 'expiry_last_day']),
+      }),
+      render: (p) => {
+        const ends =
+          p.kind === 'expiry_last_day'
+            ? `ends today, ${formatDate(p.end_date)}. Please collect your produce today.`
+            : `ends on ${formatDate(p.end_date)}. Please collect your produce by then.`;
+        return `ColdLink: your booking ${p.code} at ${facility(p.facility_name)} ${ends}`;
+      },
+    }),
+    collection_reminder: retryableTemplate({
+      params: z.object({ code, facility_name: z.string(), end_date: z.iso.date() }),
+      render: (p) =>
+        `ColdLink: the produce for booking ${p.code} at ${facility(p.facility_name)} is due ` +
+        `for collection today, ${formatDate(p.end_date)}.`,
     }),
   } satisfies TemplateRegistry;
 }

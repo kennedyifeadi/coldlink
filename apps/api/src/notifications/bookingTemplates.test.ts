@@ -53,6 +53,18 @@ const rejected: Params<'booking_rejected'> = {
   refund_kobo: 4_064_400,
 };
 
+const expiry: Params<'expiry_reminder'> = {
+  code: 'CL-AB2CD',
+  facility_name: 'Bodija Cold Room',
+  end_date: '2026-12-31',
+  kind: 'expiry_two_days_before',
+};
+const collection: Params<'collection_reminder'> = {
+  code: 'CL-AB2CD',
+  facility_name: 'Bodija Cold Room',
+  end_date: '2026-12-31',
+};
+
 // Each typed field as long as providerFields allows, in characters that are not GSM-7, and the
 // largest numbers a booking could carry. Typed so a new template fails until it is added here.
 const longName = 'Ọ̀yọ́ '.repeat(20).slice(0, 80);
@@ -85,6 +97,13 @@ const longest: { [Name in keyof BookingSmsTemplates]: Params<Name>[] } = {
     reason,
     refund_kobo: 99_999_999_999,
   })),
+  expiry_reminder: (['expiry_two_days_before', 'expiry_last_day'] as const).map((kind) => ({
+    ...expiry,
+    facility_name: longName,
+    end_date: '2027-12-28',
+    kind,
+  })),
+  collection_reminder: [{ ...collection, facility_name: longName, end_date: '2027-12-28' }],
 };
 
 function render<Name extends keyof BookingSmsTemplates>(name: Name, params: Params<Name>): string {
@@ -206,6 +225,49 @@ describe('booking SMS templates', () => {
           'Your refund of NGN 40,644 is on its way.',
       );
     });
+  });
+});
+
+describe('reminders', () => {
+  it('tells the farmer two days ahead which booking ends, where and on what day', () => {
+    expect(render('expiry_reminder', expiry)).toBe(
+      'ColdLink: your booking CL-AB2CD at Bodija Cold Room ends on 31 Dec 2026. ' +
+        'Please collect your produce by then.',
+    );
+  });
+
+  it('tells the farmer on the last day that it is today', () => {
+    expect(render('expiry_reminder', { ...expiry, kind: 'expiry_last_day' })).toBe(
+      'ColdLink: your booking CL-AB2CD at Bodija Cold Room ends today, 31 Dec 2026. ' +
+        'Please collect your produce today.',
+    );
+  });
+
+  it('tells the provider the produce is due for collection today', () => {
+    expect(render('collection_reminder', collection)).toBe(
+      'ColdLink: the produce for booking CL-AB2CD at Bodija Cold Room is due for collection ' +
+        'today, 31 Dec 2026.',
+    );
+  });
+
+  it('fit one part with an ordinary facility name', () => {
+    expect(gsm7Parts(render('expiry_reminder', expiry))).toBe(1);
+    expect(gsm7Parts(render('expiry_reminder', { ...expiry, kind: 'expiry_last_day' }))).toBe(1);
+    expect(gsm7Parts(render('collection_reminder', collection))).toBe(1);
+  });
+
+  it('are resent from their stored params', async () => {
+    const { payload } = templates.collection_reminder.prepare(collection);
+    expect(payload).toEqual(collection);
+    await expect(templates.collection_reminder.rerender(payload)).resolves.toEqual({
+      text: render('collection_reminder', collection),
+    });
+  });
+
+  it('refuse a kind that is not an expiry reminder', () => {
+    expect(() => templates.expiry_reminder.prepare({ ...expiry, kind: 'collection_due' })).toThrow(
+      z.ZodError,
+    );
   });
 });
 

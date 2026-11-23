@@ -86,6 +86,11 @@ const envSchema = z.object({
     .optional(),
   // Where Paystack sends the farmer after checkout: the web app's payment-return route.
   WEB_APP_URL: originSchema.optional(),
+  // Off for a process that must not move bookings, such as a one-off run against a shared database.
+  JOBS_ENABLED: z
+    .enum(['true', 'false'], { message: 'Must be true or false' })
+    .default('true')
+    .transform((value) => value === 'true'),
 });
 
 export interface TermiiConfig {
@@ -134,6 +139,8 @@ export interface Config {
   paystack: PaystackConfig | undefined;
   /** The web app's origin, which payment callbacks return to. */
   webAppUrl: string;
+  /** Whether this process runs the scheduled jobs (PRD 7.13). */
+  jobsEnabled: boolean;
 }
 
 export class ConfigError extends Error {
@@ -191,6 +198,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
     paystack: paystackConfig(result.data),
     // Outside production an unset web app means the local Vite dev server.
     webAppUrl: result.data.WEB_APP_URL ?? DEV_WEB_ORIGIN,
+    jobsEnabled: result.data.JOBS_ENABLED,
   };
 }
 

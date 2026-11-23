@@ -84,6 +84,7 @@ export interface Bookings {
   end_date: string;
   farmer_id: string;
   id: Generated<string>;
+  no_show_flagged_at: Timestamp | null;
   notes: string | null;
   payment_expires_at: Timestamp | null;
   provider_id: string;

@@ -37,6 +37,18 @@ export interface GatewayRefund {
   status: string;
 }
 
+/** A refund the gateway already holds for a charge. */
+export interface ExistingRefund extends GatewayRefund {
+  amountKobo: number;
+}
+
+export interface RefundLookup {
+  /** The reference of the charge the refunds are for. */
+  chargeReference: string;
+  /** The gateway's own id for the charge, from its verify or webhook record. */
+  transactionId: string;
+}
+
 export interface PaymentGateway {
   /** Starts a charge and returns the checkout page for it. */
   initialize(charge: ChargeRequest): Promise<InitializedCharge>;
@@ -44,6 +56,8 @@ export interface PaymentGateway {
   verify(reference: string): Promise<GatewayCharge>;
   /** Asks the gateway to refund all or part of a charge. */
   refund(refund: RefundRequest): Promise<GatewayRefund>;
+  /** The refunds the gateway holds for a charge, whatever their status. */
+  listRefunds(lookup: RefundLookup): Promise<ExistingRefund[]>;
   /** Whether a webhook body really came from the gateway, from its signature header. */
   isSignedWebhook(rawBody: Buffer, signature: string | undefined): boolean;
 }

@@ -148,6 +148,59 @@ describe('Paystack gateway', () => {
     expect(sent.body).toEqual({ transaction: reference, amount: 1_500_000 });
   });
 
+  describe('listing refunds', () => {
+    const listed = (refunds: object[]) =>
+      respond(200, { status: true, data: refunds, meta: { total: refunds.length } });
+
+    it("asks for all the charge's refunds by its id", async () => {
+      const fetchFn = listed([]);
+
+      await gatewayWith(fetchFn).listRefunds({
+        chargeReference: reference,
+        transactionId: '4099260516',
+      });
+
+      const sent = sentRequest(fetchFn);
+      expect(sent.init?.method).toBe('GET');
+      const url = new URL(String(sent.url));
+      expect(url.origin + url.pathname).toBe('https://api.paystack.co/refund');
+      expect(Object.fromEntries(url.searchParams)).toEqual({
+        perPage: '100',
+        transaction: '4099260516',
+      });
+    });
+
+    it("keeps only the charge's own refunds, matched by id or reference", async () => {
+      const fetchFn = listed([
+        { id: 1, status: 'processed', amount: 4_064_400, transaction: 4_099_260_516 },
+        { id: 2, status: 'pending', amount: 500, transaction: 1, transaction_reference: reference },
+        { id: 3, status: 'pending', amount: 700, transaction: 2, transaction_reference: 'CLP-x' },
+      ]);
+
+      await expect(
+        gatewayWith(fetchFn).listRefunds({
+          chargeReference: reference,
+          transactionId: '4099260516',
+        }),
+      ).resolves.toEqual([
+        { refundId: '1', status: 'processed', amountKobo: 4_064_400 },
+        { refundId: '2', status: 'pending', amountKobo: 500 },
+      ]);
+    });
+
+    it('reports an unexpected answer without the key', async () => {
+      const error = await gatewayError(
+        gatewayWith(respond(200, { status: true, data: { id: 1 } })).listRefunds({
+          chargeReference: reference,
+          transactionId: '4099260516',
+        }),
+      );
+
+      expect(error.message).toBe('Paystack list refunds returned an unexpected body');
+      expect(error.message).not.toContain(secretKey);
+    });
+  });
+
   it.each([
     ['an HTTP error', respond(400, { status: false, message: `Bad key ${secretKey}` }), /HTTP 400/],
     ['a body that is not Paystack success', respond(200, { status: false }), /unexpected body/],

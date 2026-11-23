@@ -5,21 +5,12 @@ import { createAccessTokens, type AccessTokens } from '../auth/tokens.js';
 import { createBackgroundTasks, type BackgroundTasks } from '../backgroundTasks.js';
 import type { Config } from '../config.js';
 import type { Database } from '../db/client.js';
-import { createTransitionHooks, type TransitionHooks } from '../bookings/hooks.js';
+import type { TransitionHooks } from '../bookings/hooks.js';
 import { checkDatabase } from '../db/health.js';
-import {
-  createProviderActionLinks,
-  registerBookingSmsHooks,
-} from '../notifications/bookingSmsHooks.js';
-import { createBookingSmsTemplates } from '../notifications/bookingTemplates.js';
-import { createNotificationStore, type NotificationStore } from '../notifications/store.js';
-import { smsTemplates } from '../notifications/templates.js';
-import { createSmsProvider } from '../sms/createSmsProvider.js';
+import type { NotificationStore } from '../notifications/store.js';
 import type { SmsProvider } from '../sms/provider.js';
-import { createPaymentGateway } from '../payments/createPaymentGateway.js';
 import type { PaymentGateway } from '../payments/gateway.js';
-import { registerPayoutHooks } from '../payments/payoutHooks.js';
-import { registerRefundHooks } from '../payments/refundHooks.js';
+import { createBookingServices, type BookingServices } from '../services.js';
 import { createPhotoStorage } from '../storage/createPhotoStorage.js';
 import type { PhotoStorage } from '../storage/photoStorage.js';
 import type { RateLimitOptions } from '../middleware/rateLimit.js';
@@ -50,6 +41,8 @@ export interface RouteDependencies {
   storage?: PhotoStorage;
   bookingHooks?: TransitionHooks;
   paymentGateway?: PaymentGateway;
+  /** Built from sms, notificationStore, bookingHooks and paymentGateway when left out. */
+  services?: BookingServices;
   now?: () => Date;
   generateBookingCode?: () => string;
 }
@@ -59,8 +52,8 @@ export function apiRoutes({
   config,
   logger,
   appConfig = createAppConfigReader(db),
-  sms = createSmsProvider(config.sms, logger, { showText: config.auth.devOtp }),
-  notificationStore = createNotificationStore(db),
+  sms,
+  notificationStore,
   tasks = createBackgroundTasks(),
   tokens = createAccessTokens(config.auth.jwtSecret),
   authIpLimits = defaultAuthIpLimits,
@@ -68,24 +61,21 @@ export function apiRoutes({
   quoteIpLimit = defaultQuoteIpLimit,
   actionIpLimit = defaultActionIpLimit,
   storage = createPhotoStorage(config.storage),
-  bookingHooks = createTransitionHooks(),
-  paymentGateway = createPaymentGateway(config.paystack),
+  bookingHooks,
+  paymentGateway,
+  services = createBookingServices({
+    db,
+    config,
+    logger,
+    ...(sms === undefined ? {} : { sms }),
+    ...(notificationStore === undefined ? {} : { notificationStore }),
+    ...(bookingHooks === undefined ? {} : { hooks: bookingHooks }),
+    ...(paymentGateway === undefined ? {} : { gateway: paymentGateway }),
+  }),
   now,
   generateBookingCode,
 }: RouteDependencies): Router {
-  registerPayoutHooks(bookingHooks);
-  registerRefundHooks(bookingHooks, { db, gateway: paymentGateway, logger });
-  const links = createProviderActionLinks(db, config.webAppUrl);
-  const notifications = {
-    store: notificationStore,
-    sms,
-    logger,
-    templates: {
-      ...smsTemplates,
-      ...createBookingSmsTemplates({ relinkProvider: (bookingId) => links.reissue(bookingId) }),
-    },
-  };
-  registerBookingSmsHooks(bookingHooks, { db, notifications, links });
+  const { hooks, notifications, gateway } = services;
   const router = Router();
   router.get('/health', async (req, res) => {
     const database = await checkDatabase(db, req.log);
@@ -122,7 +112,7 @@ export function apiRoutes({
       db,
       tokens,
       appConfig,
-      hooks: bookingHooks,
+      hooks,
       quoteIpLimit,
       ...(now === undefined ? {} : { now }),
       ...(generateBookingCode === undefined ? {} : { generateCode: generateBookingCode }),
@@ -132,14 +122,14 @@ export function apiRoutes({
     providerBookingRoutes({
       db,
       tokens,
-      hooks: bookingHooks,
+      hooks,
       ...(now === undefined ? {} : { now }),
     }),
   );
   router.use(
     actionRoutes({
       db,
-      hooks: bookingHooks,
+      hooks,
       ipLimit: actionIpLimit,
       ...(now === undefined ? {} : { now }),
     }),
@@ -149,8 +139,8 @@ export function apiRoutes({
       db,
       tokens,
       appConfig,
-      gateway: paymentGateway,
-      hooks: bookingHooks,
+      gateway,
+      hooks,
       config,
       logger,
       tasks,
