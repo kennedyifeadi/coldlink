@@ -1,10 +1,13 @@
 import {
   capacityUnitSchema,
   providerBookingsQuerySchema,
+  providerPayoutsQuerySchema,
   todayInLagos,
   type ProviderBookingsQueryInput,
   type ProviderBookingsResponse,
   type ProviderDashboard,
+  type ProviderPayoutsQueryInput,
+  type ProviderPayoutsResponse,
 } from '@coldlink/shared';
 import { Router, type Request, type RequestHandler } from 'express';
 import * as z from 'zod';
@@ -27,6 +30,8 @@ import {
   type AuthDependencies,
 } from '../middleware/auth.js';
 import { validate } from '../middleware/validate.js';
+import { listProviderPayouts } from '../payments/payoutStore.js';
+import { toProviderPayout } from '../payments/payoutViews.js';
 import { findProviderSummary } from '../providers/store.js';
 
 export interface ProviderDashboardRouteDependencies extends AuthDependencies {
@@ -126,6 +131,26 @@ export function providerDashboardRoutes(deps: ProviderDashboardRouteDependencies
       const detail = await findProviderBookingDetail(db, provider.id, bookingId);
       if (detail === undefined) throw new BookingNotFoundError(bookingId);
       res.json(toProviderBookingDetail(detail));
+    },
+  );
+
+  router.get(
+    '/providers/:id/payouts',
+    ...readers,
+    validate({ params: providerParamsSchema, query: providerPayoutsQuerySchema }),
+    async (req, res) => {
+      const provider = await readableProvider(db, req);
+      const page = await listProviderPayouts(
+        db,
+        provider.id,
+        req.query as unknown as ProviderPayoutsQueryInput,
+      );
+      const body: ProviderPayoutsResponse = {
+        data: page.rows.map(toProviderPayout),
+        next_cursor: page.nextCursor,
+        earnings: await providerEarnings(db, provider.id),
+      };
+      res.json(body);
     },
   );
 

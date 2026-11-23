@@ -55,6 +55,7 @@ const paths = [
   `/api/v1/providers/${providerId}/dashboard`,
   `/api/v1/providers/${providerId}/bookings?group=requests`,
   `/api/v1/providers/${providerId}/bookings/${bookingId}`,
+  `/api/v1/providers/${providerId}/payouts`,
 ];
 
 describe.each(paths)('GET %s', (path) => {
@@ -106,5 +107,34 @@ describe('GET /providers/:id/bookings', () => {
       await agentFor(['provider'])
     ).get(`/api/v1/providers/${providerId}/bookings/CL-7K3Q9`);
     expect(response.status).toBe(400);
+  });
+});
+
+describe('GET /providers/:id/payouts', () => {
+  async function issues(query: string) {
+    const response = await (
+      await agentFor(['provider'])
+    ).get(`/api/v1/providers/${providerId}/payouts${query}`);
+    expect(response.status).toBe(400);
+    expect(response.headers['cache-control']).toBe('no-store');
+    const { details } = errorResponseSchema.parse(response.body).error;
+    return z.array(validationIssueSchema).parse(details);
+  }
+
+  it('refuses a status other than owed or paid', async () => {
+    expect(await issues('?status=pending')).toEqual([
+      expect.objectContaining({ location: 'query', path: 'status' }),
+    ]);
+  });
+
+  it('refuses a cursor that is not a payout id, and a limit past 50', async () => {
+    expect(await issues('?cursor=2&limit=51')).toEqual([
+      expect.objectContaining({ location: 'query', path: 'limit' }),
+      expect.objectContaining({ location: 'query', path: 'cursor' }),
+    ]);
+  });
+
+  it('refuses a field it does not know, such as recorded_by', async () => {
+    expect(await issues('?recorded_by=me')).toHaveLength(1);
   });
 });
