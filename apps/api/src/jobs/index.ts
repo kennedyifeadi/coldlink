@@ -1,4 +1,5 @@
 import type { Logger } from 'pino';
+import { createAppConfigReader } from '../appConfig.js';
 import type { Database } from '../db/client.js';
 import { processNotificationQueue } from '../notifications/queue.js';
 import { retryFailedRefunds } from '../payments/refundRetry.js';
@@ -19,13 +20,14 @@ export interface JobDependencies {
 /** The scheduled jobs of PRD 7.13, each on its schedule on the Lagos clock (decision 114). */
 export function createJobs({ db, logger, services, now }: JobDependencies): ScheduledJob[] {
   const bookings = { db, hooks: services.hooks, logger };
+  const charges = { gateway: services.gateway, appConfig: createAppConfigReader(db) };
   // Six fields, seconds first. Each job holds a connection for its lock and another for its work,
   // so they start ten seconds apart rather than taking the whole pool from requests at once.
   return [
     {
       name: 'release_holds',
       schedule: '0 * * * * *',
-      run: (signal) => releaseHolds({ ...bookings, signal }),
+      run: (signal) => releaseHolds({ ...bookings, ...charges, signal }),
     },
     {
       name: 'expire_unanswered',

@@ -1,4 +1,5 @@
 import { sql } from 'kysely';
+import { createAppConfigReader } from '../appConfig.js';
 import type { Database } from '../db/client.js';
 import { createJobs } from '../jobs/index.js';
 import type { ScheduledJob } from '../jobs/runner.js';
@@ -39,7 +40,13 @@ export function jobServices(db: Database, now?: () => Date) {
     payments,
     services,
     job,
-    deps: { db, hooks: services.hooks, logger: logs.logger },
+    deps: {
+      db,
+      hooks: services.hooks,
+      logger: logs.logger,
+      gateway: payments.gateway,
+      appConfig: createAppConfigReader(db),
+    },
   };
 }
 
