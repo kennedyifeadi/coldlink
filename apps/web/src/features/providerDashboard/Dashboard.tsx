@@ -1,5 +1,5 @@
 import React from 'react';
-import { ChevronRight } from 'lucide-react';
+import { ChevronRight, Settings } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
@@ -16,7 +16,11 @@ import CardTitle from '../../components/ui/CardTitle';
 import SummaryRow from '../../components/ui/SummaryRow';
 import { formatDate, formatKobo, formatNumber } from '../../i18n/format';
 import { useSessionStore } from '../../session/sessionContext';
-import { providerBookingsPath } from '../../session/routes';
+import {
+  providerBookingsPath,
+  providerEarningsPath,
+  providerSettingsPath,
+} from '../../session/routes';
 import { LoadFailed } from '../booking/BookingStates';
 import { formatAmount } from '../search/units';
 import ProviderBookingCard from './ProviderBookingCard';
@@ -92,7 +96,13 @@ const BookingSection = ({ providerId, group, list }: BookingSectionProps) => {
 };
 
 // Amounts are the API's sums, shown to the kobo; the screen adds nothing up.
-const EarningsCard = ({ earnings }: { earnings: ProviderDashboard['earnings'] }) => {
+const EarningsCard = ({
+  providerId,
+  earnings,
+}: {
+  providerId: string;
+  earnings: ProviderDashboard['earnings'];
+}) => {
   const { t } = useTranslation();
 
   return (
@@ -107,6 +117,13 @@ const EarningsCard = ({ earnings }: { earnings: ProviderDashboard['earnings'] })
         <SummaryRow label={t('provider.dashboard.paid')} value={formatKobo(earnings.paid_kobo)} />
       </div>
       <p className="text-copy-subtle text-label mt-4">{t('provider.dashboard.earningsHint')}</p>
+      <Link
+        to={providerEarningsPath(providerId)}
+        className="inline-flex items-center gap-1 min-h-12 mt-2 text-primary-strong font-medium text-body"
+      >
+        {t('provider.dashboard.earningsLink')}
+        <ChevronRight size={18} aria-hidden="true" />
+      </Link>
     </Card>
   );
 };
@@ -117,14 +134,21 @@ const DashboardBody = ({ dashboard }: { dashboard: ProviderDashboard }) => {
 
   return (
     <div className="flex flex-col px-5 pt-6">
-      <h1 className="font-heading text-headline font-bold text-ink mb-6 break-words">
+      <h1 className="font-heading text-headline font-bold text-ink mb-2 break-words">
         {dashboard.provider.display_name}
       </h1>
+      <Link
+        to={providerSettingsPath(providerId)}
+        className="self-start inline-flex items-center gap-2 min-h-12 mb-4 text-primary-strong font-medium text-body"
+      >
+        <Settings size={18} aria-hidden="true" />
+        {t('provider.dashboard.settingsLink')}
+      </Link>
       <OccupancyCard occupancy={dashboard.occupancy} />
       <BookingSection providerId={providerId} group="requests" list={dashboard.requests} />
       <BookingSection providerId={providerId} group="upcoming" list={dashboard.upcoming} />
       <BookingSection providerId={providerId} group="in_storage" list={dashboard.in_storage} />
-      <EarningsCard earnings={dashboard.earnings} />
+      <EarningsCard providerId={providerId} earnings={dashboard.earnings} />
       <Link
         to={providerBookingsPath(providerId)}
         className="flex items-center justify-center gap-2 w-full min-h-12 py-3 rounded-lg font-medium text-lead bg-surface border border-line-strong text-ink hover:bg-surface-muted transition-colors"

@@ -30,7 +30,8 @@ const conflictMessage = (action: ProviderBookingAction, error: unknown, t: Trans
   return t('provider.booking.conflict.answer');
 };
 
-const secondaryButton =
+/** An outlined button for the action beside the primary one. */
+export const secondaryButton =
   'w-full min-h-12 py-3 rounded-lg font-medium text-lead bg-surface border border-line-strong text-ink hover:bg-surface-muted disabled:text-copy-subtle disabled:cursor-not-allowed transition-colors';
 const dangerButton =
   'w-full min-h-12 py-3 rounded-lg font-medium text-lead bg-alert-strong text-white hover:bg-alert disabled:bg-disabled disabled:cursor-not-allowed transition-colors';

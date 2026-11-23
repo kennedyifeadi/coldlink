@@ -67,6 +67,13 @@ const dashboardListSchema = z.strictObject({
 });
 export type ProviderDashboardList = z.infer<typeof dashboardListSchema>;
 
+/** Sums of the facility's payouts (PRD 5.8), on the dashboard and the earnings screen. */
+export const providerEarningsSchema = z.strictObject({
+  owed_kobo: koboSchema.nonnegative(),
+  paid_kobo: koboSchema.nonnegative(),
+});
+export type ProviderEarnings = z.infer<typeof providerEarningsSchema>;
+
 export const providerDashboardSchema = z.strictObject({
   provider: z.strictObject({ id: z.uuid(), display_name: z.string() }),
   /** Space booked today in Lagos, in the facility's own unit. */
@@ -79,10 +86,6 @@ export const providerDashboardSchema = z.strictObject({
   requests: dashboardListSchema,
   upcoming: dashboardListSchema,
   in_storage: dashboardListSchema,
-  /** Sums of the facility's payouts (PRD 5.8). */
-  earnings: z.strictObject({
-    owed_kobo: koboSchema.nonnegative(),
-    paid_kobo: koboSchema.nonnegative(),
-  }),
+  earnings: providerEarningsSchema,
 });
 export type ProviderDashboard = z.infer<typeof providerDashboardSchema>;

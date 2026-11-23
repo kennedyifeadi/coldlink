@@ -100,7 +100,10 @@ export async function addBooking(
   return bookingId;
 }
 
-/** Records a payout for the booking, owed, or paid with what an admin's record needs. */
+/**
+ * Records a payout for the booking, owed, or paid with what an admin's record needs, and returns
+ * its id.
+ */
 export async function addPayout(
   db: Database,
   {
@@ -108,20 +111,24 @@ export async function addPayout(
     providerId,
     amountKobo,
     paidBy,
+    createdAt,
   }: {
     bookingId: string;
     providerId: string;
     amountKobo: number;
     /** The admin who marked it paid; owed when left out. */
     paidBy?: string;
+    /** When it became owed; the transaction's now() when left out, the same for every row. */
+    createdAt?: string;
   },
-): Promise<void> {
-  await db
+): Promise<string> {
+  const { id } = await db
     .insertInto('payouts')
     .values({
       booking_id: bookingId,
       provider_id: providerId,
       amount_kobo: amountKobo,
+      ...(createdAt === undefined ? {} : { created_at: new Date(createdAt) }),
       ...(paidBy === undefined
         ? {}
         : {
@@ -131,5 +138,7 @@ export async function addPayout(
             recorded_by: paidBy,
           }),
     })
-    .execute();
+    .returning('id')
+    .executeTakeFirstOrThrow();
+  return id;
 }

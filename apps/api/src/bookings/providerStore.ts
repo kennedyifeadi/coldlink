@@ -5,6 +5,7 @@ import {
   providerBookingGroupStatuses,
   type ProviderBookingGroup,
   type ProviderBookingsQueryInput,
+  type ProviderEarnings,
 } from '@coldlink/shared';
 import { sql, type InferResult, type QueryCreator, type RawBuilder } from 'kysely';
 import type { Database } from '../db/client.js';
@@ -213,11 +214,6 @@ export async function findProviderBookingDetail(
     .executeTakeFirst();
   if (booking === undefined) return undefined;
   return { booking, history: await listBookingStatusHistory(db, bookingId) };
-}
-
-export interface ProviderEarnings {
-  owed_kobo: number;
-  paid_kobo: number;
 }
 
 /** The sums of the facility's payouts still owed and already paid (PRD 5.8, 6.4). */

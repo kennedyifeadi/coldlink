@@ -703,7 +703,9 @@
       "failedTitle": "Couldn't load your dashboard",
       "notFoundTitle": "Facility not found",
       "notFoundBody": "This facility isn't one of yours, or it no longer exists.",
-      "backToFacilities": "Your facilities"
+      "backToFacilities": "Your facilities",
+      "settingsLink": "Facility settings",
+      "earningsLink": "See payouts"
     },
     "bookings": {
       "navTitle": "Bookings",
@@ -762,6 +764,57 @@
       "notFoundBody": "It isn't one of this facility's bookings.",
       "backToBookings": "Back to bookings",
       "failedTitle": "Couldn't load this booking"
+    },
+    "settings": {
+      "navTitle": "Settings",
+      "loading": "Loading your facility...",
+      "failedTitle": "Couldn't load your facility",
+      "bookingsTitle": "Bookings",
+      "accepting": "Taking bookings",
+      "acceptingHint": "Farmers can find and book this facility.",
+      "paused": "Bookings paused",
+      "pausedHint": "Farmers can't find or book this facility. Bookings you already have stand.",
+      "pause": "Pause bookings",
+      "pausing": "Pausing...",
+      "resume": "Take bookings again",
+      "resuming": "Turning bookings on...",
+      "spaceTitle": "Space and price",
+      "unitNote": "Measured in {{unit}}. The unit can't be changed, because your bookings are counted in it.",
+      "belowBooked": "You have {{booked}} booked today. Those bookings stand. New bookings only fit in the space left.",
+      "priceHint": "In naira. A new price is for new bookings only. Bookings already made keep their price.",
+      "numbersTitle": "Phone numbers",
+      "smsLabel": "Booking SMS go to",
+      "whatsappLabel": "WhatsApp",
+      "noWhatsapp": "Not given",
+      "change": "Change",
+      "add": "Add",
+      "changeSmsLabel": "Change the number for booking SMS",
+      "changeWhatsappLabel": "Change the WhatsApp number",
+      "addWhatsappLabel": "Add a WhatsApp number",
+      "newSmsLabel": "New number for booking SMS",
+      "newWhatsappLabel": "New WhatsApp number",
+      "keepNumber": "Keep the current number",
+      "save": "Save changes",
+      "saving": "Saving...",
+      "saved": "Changes saved.",
+      "nothingChanged": "Nothing to save. Change a field first.",
+      "photosHint": "Photos are saved as soon as you add or remove them."
+    },
+    "earnings": {
+      "navTitle": "Earnings",
+      "title": "Earnings",
+      "payoutsTitle": "Payouts",
+      "loading": "Loading your payouts...",
+      "failedTitle": "Couldn't load your earnings",
+      "status": {
+        "owed": "Owed",
+        "paid": "Paid"
+      },
+      "owedSince": "Owed since {{date}}",
+      "paidOn": "Paid on {{date}}",
+      "reference": "Reference {{reference}}",
+      "emptyTitle": "No payouts yet",
+      "emptyBody": "A payout is owed to you once you check a booking's produce in. It will show here."
     }
   },
   "actionLink": {

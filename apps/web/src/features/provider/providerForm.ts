@@ -194,7 +194,7 @@ const readNumber = (text: string) => {
   return trimmed === '' ? undefined : Number(trimmed);
 };
 
-const readCapacityTotal = (text: string): { value: number } | { error: FieldErrorKey } => {
+export const readCapacityTotal = (text: string): { value: number } | { error: FieldErrorKey } => {
   const value = readNumber(text);
   if (value === undefined || !Number.isFinite(value)) return { error: 'capacityMissing' };
   if (value <= 0) return { error: 'capacityNotPositive' };
@@ -202,7 +202,7 @@ const readCapacityTotal = (text: string): { value: number } | { error: FieldErro
 };
 
 // Typed in naira and sent in kobo; nairaToKobo refuses anything finer than a kobo.
-const readPrice = (text: string): { value: number } | { error: FieldErrorKey } => {
+export const readPrice = (text: string): { value: number } | { error: FieldErrorKey } => {
   const naira = readNumber(text);
   if (naira === undefined || !Number.isFinite(naira)) return { error: 'priceMissing' };
   if (naira <= 0) return { error: 'priceNotPositive' };

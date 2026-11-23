@@ -8,8 +8,10 @@ import {
   MY_BOOKINGS_PATH,
   PROVIDER_BOOKING_PATH,
   PROVIDER_BOOKINGS_PATH,
+  PROVIDER_EARNINGS_PATH,
   PROVIDER_FACILITY_PATH,
   PROVIDER_ONBOARDING_PATH,
+  PROVIDER_SETTINGS_PATH,
   SIGN_IN_PATH,
 } from './session/routes';
 import { SEARCH_STEPS } from './features/search/searchFlow';
@@ -58,6 +60,8 @@ const ActionLink = lazyScreen(loadProviderLink, 'ActionLink');
 const Dashboard = lazyScreen(loadProviderDashboard, 'Dashboard');
 const ProviderBookings = lazyScreen(loadProviderDashboard, 'ProviderBookings');
 const ProviderBookingDetail = lazyScreen(loadProviderDashboard, 'ProviderBookingDetail');
+const FacilitySettings = lazyScreen(loadProviderDashboard, 'FacilitySettings');
+const ProviderEarnings = lazyScreen(loadProviderDashboard, 'ProviderEarnings');
 
 // Provider and admin screens go under <RequireSession roles={[...]} />.
 const AppRoutes = () => (
@@ -104,6 +108,8 @@ const AppRoutes = () => (
         <Route path={PROVIDER_FACILITY_PATH} element={<Dashboard />} />
         <Route path={PROVIDER_BOOKINGS_PATH} element={<ProviderBookings />} />
         <Route path={PROVIDER_BOOKING_PATH} element={<ProviderBookingDetail />} />
+        <Route path={PROVIDER_SETTINGS_PATH} element={<FacilitySettings />} />
+        <Route path={PROVIDER_EARNINGS_PATH} element={<ProviderEarnings />} />
       </Route>
       <Route path="*" element={<NotFound />} />
     </Route>

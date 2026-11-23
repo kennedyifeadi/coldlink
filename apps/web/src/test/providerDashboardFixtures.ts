@@ -2,9 +2,11 @@ import {
   providerBookingDetailSchema,
   providerBookingSchema,
   providerDashboardSchema,
+  providerPayoutSchema,
   type ProviderBooking,
   type ProviderBookingDetail,
   type ProviderDashboard,
+  type ProviderPayout,
 } from '@coldlink/shared';
 import { jsonResponse, sessionFixture } from './api';
 import { PROVIDER_ID } from './providerFixtures';
@@ -87,7 +89,29 @@ export const pastBooking = (index: number) =>
     collected_at: '2026-11-01T10:00:00.000Z',
   });
 
+/** A payout owed for the fixture booking since its check-in on 1 December. */
+export const providerPayout = (overrides: Partial<ProviderPayout> = {}): ProviderPayout =>
+  providerPayoutSchema.parse({
+    id: '7e8f9a0b-1c2d-4e3f-8a4b-5c6d7e8f9a0b',
+    amount_kobo: 3_048_300,
+    status: 'owed',
+    created_at: '2026-12-01T09:30:00.000Z',
+    paid_at: null,
+    reference: null,
+    booking: {
+      id: BOOKING_ID,
+      code: 'CL-7K3Q9',
+      crop: { id: '6d1f0c2a-8e3b-4f5a-9c7d-1b2e3f4a5b6c', name: 'Tomatoes' },
+      start_date: '2026-12-01',
+      duration_days: 30,
+      end_date: '2026-12-31',
+    },
+    ...overrides,
+  });
+
 export const dashboardRoute = `GET /providers/${PROVIDER_ID}/dashboard`;
+export const payoutsRoute = `GET /providers/${PROVIDER_ID}/payouts`;
+export const updateRoute = `PATCH /providers/${PROVIDER_ID}`;
 export const bookingsRoute = `GET /providers/${PROVIDER_ID}/bookings`;
 export const detailRoute = `GET /providers/${PROVIDER_ID}/bookings/${BOOKING_ID}`;
 export const actionRoute = (action: string) => `POST /bookings/${BOOKING_ID}/${action}`;

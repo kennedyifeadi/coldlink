@@ -3,6 +3,7 @@ import {
   ownProviderSchema,
   ownProvidersResponseSchema,
   type CreateProviderBody,
+  type UpdateProviderBody,
 } from '@coldlink/shared';
 import { isApiError } from './client';
 import type { SessionStore } from '../session/sessionStore';
@@ -13,6 +14,13 @@ const providerPath = (providerId: string) => `/providers/${encodeURIComponent(pr
 
 export const createProvider = (request: AuthorizedRequest, body: CreateProviderBody) =>
   request('/providers', { method: 'POST', body, schema: ownProviderSchema });
+
+/** Only the fields in the body change (decision 64). */
+export const updateProvider = (
+  request: AuthorizedRequest,
+  providerId: string,
+  body: UpdateProviderBody,
+) => request(providerPath(providerId), { method: 'PATCH', body, schema: ownProviderSchema });
 
 /** One photo as the raw body, typed by the Blob (decision 66). */
 export const uploadProviderPhoto = (request: AuthorizedRequest, providerId: string, photo: Blob) =>
