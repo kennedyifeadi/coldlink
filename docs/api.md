@@ -8,7 +8,7 @@ The API contract, written as an OpenAPI 3.1 document in the YAML block below. Ea
 - **Errors:** every error response has the shape `{ error: { code, message, details? } }`. The schema and the list of codes live in `packages/shared/src/errors.ts` (`errorResponseSchema`, `errorCodes`); the table below must match them.
 - **Correlation ID:** send `X-Request-Id` to tag a request (1 to 128 characters from `A-Z a-z 0-9 . _ : -`). Anything else, or no header, gets a generated UUID. The response always echoes the ID in `X-Request-Id`, and every log line for the request carries it, so quote it when reporting a problem.
 - **Lists:** a list response is `{ data: [...] }`, so a cursor can sit next to `data` later without changing the shape.
-- **Pagination:** paginated lists take `limit` and `cursor` (PRD 8). The reference lists (`/crops`, `/crop-categories`) are not paginated: they are small, admin-managed reference data (22 crops, 7 categories) that a client loads whole. `GET /providers/mine` and `GET /bookings` are not paginated yet either (decisions 62, 85).
+- **Pagination:** paginated lists take `limit` and `cursor` (PRD 8). The reference lists (`/crops`, `/crop-categories`) are not paginated: they are small, admin-managed reference data (22 crops, 7 categories) that a client loads whole. `GET /providers/mine` and `GET /bookings` are not paginated yet either (decisions 62, 85). `GET /providers/:id/bookings` is: `limit` (1 to 50, default 20) and `cursor`, the `next_cursor` of the page before, which is null on the last page.
 - **Caching:** the public reference endpoints send `Cache-Control: public` with a short `max-age` (5 minutes for crops and categories, 60 seconds for config). Responses for the signed-in user (`/me`, the owner's provider views, the farmer's bookings, the provider's booking actions) and the action link routes send `no-store`. Other responses, and every error, send none.
 - **Rate limits:** limited routes send `RateLimit` and `RateLimit-Policy` headers, and `Retry-After` with a 429. The reference endpoints are not limited yet: they are cheap, cacheable reads. The auth routes are limited per IP (decision 56); `POST /auth/otp/request` is also limited per phone number, and its 429 adds `details.retry_after_seconds`. `POST /search` and `POST /bookings/quote` are each limited to 300 requests per IP per 15 minutes (decisions 74, 75). `GET` and `POST /actions/:token` share a limit of 60 requests per IP per 15 minutes (decision 101).
 - **Response schemas:** the Zod schemas for request and response bodies live in `packages/shared` (`cropCategoriesResponseSchema`, `cropsResponseSchema`, `publicConfigSchema`, `otpRequestBodySchema`, `otpRequestResponseSchema`, `otpVerifyBodySchema`, `sessionResponseSchema`, `userProfileSchema`, `updateProfileBodySchema`, `createProviderBodySchema`, `updateProviderBodySchema`, `publicProviderSchema`, `ownProviderSchema`, `ownProvidersResponseSchema`, `searchBodySchema`, `searchResponseSchema`, `bookingQuoteBodySchema`, `bookingQuoteSchema`, `createBookingBodySchema`, `farmerBookingSchema`, `farmerBookingsResponseSchema`, `cancelBookingBodySchema`, `cancelledBookingSchema`, `initializePaymentBodySchema`, `initializedPaymentSchema`, `paymentVerificationSchema`, `rejectBookingBodySchema`, `providerBookingSchema`, `providerBookingRequestSchema`, `providerLinkActionBodySchema`, `providerLinkActionResultSchema`), for the web app to validate forms and parse responses with.
@@ -89,6 +89,12 @@ The provider's actions (PRD 6.4, 6.5, 7.2; decisions 97 to 100) move a booking f
 - **`POST /bookings/:id/check-in`** moves a `confirmed` booking to `in_storage`, from 00:00 in Lagos on `start_date` (earlier is 409), and records the payout owed to the facility.
 - **`POST /bookings/:id/collect`** moves an `in_storage` booking to `completed`. The farmer pays `balance_due_kobo` at the facility; ColdLink does not process it.
 - Any other status is the state machine's 409 `conflict`.
+
+The provider's reads (PRD 7.2, 9.5; decisions 117 to 120) are for the facility's owner and for admins; any other role gets 403. Another provider's facility is the same 404 `not_found` as an unknown id, and every answer, errors included, sends `Cache-Control: no-store`. They list only bookings the facility has been asked about, that is, paid ones: an unpaid hold, running or lapsed, is in none of them. Every booking in them is a `providerBookingSchema`, with no farmer field.
+
+- **`GET /providers/:id/dashboard`** (`providerDashboardSchema`): `occupancy`, the space booked today in Lagos (`used` of `total`, in the facility's `capacity_unit`), counting held, waiting, confirmed and stored bookings as availability does; `requests`, `upcoming` and `in_storage`, each a `count` and its first five `items`, in the order of the list below; and `earnings`, the sums of the facility's payouts `owed_kobo` and `paid_kobo`.
+- **`GET /providers/:id/bookings?group=`** (`providerBookingsResponseSchema`): `requests` (`pending_provider`, soonest `provider_response_due_at` first), `upcoming` (`confirmed`, soonest `start_date` first), `in_storage` (soonest `end_date` first) or `past` (`completed`, `rejected`, `expired`, `cancelled` and `no_show`, latest `start_date` first). Ties go by id. Paginated with `limit` and `cursor`; a cursor that is not one of the facility's bookings gives an empty page.
+- **`GET /providers/:id/bookings/:bookingId`** (`providerBookingDetailSchema`): the booking with `status_history`, as for the farmer's full booking. A booking of another facility, or one this facility was never asked about, is 404.
 
 ## Action links
 
@@ -747,6 +753,143 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/OwnProvider'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/Internal'
+  /providers/{id}/dashboard:
+    parameters:
+      - $ref: '#/components/parameters/ProviderId'
+    get:
+      operationId: getProviderDashboard
+      summary: The facility's dashboard
+      description: >-
+        For the facility's owner and admins; another provider's facility is the same 404 as an
+        unknown id. Today's occupancy in Lagos, the first five requests, upcoming and stored
+        bookings with their counts, and the payouts owed and paid.
+      tags: [Providers]
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: The dashboard.
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/NoStore'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProviderDashboard'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/Internal'
+  /providers/{id}/bookings:
+    parameters:
+      - $ref: '#/components/parameters/ProviderId'
+    get:
+      operationId: listProviderBookings
+      summary: One group of the facility's bookings
+      description: >-
+        For the facility's owner and admins. Only bookings the facility was asked about (paid
+        ones). requests by the soonest deadline, upcoming by start date, in_storage by end date,
+        past by the latest start date; ties by id.
+      tags: [Providers]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: group
+          in: query
+          required: true
+          schema:
+            type: string
+            enum: [requests, upcoming, in_storage, past]
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 50
+            default: 20
+        - name: cursor
+          in: query
+          required: false
+          description: The next_cursor of the page before.
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: One page of the group.
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/NoStore'
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, next_cursor]
+                additionalProperties: false
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ProviderBooking'
+                  next_cursor:
+                    type: [string, 'null']
+                    format: uuid
+                    description: Null on the last page.
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/Internal'
+  /providers/{id}/bookings/{bookingId}:
+    parameters:
+      - $ref: '#/components/parameters/ProviderId'
+      - name: bookingId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      operationId: getProviderBooking
+      summary: One of the facility's bookings, with its history
+      description: >-
+        For the facility's owner and admins. A booking of another facility, or one this facility
+        was never asked about, is 404.
+      tags: [Providers]
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: The booking, in the provider's view, with its status history.
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/NoStore'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProviderBookingDetail'
         '400':
           $ref: '#/components/responses/BadRequest'
         '401':
@@ -2314,6 +2457,80 @@ components:
         collected_at:
           type: [string, 'null']
           format: date-time
+    ProviderBookingDetail:
+      description: The provider's view of a booking with its status history.
+      allOf:
+        - $ref: '#/components/schemas/ProviderBooking'
+        - type: object
+          required: [status_history]
+          properties:
+            status_history:
+              $ref: '#/components/schemas/FarmerBookingDetails/properties/status_history'
+    ProviderDashboardList:
+      type: object
+      additionalProperties: false
+      required: [count, items]
+      properties:
+        count:
+          type: integer
+          minimum: 0
+        items:
+          type: array
+          maxItems: 5
+          description: The first five, in the group's order.
+          items:
+            $ref: '#/components/schemas/ProviderBooking'
+    ProviderDashboard:
+      type: object
+      additionalProperties: false
+      required: [provider, occupancy, requests, upcoming, in_storage, earnings]
+      properties:
+        provider:
+          type: object
+          additionalProperties: false
+          required: [id, display_name]
+          properties:
+            id:
+              type: string
+              format: uuid
+            display_name:
+              type: string
+        occupancy:
+          type: object
+          additionalProperties: false
+          description: >-
+            Space booked today in Lagos: the capacity less what is free that day, counting live
+            holds, bookings awaiting an answer, confirmed and stored.
+          required: [date, used, total, capacity_unit]
+          properties:
+            date:
+              type: string
+              format: date
+            used:
+              type: number
+              minimum: 0
+            total:
+              type: number
+              minimum: 0
+            capacity_unit:
+              $ref: '#/components/schemas/ProviderBooking/properties/capacity_unit'
+        requests:
+          $ref: '#/components/schemas/ProviderDashboardList'
+        upcoming:
+          $ref: '#/components/schemas/ProviderDashboardList'
+        in_storage:
+          $ref: '#/components/schemas/ProviderDashboardList'
+        earnings:
+          type: object
+          additionalProperties: false
+          required: [owed_kobo, paid_kobo]
+          properties:
+            owed_kobo:
+              type: integer
+              minimum: 0
+            paid_kobo:
+              type: integer
+              minimum: 0
     ProviderBookingRequest:
       type: object
       description: What a provider's SMS link shows, and nothing more.

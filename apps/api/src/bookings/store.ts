@@ -156,7 +156,7 @@ export function findFarmerBooking(
 }
 
 /** The statuses a booking has entered, oldest first, without who moved it. */
-function listBookingStatusHistory(db: Database, bookingId: string) {
+export function listBookingStatusHistory(db: Database, bookingId: string) {
   // created_at is the transaction's start, so events written in one transaction tie; the creation
   // (the only event with no from_status) comes first, and the random id only keeps the order stable.
   return db
