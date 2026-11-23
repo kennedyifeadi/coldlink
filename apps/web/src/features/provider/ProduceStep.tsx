@@ -3,17 +3,16 @@ import { Check } from 'lucide-react';
 import { Navigate, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import * as z from 'zod';
-import { validationIssueSchema, type CreateProviderBody } from '@coldlink/shared';
+import type { CreateProviderBody } from '@coldlink/shared';
 import ErrorMessage from '../../components/ui/ErrorMessage';
 import PrimaryButton from '../../components/ui/PrimaryButton';
 import TextButton from '../../components/ui/TextButton';
-import { isApiError } from '../../api/client';
 import { describeApiError } from '../../api/describeError';
 import { createProvider, OWN_PROVIDERS_KEY } from '../../api/providers';
 import { cropCategoriesQuery } from '../../api/referenceData';
 import { useSession, useSessionStore } from '../../session/sessionContext';
 import { produceIcon } from '../search/produceIcons';
+import { apiFieldErrors } from './apiFieldErrors';
 import {
   FORM_STEPS,
   ONBOARDING_STEPS,
@@ -27,19 +26,10 @@ import { useStepForm } from './useStepForm';
 
 const CATEGORY_ERROR_ID = 'category-ids-error';
 
-const validationDetailsSchema = z.array(validationIssueSchema);
+const isStepField = (field: string): field is ProviderField => Object.hasOwn(fieldSteps, field);
 
 /** The API's messages for fields a step asks for, by field; undefined if there are none. */
-const readFieldErrors = (error: unknown) => {
-  if (!isApiError(error, 'validation_failed')) return undefined;
-  const issues = validationDetailsSchema.safeParse(error.details).data ?? [];
-  const byField: Partial<Record<ProviderField, string>> = {};
-  for (const { location, path, message } of issues) {
-    const field = path.split('.')[0] as ProviderField;
-    if (location === 'body' && fieldSteps[field] && !byField[field]) byField[field] = message;
-  }
-  return Object.keys(byField).length > 0 ? byField : undefined;
-};
+const readFieldErrors = (error: unknown) => apiFieldErrors(error, isStepField);
 
 const CategorySkeleton = () => (
   <div aria-hidden="true" className="flex flex-wrap gap-2">
