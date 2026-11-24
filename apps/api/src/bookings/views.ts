@@ -8,12 +8,14 @@ import {
   type FarmerBooking,
   type FarmerBookingSummary,
   type FarmerCancellationPreview,
+  type BookingRating,
   type BookingStatusChange,
   type ProviderBooking,
   type ProviderBookingDetail,
   type ProviderBookingRequest,
 } from '@coldlink/shared';
 import type { ProviderBookingDetailRows, ProviderBookingRow } from './providerStore.js';
+import type { BookingRatingRow } from './ratings.js';
 import type { BookingStatusChangeRow, FarmerBookingDetail, FarmerBookingRow } from './store.js';
 
 function isoOrNull(date: Date | null): string | null {
@@ -78,8 +80,12 @@ export function farmerCancellationPreview(
   };
 }
 
+function toBookingRating(row: BookingRatingRow): BookingRating {
+  return { stars: row.stars, comment: row.comment, created_at: row.created_at.toISOString() };
+}
+
 export function toFarmerBooking(
-  { booking: row, history }: FarmerBookingDetail,
+  { booking: row, history, rating }: FarmerBookingDetail,
   terms: CancellationTerms,
 ): FarmerBooking {
   const summary = toFarmerBookingSummary(row);
@@ -104,6 +110,7 @@ export function toFarmerBooking(
     cancel_reason: row.cancel_reason,
     status_history: toStatusHistory(history),
     cancellation: farmerCancellationPreview(row, terms),
+    rating: rating === undefined ? null : toBookingRating(rating),
   };
 }
 

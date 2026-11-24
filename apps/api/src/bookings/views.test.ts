@@ -87,7 +87,9 @@ describe('toFarmerBooking', () => {
   ];
 
   it('gives each status change as a status and a time only', () => {
-    const booking = farmerBookingSchema.parse(toFarmerBooking({ booking: row, history }, terms));
+    const booking = farmerBookingSchema.parse(
+      toFarmerBooking({ booking: row, history, rating: undefined }, terms),
+    );
     expect(booking.status_history).toEqual([
       { status: 'payment_pending', at: '2026-11-10T08:00:00.000Z' },
       { status: 'pending_provider', at: '2026-11-10T08:05:00.000Z' },
@@ -96,10 +98,30 @@ describe('toFarmerBooking', () => {
   });
 
   it('passes on the facility phone the query read, or null', () => {
-    const shown = toFarmerBooking({ booking: row, history }, terms);
-    const hidden = toFarmerBooking({ booking: { ...row, provider_phone: null }, history }, terms);
+    const shown = toFarmerBooking({ booking: row, history, rating: undefined }, terms);
+    const hidden = toFarmerBooking(
+      { booking: { ...row, provider_phone: null }, history, rating: undefined },
+      terms,
+    );
     expect(shown.provider.phone).toBe('+2348006000001');
     expect(hidden.provider.phone).toBeNull();
+  });
+
+  it('has a null rating until the farmer rates it', () => {
+    const booking = toFarmerBooking({ booking: row, history, rating: undefined }, terms);
+    expect(booking.rating).toBeNull();
+  });
+
+  it("gives the farmer's rating as its stars, comment and time", () => {
+    const rating = { stars: 4, comment: null, created_at: new Date('2026-11-23T10:00:00Z') };
+    const booking = farmerBookingSchema.parse(
+      toFarmerBooking({ booking: { ...row, status: 'completed' }, history, rating }, terms),
+    );
+    expect(booking.rating).toEqual({
+      stars: 4,
+      comment: null,
+      created_at: '2026-11-23T10:00:00.000Z',
+    });
   });
 });
 

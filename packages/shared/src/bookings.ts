@@ -3,6 +3,7 @@ import { bookingQuoteBodySchema } from './bookingQuote.js';
 import { bookingStatusSchema, cancelledBySchema, capacityUnitSchema } from './enums.js';
 import { koboSchema } from './money.js';
 import { e164PhoneSchema } from './phone.js';
+import { bookingRatingSchema } from './ratings.js';
 
 // Request and response bodies of the farmer's booking endpoints (PRD 5.5, 8).
 
@@ -100,6 +101,8 @@ export const farmerBookingSchema = z.strictObject({
   /** Every status the booking has entered, oldest first, starting with payment_pending. */
   status_history: z.array(bookingStatusChangeSchema),
   cancellation: farmerCancellationPreviewSchema,
+  /** The farmer's rating of the facility for this booking; null until they rate it. */
+  rating: bookingRatingSchema.nullable(),
 });
 export type FarmerBooking = z.infer<typeof farmerBookingSchema>;
 

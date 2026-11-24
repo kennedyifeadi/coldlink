@@ -2,12 +2,14 @@ import {
   bookingQuoteBodySchema,
   cancelBookingBodySchema,
   createBookingBodySchema,
+  rateBookingBodySchema,
   type BookingQuote,
   type BookingQuoteInput,
   type CancelBookingInput,
   type CancelledBooking,
   type CreateBookingInput,
   type FarmerBookingsResponse,
+  type RateBookingInput,
 } from '@coldlink/shared';
 import { Router } from 'express';
 import * as z from 'zod';
@@ -15,6 +17,7 @@ import type { AppConfigReader } from '../appConfig.js';
 import { generateBookingCode } from '../bookings/code.js';
 import type { TransitionHooks } from '../bookings/hooks.js';
 import { priceBooking, type PricedBooking } from '../bookings/pricing.js';
+import { rateBooking } from '../bookings/ratings.js';
 import {
   findFarmerBookingDetail,
   insertBooking,
@@ -218,6 +221,26 @@ export function bookingRoutes(deps: BookingRouteDependencies): Router {
         refund_kobo: refundKobo,
       };
       res.set('Cache-Control', 'no-store').json(body);
+    },
+  );
+
+  // PRD 6.7: once completed, once per booking. The farmer and facility come from the booking,
+  // never the body, and the facility's average is recomputed in the same transaction.
+  router.post(
+    '/bookings/:id/rating',
+    ...farmerOnly,
+    validate({ params: bookingParamsSchema, body: rateBookingBodySchema }),
+    async (req, res) => {
+      const { id } = req.params as BookingParams;
+      const { stars, comment } = req.body as RateBookingInput;
+      const farmerId = signedInUser(req).id;
+      const booking = await inTransaction(db, async (trx) => {
+        await rateBooking(trx, { farmerId, bookingId: id, stars, comment });
+        return requireFarmerBookingDetail(trx, farmerId, id);
+      });
+      const { farmer_free_cancel_hours } = await appConfig.get();
+      const terms = { now: now(), freeCancelHours: farmer_free_cancel_hours };
+      res.status(201).set('Cache-Control', 'no-store').json(toFarmerBooking(booking, terms));
     },
   );
 

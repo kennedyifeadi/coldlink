@@ -4,6 +4,7 @@ import type { Database } from '../db/client.js';
 import type { DB } from '../db/schema.js';
 import type { StoragePeriod } from '../storagePeriod.js';
 import { generateBookingCode } from './code.js';
+import { findBookingRating, type BookingRatingRow } from './ratings.js';
 
 // 32^5 codes, so a code is taken twice in a row only once the table holds millions of bookings.
 export const BOOKING_CODE_ATTEMPTS = 5;
@@ -174,9 +175,10 @@ export type BookingStatusChangeRow = Awaited<ReturnType<typeof listBookingStatus
 export interface FarmerBookingDetail {
   booking: FarmerBookingRow;
   history: BookingStatusChangeRow[];
+  rating: BookingRatingRow | undefined;
 }
 
-/** The farmer's booking with its status history, or undefined as findFarmerBooking is. */
+/** The farmer's booking with its history and rating, or undefined as findFarmerBooking is. */
 export async function findFarmerBookingDetail(
   db: Database,
   farmerId: string,
@@ -184,7 +186,11 @@ export async function findFarmerBookingDetail(
 ): Promise<FarmerBookingDetail | undefined> {
   const booking = await findFarmerBooking(db, farmerId, bookingId);
   if (booking === undefined) return undefined;
-  return { booking, history: await listBookingStatusHistory(db, bookingId) };
+  return {
+    booking,
+    history: await listBookingStatusHistory(db, bookingId),
+    rating: await findBookingRating(db, bookingId),
+  };
 }
 
 /** For a booking the caller has just read or written; a missing one is a bug, not a 404. */
