@@ -56,6 +56,6 @@ export function createBookingServices({
     logger,
     templates: createSmsTemplateRegistry(links),
   };
-  registerBookingSmsHooks(hooks, { db, notifications, links });
+  registerBookingSmsHooks(hooks, { db, notifications, links, webAppUrl: config.webAppUrl });
   return { hooks, notifications, gateway };
 }

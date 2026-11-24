@@ -1,4 +1,4 @@
-import { capacityUnitSchema, providerActionPath } from '@coldlink/shared';
+import { bookingRatingPath, capacityUnitSchema, providerActionPath } from '@coldlink/shared';
 import { sql } from 'kysely';
 import * as z from 'zod';
 import { issueProviderActionToken } from '../actions/tokens.js';
@@ -102,16 +102,19 @@ export interface BookingSmsDependencies {
   db: Database;
   notifications: NotificationDeps<BookingSmsTemplates>;
   links: ProviderActionLinks;
+  /** The web app's origin, which the farmer's rating link opens. */
+  webAppUrl: string;
 }
 
 /**
- * Texts the provider and the farmer after each booking transition PRD 7.6 names. Each is an
- * after-commit hook (decision 53), so a failed SMS never holds or undoes the change, and
- * sendNotification records the failure for a retry.
+ * Texts the provider and the farmer after each booking transition PRD 7.6 names, and asks the
+ * farmer for a rating once the booking is completed (PRD 7.8). Each is an after-commit hook
+ * (decision 53), so a failed SMS never holds or undoes the change, and sendNotification records
+ * the failure for a retry.
  */
 export function registerBookingSmsHooks(
   hooks: TransitionHooks,
-  { db, notifications, links }: BookingSmsDependencies,
+  { db, notifications, links, webAppUrl }: BookingSmsDependencies,
 ): void {
   const toFarmer = (booking: BookingRow) => ({
     to: booking.farmer_phone,
@@ -216,5 +219,23 @@ export function registerBookingSmsHooks(
     name: 'sms_booking_expired',
     on: { from: 'pending_provider', to: 'expired' },
     run: sendRejected('expired'),
+  });
+
+  // A plain screen link: rating needs the farmer signed in, who comes back to it after signing in.
+  hooks.afterCommit({
+    name: 'sms_rating_request',
+    on: { to: 'completed' },
+    run: async ({ bookingId }) => {
+      const booking = await readBooking(db, bookingId);
+      await sendNotification(notifications, {
+        template: 'rating_request',
+        params: {
+          code: booking.code,
+          facility_name: booking.display_name,
+          link: new URL(bookingRatingPath(bookingId), webAppUrl).toString(),
+        },
+        ...toFarmer(booking),
+      });
+    },
   });
 }
