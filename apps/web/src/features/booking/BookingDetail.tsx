@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { CircleCheck, SearchX } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
+import type { TFunction } from 'i18next';
 import { useTranslation } from 'react-i18next';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import * as z from 'zod';
@@ -25,8 +26,7 @@ import { LoadFailed, ProblemScreen } from './BookingStates';
 import StatusBadge from './StatusBadge';
 import StatusHistory from './StatusHistory';
 
-const lagosAt = (iso: string, t: ReturnType<typeof useTranslation>['t']) =>
-  t('booking.detail.at', formatLagosTime(iso));
+const lagosAt = (iso: string, t: TFunction) => t('booking.detail.at', formatLagosTime(iso));
 
 // Every figure is the API's, as it was booked; the screen adds nothing up (PRD 9.4).
 const PriceCard = ({ booking }: { booking: FarmerBooking }) => {
@@ -73,7 +73,7 @@ const PriceCard = ({ booking }: { booking: FarmerBooking }) => {
 };
 
 /** The deadlines and times that apply to the booking as it stands. */
-const timeRows = (booking: FarmerBooking, t: ReturnType<typeof useTranslation>['t']) =>
+const timeRows = (booking: FarmerBooking, t: TFunction) =>
   [
     booking.status === 'payment_pending' && booking.payment_expires_at
       ? { label: t('booking.detail.payBy'), value: lagosAt(booking.payment_expires_at, t) }
