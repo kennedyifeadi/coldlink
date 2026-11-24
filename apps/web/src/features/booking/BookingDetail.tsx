@@ -1,11 +1,16 @@
 import React, { useState } from 'react';
-import { CircleCheck, SearchX } from 'lucide-react';
+import { CircleCheck } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
 import type { TFunction } from 'i18next';
 import { useTranslation } from 'react-i18next';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import * as z from 'zod';
-import type { CancelledBooking, FarmerBooking } from '@coldlink/shared';
+import {
+  bookingRatingPath,
+  canRateBooking,
+  type CancelledBooking,
+  type FarmerBooking,
+} from '@coldlink/shared';
 import { bookingKey, bookingQuery, cancelBooking, myBookingsKey } from '../../api/bookings';
 import { isApiError } from '../../api/client';
 import { describeApiError } from '../../api/describeError';
@@ -13,16 +18,17 @@ import TopNavBar from '../../components/TopNavBar';
 import Card from '../../components/ui/Card';
 import CardTitle from '../../components/ui/CardTitle';
 import ErrorMessage from '../../components/ui/ErrorMessage';
+import PrimaryButton from '../../components/ui/PrimaryButton';
 import SummaryRow from '../../components/ui/SummaryRow';
 import TextButton from '../../components/ui/TextButton';
 import { formatKobo, formatLagosTime } from '../../i18n/format';
 import { useSessionStore } from '../../session/sessionContext';
-import { MY_BOOKINGS_PATH } from '../../session/routes';
 import BookAgainButton from './BookAgainButton';
 import { canBookAgain } from './bookingStatus';
 import BookingCountdown from './BookingCountdown';
 import { BookingCode, BookingDetails } from './BookingFacts';
-import { LoadFailed, ProblemScreen } from './BookingStates';
+import { BookingNotFound, BookingSkeleton, LoadFailed } from './BookingStates';
+import { RatingSummary } from './RatingStars';
 import StatusBadge from './StatusBadge';
 import StatusHistory from './StatusHistory';
 
@@ -243,40 +249,36 @@ const CancelSection = ({ booking, refresh, onCancelled }: CancelSectionProps) =>
   );
 };
 
-const BookingNotFound = () => {
+/** A completed booking's rating, or the way to give one (PRD 7.8). */
+const RatingCard = ({ booking }: { booking: FarmerBooking }) => {
+  const { t } = useTranslation();
   const navigate = useNavigate();
-  const { t } = useTranslation();
 
+  if (booking.rating !== null) {
+    return (
+      <Card className="p-6 mb-4">
+        <CardTitle>{t('booking.rating.yourRating')}</CardTitle>
+        <RatingSummary rating={booking.rating} />
+      </Card>
+    );
+  }
+  if (!canRateBooking(booking)) return null;
   return (
-    <ProblemScreen
-      navTitle={t('booking.detail.navTitle')}
-      icon={SearchX}
-      title={t('booking.confirmation.notFoundTitle')}
-      body={t('booking.confirmation.notFoundBody')}
-      action={t('booking.paymentReturn.goToBookings')}
-      onAction={() => void navigate(MY_BOOKINGS_PATH, { replace: true })}
-    />
-  );
-};
-
-const DetailSkeleton = () => {
-  const { t } = useTranslation();
-
-  return (
-    <div className="flex flex-col gap-4 px-5 pt-6">
-      <p role="status" className="text-copy-muted text-body text-center">
-        {t('common.loading')}
+    <Card className="p-6 mb-4">
+      <h2 className="font-heading font-semibold text-ink text-subtitle mb-2">
+        {t('booking.rating.askTitle')}
+      </h2>
+      <p className="text-copy text-body leading-relaxed mb-5">
+        {t('booking.rating.askBody', { facility: booking.provider.display_name })}
       </p>
-      <div aria-hidden="true" className="flex flex-col gap-4">
-        <div className="h-24 rounded-2xl bg-surface-muted" />
-        <div className="h-36 rounded-2xl bg-surface-muted" />
-        <div className="h-64 rounded-2xl bg-surface-muted" />
-      </div>
-    </div>
+      <PrimaryButton onClick={() => void navigate(bookingRatingPath(booking.id))}>
+        {t('booking.rating.rateStay')}
+      </PrimaryButton>
+    </Card>
   );
 };
 
-/** One booking in full: every fact and amount, its history, and cancel and Book again. */
+/** One booking in full: every fact and amount, its rating, history, cancel and Book again. */
 const BookingDetail = () => {
   const { t } = useTranslation();
   const store = useSessionStore();
@@ -288,7 +290,9 @@ const BookingDetail = () => {
   });
   const [cancelled, setCancelled] = useState<CancelledBooking>();
 
-  if (bookingId === undefined || isApiError(query.error, 'not_found')) return <BookingNotFound />;
+  if (bookingId === undefined || isApiError(query.error, 'not_found')) {
+    return <BookingNotFound navTitle={t('booking.detail.navTitle')} />;
+  }
   if (query.isError && query.data === undefined) {
     return (
       <LoadFailed
@@ -325,6 +329,7 @@ const BookingDetail = () => {
           {cancelled && <CancelledNotice result={cancelled} />}
           <BookingCode code={booking.code} />
           <BookingDetails booking={booking} />
+          <RatingCard booking={booking} />
           <PriceCard booking={booking} />
           <TimesCard booking={booking} />
           <StatusHistory history={booking.status_history} />
@@ -336,7 +341,7 @@ const BookingDetail = () => {
           {canBookAgain(booking) && <BookAgainButton booking={booking} />}
         </div>
       ) : (
-        <DetailSkeleton />
+        <BookingSkeleton />
       )}
     </div>
   );

@@ -10,6 +10,7 @@ import Card from '../../components/ui/Card';
 import PrimaryButton from '../../components/ui/PrimaryButton';
 import TextButton from '../../components/ui/TextButton';
 import StepProgress from '../../components/ui/StepProgress';
+import { MY_BOOKINGS_PATH } from '../../session/routes';
 import {
   readDraft,
   SEARCH_STEPS,
@@ -101,6 +102,40 @@ export const FacilityGone = ({ navTitle }: { navTitle: string }) => {
       action={t('booking.problems.findAnother')}
       onAction={() => void navigate(searchDone ? SEARCH_STEPS.results : SEARCH_STEPS.place)}
     />
+  );
+};
+
+/** A booking id that is malformed, unknown or someone else's: the API's one 404. */
+export const BookingNotFound = ({ navTitle }: { navTitle: string }) => {
+  const navigate = useNavigate();
+  const { t } = useTranslation();
+
+  return (
+    <ProblemScreen
+      navTitle={navTitle}
+      icon={SearchX}
+      title={t('booking.confirmation.notFoundTitle')}
+      body={t('booking.confirmation.notFoundBody')}
+      action={t('booking.paymentReturn.goToBookings')}
+      onAction={() => void navigate(MY_BOOKINGS_PATH, { replace: true })}
+    />
+  );
+};
+
+export const BookingSkeleton = () => {
+  const { t } = useTranslation();
+
+  return (
+    <div className="flex flex-col gap-4 px-5 pt-6">
+      <p role="status" className="text-copy-muted text-body text-center">
+        {t('common.loading')}
+      </p>
+      <div aria-hidden="true" className="flex flex-col gap-4">
+        <div className="h-24 rounded-2xl bg-surface-muted" />
+        <div className="h-36 rounded-2xl bg-surface-muted" />
+        <div className="h-64 rounded-2xl bg-surface-muted" />
+      </div>
+    </div>
   );
 };
 

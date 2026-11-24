@@ -478,6 +478,43 @@
       "cancelled": "Cancelled",
       "no_show": "Not brought in",
       "completed": "Collected"
+    },
+    "rating": {
+      "navTitle": "Rate your stay",
+      "title": "How was {{facility}}?",
+      "intro": "Your rating helps other farmers choose a cold room. Booking {{code}}.",
+      "starsLabel": "Your rating",
+      "outOf": "{{stars}} out of 5",
+      "chosen": "{{stars}} out of 5: {{words}}",
+      "noneChosen": "Tap a star to rate.",
+      "words": {
+        "poor": "Poor",
+        "fair": "Fair",
+        "good": "Good",
+        "veryGood": "Very good",
+        "excellent": "Excellent"
+      },
+      "chooseStars": "Tap a star from 1 to 5 to rate your stay.",
+      "commentLabel": "Anything to add?",
+      "optional": "(optional)",
+      "commentHint": "For example, how cold it was or how you were treated.",
+      "commentCount": "{{count}} of {{max}} characters",
+      "submit": "Send rating",
+      "sending": "Sending...",
+      "thanksTitle": "Thank you for rating {{facility}}",
+      "thanksBody": "Your rating now counts in the cold room's score.",
+      "ratedTitle": "You've rated this stay",
+      "ratedBody": "Each booking can be rated once.",
+      "yourRating": "Your rating",
+      "ratedOn": "Rated on {{day}}",
+      "notReadyTitle": "You can rate this once your produce is collected",
+      "notReadyBody": "{{facility}} marks the booking as collected when you take your produce out. You can rate your stay after that.",
+      "endedTitle": "This booking can't be rated",
+      "endedBody": "Only a booking whose produce was stored and collected can be rated.",
+      "seeBooking": "See booking",
+      "askTitle": "How was your stay?",
+      "askBody": "Rate {{facility}} to help other farmers choose a cold room.",
+      "rateStay": "Rate your stay"
     }
   },
   "provider": {

@@ -1,6 +1,6 @@
 import React, { lazy, type ComponentType } from 'react';
 import { Routes, Route } from 'react-router-dom';
-import { PROVIDER_ACTION_ROUTE } from '@coldlink/shared';
+import { BOOKING_RATING_ROUTE, PROVIDER_ACTION_ROUTE } from '@coldlink/shared';
 import AppLayout from './components/AppLayout';
 import NotFound from './components/NotFound';
 import { RedirectIfSignedIn, RequireSession } from './session/guards';
@@ -49,6 +49,7 @@ const PaymentReturn = lazyScreen(loadBooking, 'PaymentReturn');
 const Confirmation = lazyScreen(loadBooking, 'Confirmation');
 const MyBookings = lazyScreen(loadBooking, 'MyBookings');
 const BookingDetail = lazyScreen(loadBooking, 'BookingDetail');
+const RateBooking = lazyScreen(loadBooking, 'RateBooking');
 const Facilities = lazyScreen(loadProvider, 'Facilities');
 const ContactStep = lazyScreen(loadProvider, 'ContactStep');
 const LocationStep = lazyScreen(loadProvider, 'LocationStep');
@@ -91,6 +92,8 @@ const AppRoutes = () => (
         <Route path="/userid" element={<UserId />} />
         <Route path={MY_BOOKINGS_PATH} element={<MyBookings />} />
         <Route path={`${MY_BOOKINGS_PATH}/:bookingId`} element={<BookingDetail />} />
+        {/* The rating_request SMS links here; a signed-out farmer signs in and comes back. */}
+        <Route path={BOOKING_RATING_ROUTE} element={<RateBooking />} />
         {/* Paystack's callback (decision 92); matched before /payment/:providerId. */}
         <Route path={PAYMENT_RETURN_PATH} element={<PaymentReturn />} />
         <Route path={`${CONFIRMATION_PATH}/:bookingId`} element={<Confirmation />} />
