@@ -1,5 +1,6 @@
 import React, { useRef, useState } from 'react';
 import { Hourglass, Wallet } from 'lucide-react';
+import type { TFunction } from 'i18next';
 import { useTranslation } from 'react-i18next';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import * as z from 'zod';
@@ -16,10 +17,8 @@ import { useSessionStore } from '../../session/sessionContext';
 
 const earlyCheckInSchema = z.object({ start_date: z.iso.date() });
 
-type Translate = ReturnType<typeof useTranslation>['t'];
-
 /** Why the API refused the action with a 409, read after the booking is reloaded. */
-const conflictMessage = (action: ProviderBookingAction, error: unknown, t: Translate) => {
+const conflictMessage = (action: ProviderBookingAction, error: unknown, t: TFunction) => {
   if (action === 'check-in') {
     const early = isApiError(error) ? earlyCheckInSchema.safeParse(error.details) : undefined;
     return early?.success

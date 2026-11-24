@@ -90,7 +90,12 @@ describe.skipIf(noTestDatabase)('booking SMS hooks', () => {
       templates: createBookingSmsTemplates({ relinkProvider: (id) => links.reissue(id) }),
     };
     const hooks = createTransitionHooks();
-    registerBookingSmsHooks(hooks, { db: db(), notifications, links });
+    registerBookingSmsHooks(hooks, {
+      db: db(),
+      notifications,
+      links,
+      webAppUrl: testConfig.webAppUrl,
+    });
 
     // db() is the test's transaction, which cannot nest: decision 53's pattern for a caller
     // inside one is to transition, then run the after-commit hooks.
@@ -253,6 +258,64 @@ describe.skipIf(noTestDatabase)('booking SMS hooks', () => {
         },
       }),
     ]);
+  });
+
+  describe('when the produce is collected', () => {
+    const ratingLink = () => `${testConfig.webAppUrl}/bookings/${booking.bookingId}/rate`;
+
+    it('asks the farmer once to rate the facility, with a link to the rating screen', async () => {
+      const { move, sms } = setup();
+      await move('in_storage', 'completed', { type: 'provider', id: booking.ownerId });
+      const { code } = await bookingFacts();
+
+      expect(await notificationRows()).toEqual([
+        expect.objectContaining({
+          template: 'rating_request',
+          recipient_phone: phones.farmer,
+          user_id: booking.farmerId,
+          status: 'sent',
+          payload: { code, facility_name: 'Booking test cold room', link: ratingLink() },
+        }),
+      ]);
+      expect(sms.sent).toHaveLength(1);
+      expect(sms.sent[0]?.to).toBe(phones.farmer);
+      expect(sms.sent[0]?.text).toBe(
+        `ColdLink: how was Booking test cold room? Rate booking ${code}: ${ratingLink()}`,
+      );
+    });
+
+    it('carries no token, so no action link is issued', async () => {
+      const { move } = setup();
+      await move('in_storage', 'completed', { type: 'provider', id: booking.ownerId });
+
+      const tokens = await db()
+        .selectFrom('action_tokens')
+        .select('id')
+        .where('subject_id', '=', booking.bookingId)
+        .execute();
+      expect(tokens).toEqual([]);
+    });
+  });
+
+  it.each<[BookingStatus, BookingStatus, 'system' | 'provider' | 'farmer']>([
+    ['payment_pending', 'pending_provider', 'system'],
+    ['payment_pending', 'expired', 'system'],
+    ['pending_provider', 'confirmed', 'provider'],
+    ['pending_provider', 'rejected', 'provider'],
+    ['pending_provider', 'expired', 'system'],
+    ['pending_provider', 'cancelled', 'farmer'],
+    ['confirmed', 'in_storage', 'provider'],
+    ['confirmed', 'cancelled', 'provider'],
+    ['confirmed', 'no_show', 'system'],
+  ])('asks for no rating on %s to %s', async (from, to, actorType) => {
+    const { move } = setup();
+    const ids = { provider: booking.ownerId, farmer: booking.farmerId };
+    const actor: BookingActor =
+      actorType === 'system' ? { type: 'system' } : { type: actorType, id: ids[actorType] };
+    await move(from, to, actor);
+
+    const templates = (await notificationRows()).map((row) => row.template);
+    expect(templates).not.toContain('rating_request');
   });
 
   it('texts nobody when an unpaid hold expires', async () => {

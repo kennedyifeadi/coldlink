@@ -109,6 +109,7 @@ export const dugbeBooking = (changes: Partial<FarmerBooking> = {}): FarmerBookin
   created_at: '2026-11-10T09:00:00.000Z',
   status_history: [{ status: 'payment_pending', at: '2026-11-10T09:00:00.000Z' }],
   cancellation: { allowed: false },
+  rating: null,
   ...changes,
 });
 

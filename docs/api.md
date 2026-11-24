@@ -11,7 +11,7 @@ The API contract, written as an OpenAPI 3.1 document in the YAML block below. Ea
 - **Pagination:** paginated lists take `limit` and `cursor` (PRD 8). The reference lists (`/crops`, `/crop-categories`) are not paginated: they are small, admin-managed reference data (22 crops, 7 categories) that a client loads whole. `GET /providers/mine` and `GET /bookings` are not paginated yet either (decisions 62, 85). `GET /providers/:id/bookings` and `GET /providers/:id/payouts` are: `limit` (1 to 50, default 20) and `cursor`, the `next_cursor` of the page before, which is null on the last page.
 - **Caching:** the public reference endpoints send `Cache-Control: public` with a short `max-age` (5 minutes for crops and categories, 60 seconds for config). Responses for the signed-in user (`/me`, the owner's provider views, the farmer's bookings, the provider's booking actions) and the action link routes send `no-store`. Other responses, and every error, send none.
 - **Rate limits:** limited routes send `RateLimit` and `RateLimit-Policy` headers, and `Retry-After` with a 429. The reference endpoints are not limited yet: they are cheap, cacheable reads. The auth routes are limited per IP (decision 56); `POST /auth/otp/request` is also limited per phone number, and its 429 adds `details.retry_after_seconds`. `POST /search` and `POST /bookings/quote` are each limited to 300 requests per IP per 15 minutes (decisions 74, 75). `GET` and `POST /actions/:token` share a limit of 60 requests per IP per 15 minutes (decision 101).
-- **Response schemas:** the Zod schemas for request and response bodies live in `packages/shared` (`cropCategoriesResponseSchema`, `cropsResponseSchema`, `publicConfigSchema`, `otpRequestBodySchema`, `otpRequestResponseSchema`, `otpVerifyBodySchema`, `sessionResponseSchema`, `userProfileSchema`, `updateProfileBodySchema`, `createProviderBodySchema`, `updateProviderBodySchema`, `publicProviderSchema`, `ownProviderSchema`, `ownProvidersResponseSchema`, `searchBodySchema`, `searchResponseSchema`, `bookingQuoteBodySchema`, `bookingQuoteSchema`, `createBookingBodySchema`, `farmerBookingSchema`, `farmerBookingsResponseSchema`, `cancelBookingBodySchema`, `cancelledBookingSchema`, `initializePaymentBodySchema`, `initializedPaymentSchema`, `paymentVerificationSchema`, `rejectBookingBodySchema`, `providerBookingSchema`, `providerBookingRequestSchema`, `providerLinkActionBodySchema`, `providerLinkActionResultSchema`), for the web app to validate forms and parse responses with.
+- **Response schemas:** the Zod schemas for request and response bodies live in `packages/shared` (`cropCategoriesResponseSchema`, `cropsResponseSchema`, `publicConfigSchema`, `otpRequestBodySchema`, `otpRequestResponseSchema`, `otpVerifyBodySchema`, `sessionResponseSchema`, `userProfileSchema`, `updateProfileBodySchema`, `createProviderBodySchema`, `updateProviderBodySchema`, `publicProviderSchema`, `ownProviderSchema`, `ownProvidersResponseSchema`, `searchBodySchema`, `searchResponseSchema`, `bookingQuoteBodySchema`, `bookingQuoteSchema`, `createBookingBodySchema`, `farmerBookingSchema`, `farmerBookingsResponseSchema`, `cancelBookingBodySchema`, `cancelledBookingSchema`, `rateBookingBodySchema`, `bookingRatingSchema`, `initializePaymentBodySchema`, `initializedPaymentSchema`, `paymentVerificationSchema`, `rejectBookingBodySchema`, `providerBookingSchema`, `providerBookingRequestSchema`, `providerLinkActionBodySchema`, `providerLinkActionResultSchema`), for the web app to validate forms and parse responses with.
 - **Phone numbers:** send them as people type them: `08031234567`, `8031234567`, `2348031234567` or `+2348031234567`, with or without spaces or hyphens. The API stores `+234` and ten digits, and accepts only mobile numbers (70x, 80x, 81x, 90x, 91x). `normalisePhone` and `phoneSchema` in `packages/shared` do the same in the browser. Responses never contain a full phone number but one: a farmer's booking that its facility has accepted has the facility's phone, so the farmer can call it. A profile has `phone_masked` (`+234803***4567`).
 
 ## Authentication
@@ -74,13 +74,15 @@ A provider is a storage facility (PRD 5.3, 7.2; decisions 62 to 66).
 - **Capacity:** if less than `quantity` is free on any day of the period, the answer is 409 `conflict` with `details.available_quantity`.
 - **Prices:** `storage_subtotal_kobo` is split into `deposit_kobo` (paid online) and `balance_due_kobo` (paid at the facility). `total_charged_online_kobo` is the deposit plus `service_fee_kobo` plus `delivery_fee_kobo`, which is 0 until delivery can be added to a booking.
 
-The farmer's own bookings (PRD 5.5, 6.3, 6.6, 7.4; decisions 82 to 86) need a signed-in user with the `farmer` role; any other role gets 403.
+The farmer's own bookings (PRD 5.5, 6.3, 6.6, 6.7, 7.4, 7.8; decisions 82 to 86, 126 to 128) need a signed-in user with the `farmer` role; any other role gets 403.
 
 - **`POST /bookings`** takes the quote's body plus `crop_id`, and answers with the same 400s, 404 and 409 as the quote. The facility must store the crop's category (otherwise 400 on `crop_id`). On success it is 201 with the booking in `payment_pending`, holding the space until `payment_expires_at`; pay before then, or the booking expires and the space is freed. Two requests for the last space are handled one after the other, so only one gets it.
 - **Prices are fixed when booking:** every price, rate and fee is copied onto the booking, so a later change to the facility's price or the platform's rates never changes it.
 - **`GET /bookings`** lists the farmer's bookings, newest first, with what a list needs: code, status, dates, quantity, facility name and LGA, crop and the amounts. **`GET /bookings/:id`** gives one in full. Another farmer's booking is the same 404 as an unknown id.
 - **The full booking** (from `GET /bookings/:id`, `POST /bookings` and the cancellation) also has `status_history`, each status the booking has entered and when, oldest first, never who moved it; `provider.phone`, the facility's phone in full once it has accepted (`confirmed`, `in_storage` or `completed`) and null before or otherwise; and `cancellation`, what cancelling now would do: `{ allowed: false }`, or `{ allowed: true, refund_kobo, deposit_refund_ends_at }` with the refund the cancellation would make at that moment and, once confirmed, the last moment it still refunds the deposit.
 - **`POST /bookings/:id/cancel`**, with an optional `reason` (the body may be left out), cancels a booking awaiting the provider (`pending_provider`) or confirmed. The response adds `refund_kobo`, what the policy refunds of the online payment: all of it before the provider accepts; after that, the deposit (not the service fee) if it is at least `farmer_free_cancel_hours` before 00:00 in Lagos on `start_date`; nothing later. Any other status is 409 `conflict`, including `payment_pending`: an unpaid booking is not cancelled, it expires. The refund itself is made separately.
+- **The full booking** also has `rating`: null, or the farmer's `{ stars, comment, created_at }` once they have rated it. A booking can be rated when it is `completed` and its `rating` is null (`canRateBooking` in `packages/shared`).
+- **`POST /bookings/:id/rating`**, with `stars` (a whole number from 1 to 5) and an optional `comment` (trimmed, at most 500 characters; a blank one is stored as null), rates the facility for a `completed` booking, once. It answers 201 with the full booking, `rating` included, and the facility's `avg_rating` and `rating_count` are recomputed from all its ratings. A booking that is not `completed` is 409 `conflict` with `details.status`; one already rated is 409, including when two ratings arrive at once. Another farmer's booking is the same 404 as an unknown id. Ratings cannot be changed or deleted.
 - The farmer's view never has the commission, its rate or the provider's payout.
 
 The provider's actions (PRD 6.4, 6.5, 7.2; decisions 97 to 100) move a booking for its facility's owner. Accept and reject are open to the `provider` and `admin` roles, check-in and collect to `provider` only; any other role gets 403. A booking at another provider's facility is the same 404 as an unknown id. Each answers with the provider's view of the booking (`providerBookingSchema`): code, status, facility, crop, quantity, dates, `balance_due_kobo` (collected at the facility), `payout_kobo` (what ColdLink pays the facility: the deposit less the commission) and the deadline and check-in times. It never has the farmer's phone or name.
@@ -1198,6 +1200,47 @@ paths:
           $ref: '#/components/responses/Conflict'
         '500':
           $ref: '#/components/responses/Internal'
+  /bookings/{id}/rating:
+    parameters:
+      - $ref: '#/components/parameters/BookingId'
+    post:
+      operationId: rateMyBooking
+      summary: Rate the facility for one of the signed-in farmer's completed bookings
+      description: >-
+        Once per booking, and only once it is completed; otherwise 409. The farmer and facility
+        come from the booking. The facility's avg_rating and rating_count are recomputed in the
+        same transaction.
+      tags: [Bookings]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RateBookingRequest'
+      responses:
+        '201':
+          description: The booking, with its rating.
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/NoStore'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FarmerBooking'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '500':
+          $ref: '#/components/responses/Internal'
   /bookings/{id}/accept:
     parameters:
       - $ref: '#/components/parameters/BookingId'
@@ -2225,6 +2268,19 @@ components:
           minLength: 1
           maxLength: 500
           description: Trimmed; saved as cancel_reason.
+    RateBookingRequest:
+      type: object
+      additionalProperties: false
+      required: [stars]
+      properties:
+        stars:
+          type: integer
+          minimum: 1
+          maximum: 5
+        comment:
+          type: string
+          maxLength: 500
+          description: Trimmed, then at most 500 characters; a blank comment is stored as null.
     FarmerBookingSummary:
       type: object
       description: A booking as GET /bookings lists it.
@@ -2330,6 +2386,7 @@ components:
         - cancel_reason
         - status_history
         - cancellation
+        - rating
       properties:
         unit_price_kobo:
           type: integer
@@ -2403,6 +2460,23 @@ components:
                     Once confirmed, the last moment cancelling refunds the deposit
                     (farmer_free_cancel_hours before 00:00 in Lagos on start_date). Null before the
                     provider accepts, when everything is refunded.
+        rating:
+          description: The farmer's rating of the facility for this booking; null until rated.
+          oneOf:
+            - type: 'null'
+            - type: object
+              additionalProperties: false
+              required: [stars, comment, created_at]
+              properties:
+                stars:
+                  type: integer
+                  minimum: 1
+                  maximum: 5
+                comment:
+                  type: [string, 'null']
+                created_at:
+                  type: string
+                  format: date-time
         provider:
           type: object
           required: [address_text, landmark, phone]

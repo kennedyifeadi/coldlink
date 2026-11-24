@@ -176,6 +176,13 @@ export function createBookingSmsTemplates({ relinkProvider }: BookingSmsTemplate
         `ColdLink: the produce for booking ${p.code} at ${facility(p.facility_name)} is due ` +
         `for collection today, ${formatDate(p.end_date)}.`,
     }),
+    // PRD 7.8's follow-up after collection. The link opens the rating screen and carries no token
+    // (decision 129), so unlike booking_received it is safe to store for a resend.
+    rating_request: retryableTemplate({
+      params: z.object({ code, facility_name: z.string(), link: z.url() }),
+      render: (p) =>
+        `ColdLink: how was ${facility(p.facility_name)}? Rate booking ${p.code}: ${p.link}`,
+    }),
   } satisfies TemplateRegistry;
 }
 

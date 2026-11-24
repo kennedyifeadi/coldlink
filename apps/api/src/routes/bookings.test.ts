@@ -141,6 +141,10 @@ const farmerCalls: [string, (target: request.Agent) => request.Test][] = [
   ['GET /bookings', (target) => target.get('/api/v1/bookings')],
   ['GET /bookings/:id', (target) => target.get(`/api/v1/bookings/${bookingId}`)],
   ['POST /bookings/:id/cancel', (target) => target.post(`/api/v1/bookings/${bookingId}/cancel`)],
+  [
+    'POST /bookings/:id/rating',
+    (target) => target.post(`/api/v1/bookings/${bookingId}/rating`).send({ stars: 5 }),
+  ],
 ];
 
 describe.each(farmerCalls)('%s', (_name, call) => {
@@ -207,5 +211,38 @@ describe('farmer booking requests', () => {
     // The stub database has no bookings, so getting as far as the lookup ends in a 404.
     const response = await (await farmer(appConfig)).post(`/api/v1/bookings/${bookingId}/cancel`);
     expect(response.status).toBe(404);
+  });
+});
+
+describe('POST /bookings/:id/rating requests', () => {
+  async function rate(body: unknown, id = bookingId, config = unusedConfig) {
+    const agent = request.agent(app(100, ['farmer'], config));
+    agent.set('Authorization', await bearer(['farmer']));
+    return agent.post(`/api/v1/bookings/${id}/rating`).send(body as object);
+  }
+
+  it.each([0, 6, 3.5, '5', null])('refuses %j stars', async (stars) => {
+    expect(issues(await rate({ stars })).map((issue) => issue.path)).toEqual(['stars']);
+  });
+
+  it('needs the stars', async () => {
+    expect(issues(await rate({ comment: 'Cold and clean' })).map((issue) => issue.path)).toEqual([
+      'stars',
+    ]);
+  });
+
+  it('refuses a comment over 500 characters after trimming', async () => {
+    const response = await rate({ stars: 4, comment: 'x'.repeat(501) });
+    expect(issues(response).map((issue) => issue.path)).toEqual(['comment']);
+  });
+
+  it('refuses unknown fields, so the body cannot name the farmer or facility', async () => {
+    const response = await rate({ stars: 4, provider_id: body.provider_id });
+    expect(issues(response)).toMatchObject([{ location: 'body', path: '' }]);
+  });
+
+  it('refuses a booking id that is not a uuid', async () => {
+    const response = await rate({ stars: 4 }, 'CL-7K3Q9');
+    expect(issues(response)).toMatchObject([{ location: 'params', path: 'id' }]);
   });
 });

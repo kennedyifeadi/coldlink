@@ -64,6 +64,12 @@ const collection: Params<'collection_reminder'> = {
   facility_name: 'Bodija Cold Room',
   end_date: '2026-12-31',
 };
+const ratingLink = `https://coldlink-web-production.onrender.com/bookings/${bookingId}/rate`;
+const ratingRequest: Params<'rating_request'> = {
+  code: 'CL-AB2CD',
+  facility_name: 'Bodija Cold Room',
+  link: ratingLink,
+};
 
 // Each typed field as long as providerFields allows, in characters that are not GSM-7, and the
 // largest numbers a booking could carry. Typed so a new template fails until it is added here.
@@ -104,6 +110,7 @@ const longest: { [Name in keyof BookingSmsTemplates]: Params<Name>[] } = {
     kind,
   })),
   collection_reminder: [{ ...collection, facility_name: longName, end_date: '2027-12-28' }],
+  rating_request: [{ ...ratingRequest, facility_name: longName }],
 };
 
 function render<Name extends keyof BookingSmsTemplates>(name: Name, params: Params<Name>): string {
@@ -268,6 +275,36 @@ describe('reminders', () => {
     expect(() => templates.expiry_reminder.prepare({ ...expiry, kind: 'collection_due' })).toThrow(
       z.ZodError,
     );
+  });
+});
+
+describe('rating_request', () => {
+  it('asks the farmer to rate the facility, with the code and the rating link', () => {
+    expect(render('rating_request', ratingRequest)).toBe(
+      `ColdLink: how was Bodija Cold Room? Rate booking CL-AB2CD: ${ratingLink}`,
+    );
+  });
+
+  it('fits one part with an ordinary name, even behind a long origin', () => {
+    expect(gsm7Parts(render('rating_request', ratingRequest))).toBe(1);
+  });
+
+  it('makes a typed facility name GSM-7 and clips it', () => {
+    const text = render('rating_request', { ...ratingRequest, facility_name: longName });
+    expect(text).toMatch(/^ColdLink: how was [ -~]{1,30}\? Rate booking CL-AB2CD: /);
+  });
+
+  it('is resent from its stored params, link and all', async () => {
+    const { payload } = templates.rating_request.prepare(ratingRequest);
+    expect(payload).toEqual(ratingRequest);
+    await expect(templates.rating_request.rerender(payload)).resolves.toEqual({
+      text: render('rating_request', ratingRequest),
+    });
+  });
+
+  it('refuses a message without a link', () => {
+    const { link: _link, ...withoutLink } = ratingRequest;
+    expect(() => templates.rating_request.prepare(withoutLink)).toThrow(z.ZodError);
   });
 });
 

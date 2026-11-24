@@ -76,13 +76,23 @@ export async function insertBooking(db: Database, status: BookingStatus): Promis
     })
     .returning('id')
     .executeTakeFirstOrThrow();
+  const bookingId = await insertBookingFor(db, { farmerId, providerId }, status);
+  return { bookingId, farmerId, ownerId, providerId };
+}
+
+/** Another booking for the farmer at the facility, priced as insertBooking's. */
+export async function insertBookingFor(
+  db: Database,
+  { farmerId, providerId }: Pick<BookingFixture, 'farmerId' | 'providerId'>,
+  status: BookingStatus,
+): Promise<string> {
   const { id: cropId } = await db
     .selectFrom('crops')
     .select('id')
     .orderBy('name')
     .limit(1)
     .executeTakeFirstOrThrow();
-  const bookingId = await insertBookingRow(db, {
+  return insertBookingRow(db, {
     farmer_id: farmerId,
     provider_id: providerId,
     crop_id: cropId,
@@ -102,7 +112,6 @@ export async function insertBooking(db: Database, status: BookingStatus): Promis
     balance_due_kobo: 9_483_600,
     total_charged_online_kobo: 4_064_400,
   });
-  return { bookingId, farmerId, ownerId, providerId };
 }
 
 /** Deletes a committed fixture, as deleteCommittedRows does. */
@@ -119,8 +128,9 @@ export interface CommittedRows {
 }
 
 /**
- * Deletes committed providers and users with every booking made for those providers, and the
- * booking events, action tokens and notifications the after-commit hooks left for them.
+ * Deletes committed providers and users with every booking made for those providers, their
+ * ratings, and the booking events, action tokens and notifications the after-commit hooks left for
+ * them.
  * booking_events is append-only (decision 27), so its guard trigger is disabled for this one
  * transaction, which no other session sees; this needs the table's owner, as the test database's
  * migrations user is. notifications.user_id is `on delete set null`, so deleting the users alone
@@ -133,6 +143,7 @@ export async function deleteCommittedRows(db: Database, rows: CommittedRows): Pr
       .select('id')
       .where('provider_id', 'in', rows.providerIds);
     await trx.deleteFrom('action_tokens').where('subject_id', 'in', bookingIds).execute();
+    await trx.deleteFrom('ratings').where('provider_id', 'in', rows.providerIds).execute();
     await trx.deleteFrom('notifications').where('user_id', 'in', rows.userIds).execute();
     await sql`alter table public.booking_events disable trigger booking_events_no_update_or_delete`.execute(
       trx,

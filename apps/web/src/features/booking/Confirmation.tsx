@@ -1,6 +1,7 @@
 import React from 'react';
 import { CheckCircle2, CircleDot, Hourglass, SearchX, Share2 } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
+import type { TFunction } from 'i18next';
 import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
 import * as z from 'zod';
@@ -62,7 +63,7 @@ const StatusHeader = ({ booking }: { booking: FarmerBooking }) => {
 };
 
 /** The code and where to bring the produce: nothing about the price or anyone's phone. */
-const shareText = (booking: FarmerBooking, t: ReturnType<typeof useTranslation>['t']) => {
+const shareText = (booking: FarmerBooking, t: TFunction) => {
   const { display_name, address_text, landmark } = booking.provider;
   const terms = { code: booking.code, facility: display_name, address: address_text };
   return landmark

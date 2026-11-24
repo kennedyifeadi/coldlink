@@ -9,6 +9,7 @@ import {
   publicProviderSchema,
   type BookingQuoteBody,
   type CreateBookingBody,
+  type RateBookingBody,
 } from '@coldlink/shared';
 import { apiRequest } from './client';
 import type { SessionStore } from '../session/sessionStore';
@@ -56,6 +57,13 @@ export const cancelBooking = (request: AuthorizedRequest, bookingId: string) =>
   request(`/bookings/${encodeURIComponent(bookingId)}/cancel`, {
     method: 'POST',
     schema: cancelledBookingSchema,
+  });
+
+export const rateBooking = (request: AuthorizedRequest, bookingId: string, body: RateBookingBody) =>
+  request(`/bookings/${encodeURIComponent(bookingId)}/rating`, {
+    method: 'POST',
+    body,
+    schema: farmerBookingSchema,
   });
 
 export const initializePayment = (request: AuthorizedRequest, bookingId: string) =>
