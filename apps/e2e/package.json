@@ -1,0 +1,25 @@
+{
+  "name": "@coldlink/e2e",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "e2e": "pnpm --filter @coldlink/shared build && playwright test",
+    "lint": "oxlint --type-aware",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@coldlink/shared": "workspace:*",
+    "pg": "^8.23.1"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.65.1",
+    "@types/node": "^24.19.2",
+    "@types/pg": "^8.23.1",
+    "oxlint": "^1.88.0",
+    "oxlint-tsgolint": "^7.0.2005",
+    "typescript": "^7.0.2",
+    "vitest": "^5.0.5"
+  }
+}

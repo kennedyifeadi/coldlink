@@ -13,6 +13,7 @@
     "lint": "pnpm build:shared && pnpm -r --if-present run lint",
     "typecheck": "pnpm build:shared && pnpm -r --if-present run typecheck",
     "test": "pnpm build:shared && pnpm -r --if-present run test",
+    "e2e": "pnpm --filter @coldlink/e2e e2e",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "db:new": "supabase migration new",

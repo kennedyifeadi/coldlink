@@ -8,6 +8,7 @@ ColdLink connects farmers in Oyo State with nearby cold storage, so they can fin
 apps/
   web/        React + Vite frontend
   api/        Express API (TypeScript)
+  e2e/        Playwright end-to-end test of the booking journey
 packages/
   shared/     Types and constants shared by web and api
 docs/         Product requirements, decisions and audits
@@ -37,6 +38,8 @@ TEST_DATABASE_URL=postgresql://postgres:postgres@localhost:5432/postgres?sslmode
 TEST_DATABASE_URL=postgresql://postgres:postgres@localhost:5432/postgres?sslmode=disable pnpm --filter @coldlink/api db:types
 ```
 
+`pnpm e2e` runs the whole booking journey in Chromium with a phone's screen: a farmer registers, searches, books and pays on Paystack's test checkout, the cold room accepts, checks in and marks collected, and the farmer rates the stay. It builds only the shared package: run `pnpm build` first. Playwright then starts the built API (in development mode, with no SMS and no jobs) and the built web app, and stops them afterwards. It needs Chromium (`pnpm --filter @coldlink/e2e exec playwright install --no-shell chromium`) and `apps/e2e/.env`, copied from `apps/e2e/.env.example`: Paystack's test keys, which the suite refuses unless they start with `sk_test_`, and the database the API uses. Each run makes its own users and cold room and leaves the cold room paused (decision 133). CI's `E2E` job runs it against its own Postgres, and is skipped until the repository has the Paystack secrets. Run it against dev only under the guardrails in decision 131.
+
 Scripts at the root run across every workspace:
 
 | Command | What it does |
@@ -46,6 +49,7 @@ Scripts at the root run across every workspace:
 | `pnpm lint` | Lint every workspace |
 | `pnpm typecheck` | Type-check the TypeScript workspaces |
 | `pnpm test` | Run every workspace's tests |
+| `pnpm e2e` | Run the end-to-end booking journey (Playwright) |
 | `pnpm db:new <name>` | Create a database migration |
 | `pnpm db:push` | Apply pending migrations to the dev project ([supabase/README.md](supabase/README.md)) |
 
