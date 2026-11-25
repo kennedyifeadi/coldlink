@@ -157,3 +157,103 @@ jobs:
       # is 500 ms or more (PRD 7.3). The rows are deleted afterwards.
       - name: Search benchmark
         run: pnpm --filter @coldlink/api bench:search
+
+  # Job-level `if` cannot read secrets, so this job says whether Paystack's test keys are set. They
+  # are repository secrets only the owner can add; until then E2E shows as skipped, never as passed.
+  e2e-secrets:
+    name: E2E secrets
+    runs-on: ubuntu-latest
+    outputs:
+      present: ${{ steps.check.outputs.present }}
+    steps:
+      - id: check
+        env:
+          PAYSTACK_SECRET_KEY: ${{ secrets.PAYSTACK_TEST_SECRET_KEY }}
+          PAYSTACK_PUBLIC_KEY: ${{ secrets.PAYSTACK_TEST_PUBLIC_KEY }}
+        run: |
+          if [ -n "$PAYSTACK_SECRET_KEY" ] && [ -n "$PAYSTACK_PUBLIC_KEY" ]; then
+            echo "present=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "::notice::E2E is skipped: add the PAYSTACK_TEST_SECRET_KEY and PAYSTACK_TEST_PUBLIC_KEY secrets."
+            echo "present=false" >> "$GITHUB_OUTPUT"
+          fi
+
+  # The whole booking journey in a browser (PRD 11), against this job's throwaway database, a built
+  # API in development mode (dev sign-in codes, no SMS, no jobs) and the built web app (decision 131).
+  e2e:
+    name: E2E
+    needs: e2e-secrets
+    if: needs.e2e-secrets.outputs.present == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: supabase/postgres:17.11.0.006
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -h localhost"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 30
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/postgres?sslmode=disable
+      E2E_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/postgres?sslmode=disable
+      NODE_ENV: development
+      SMS_PROVIDER: console
+      JOBS_ENABLED: 'false'
+      WEB_APP_URL: http://localhost:4173
+      CORS_ORIGINS: http://localhost:4173
+      LOG_LEVEL: warn
+      # Test keys only: the suite refuses anything but sk_test_ (decision 132), and the API refuses
+      # live keys outside production (decision 91).
+      PAYSTACK_SECRET_KEY: ${{ secrets.PAYSTACK_TEST_SECRET_KEY }}
+      PAYSTACK_PUBLIC_KEY: ${{ secrets.PAYSTACK_TEST_PUBLIC_KEY }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: pnpm/action-setup@v6
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+
+      - name: Install
+        run: pnpm install --frozen-lockfile
+
+      # Migrations include the reference data (decision 40). No dev seed: the test makes its own facility.
+      - name: Apply migrations
+        run: pnpm exec supabase db push --db-url "$DATABASE_URL" --yes
+
+      # Fresh secrets per run for a database that lives only as long as this job.
+      - name: Generate API secrets
+        run: |
+          for name in JWT_SECRET OTP_PEPPER; do
+            value=$(node -e "console.log(crypto.randomBytes(32).toString('base64url'))")
+            echo "::add-mask::$value"
+            echo "$name=$value" >> "$GITHUB_ENV"
+          done
+
+      - name: Build
+        run: pnpm build
+
+      - name: Install Chromium
+        run: pnpm --filter @coldlink/e2e exec playwright install --with-deps --no-shell chromium
+
+      # Playwright starts the built API and web app itself (apps/e2e/playwright.config.ts).
+      - name: End-to-end tests
+        run: pnpm e2e
+
+      # The HTML report holds the trace, screenshots and video of a failed test.
+      - name: Upload the Playwright report
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: playwright-report
+          path: |
+            apps/e2e/playwright-report
+            apps/e2e/test-results
+          retention-days: 14
