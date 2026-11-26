@@ -1,5 +1,6 @@
 import * as z from 'zod';
 import { bookingQuoteBodySchema } from './bookingQuote.js';
+import { deliveryDetailsSchema } from './deliveries.js';
 import { bookingStatusSchema, cancelledBySchema, capacityUnitSchema } from './enums.js';
 import { koboSchema } from './money.js';
 import { e164PhoneSchema } from './phone.js';
@@ -12,9 +13,10 @@ export const BOOKING_CODE_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 export const BOOKING_CODE_LENGTH = 5;
 export const bookingCodeSchema = z.string().regex(/^CL-[A-HJ-NP-Z2-9]{5}$/);
 
-/** The quote's terms, and the crop being stored. */
+/** The quote's terms, the crop being stored, and an optional inbound delivery (decision 146). */
 export const createBookingBodySchema = bookingQuoteBodySchema.safeExtend({
   crop_id: z.uuid(),
+  delivery: deliveryDetailsSchema.optional(),
 });
 export type CreateBookingBody = z.input<typeof createBookingBodySchema>;
 export type CreateBookingInput = z.output<typeof createBookingBodySchema>;
@@ -89,7 +91,7 @@ export const farmerBookingSchema = z.strictObject({
   storage_subtotal_kobo: amountSchema,
   service_fee_kobo: amountSchema,
   deposit_kobo: amountSchema,
-  /** Always 0 until delivery can be requested with a booking. */
+  /** The fee of a delivery requested with the booking, or 0. */
   delivery_fee_kobo: amountSchema,
   /** Until then the booking holds the space while it waits for payment. */
   payment_expires_at: z.iso.datetime().nullable(),

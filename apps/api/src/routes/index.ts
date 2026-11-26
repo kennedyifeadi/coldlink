@@ -18,6 +18,11 @@ import { version } from '../version.js';
 import { actionRoutes, defaultActionIpLimit } from './actions.js';
 import { authRoutes, defaultAuthIpLimits, type AuthIpLimits } from './auth.js';
 import { bookingRoutes, defaultQuoteIpLimit } from './bookings.js';
+import {
+  defaultDeliveryIpLimit,
+  defaultDeliveryQuoteIpLimit,
+  deliveryRoutes,
+} from './deliveries.js';
 import { meRoutes } from './me.js';
 import { paymentRoutes } from './payments.js';
 import { providerBookingRoutes } from './providerBookings.js';
@@ -39,6 +44,8 @@ export interface RouteDependencies {
   searchIpLimit?: RateLimitOptions;
   quoteIpLimit?: RateLimitOptions;
   actionIpLimit?: RateLimitOptions;
+  deliveryQuoteIpLimit?: RateLimitOptions;
+  deliveryIpLimit?: RateLimitOptions;
   storage?: PhotoStorage;
   bookingHooks?: TransitionHooks;
   paymentGateway?: PaymentGateway;
@@ -61,6 +68,8 @@ export function apiRoutes({
   searchIpLimit = defaultSearchIpLimit,
   quoteIpLimit = defaultQuoteIpLimit,
   actionIpLimit = defaultActionIpLimit,
+  deliveryQuoteIpLimit = defaultDeliveryQuoteIpLimit,
+  deliveryIpLimit = defaultDeliveryIpLimit,
   storage = createPhotoStorage(config.storage),
   bookingHooks,
   paymentGateway,
@@ -121,6 +130,17 @@ export function apiRoutes({
     }),
   );
   router.use(
+    deliveryRoutes({
+      db,
+      tokens,
+      appConfig,
+      gateway,
+      quoteIpLimit: deliveryQuoteIpLimit,
+      ipLimit: deliveryIpLimit,
+      ...(now === undefined ? {} : { now }),
+    }),
+  );
+  router.use(
     providerBookingRoutes({
       db,
       tokens,
@@ -146,6 +166,7 @@ export function apiRoutes({
       config,
       logger,
       tasks,
+      ...(now === undefined ? {} : { now }),
     }),
   );
   return router;

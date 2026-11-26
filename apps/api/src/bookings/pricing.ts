@@ -2,9 +2,11 @@ import {
   calculatePricing,
   type AppConfig,
   type BookingQuoteInput,
+  type DeliveryLoad,
   type PricingBreakdown,
 } from '@coldlink/shared';
 import type { Database } from '../db/client.js';
+import { priceDelivery, type DeliveryPrice } from '../deliveries/pricing.js';
 import { AppError, invalidBody } from '../errors.js';
 import { findProvider, type ProviderRecord } from '../providers/store.js';
 import { isBookable } from '../providers/visibility.js';
@@ -17,6 +19,8 @@ export type BookingTerms = Pick<
 > & {
   /** The category of the crop being stored, which the facility must support; a quote has none. */
   cropCategoryId?: string;
+  /** An inbound delivery to the facility, priced and added to the online total (PRD 7.7 step 3). */
+  delivery?: DeliveryLoad | undefined;
 };
 
 export interface PricedBooking {
@@ -24,13 +28,19 @@ export interface PricedBooking {
   /** Free on the busiest day of the period, in the facility's unit. */
   available: number;
   pricing: PricingBreakdown;
+  /** The inbound delivery's price, when one was asked for. */
+  delivery: DeliveryPrice | undefined;
 }
 
-/** The facility's price for the terms, with the platform rates in `config` (PRD 6.1). */
+/**
+ * The facility's price for the terms, with the platform rates in `config` (PRD 6.1), and a
+ * delivery's fee and ColdLink's margin on it when there is one.
+ */
 export function pricingFor(
   provider: ProviderRecord,
   terms: Pick<BookingTerms, 'quantity' | 'days'>,
   config: AppConfig,
+  delivery?: DeliveryPrice,
 ): PricingBreakdown {
   return calculatePricing({
     quantity: terms.quantity,
@@ -39,6 +49,8 @@ export function pricingFor(
     commission_rate: config.commission_rate,
     deposit_percent: config.deposit_percent,
     service_fee_kobo: config.service_fee_kobo,
+    delivery_fee_kobo: delivery?.fee_kobo ?? 0,
+    delivery_margin_kobo: delivery?.platform_margin_kobo ?? 0,
   });
 }
 
@@ -93,5 +105,7 @@ export async function priceBooking(
   const available = await availableQuantity(db, provider.id, period.startDate, period.endDate);
   if (available < terms.quantity) throw notEnoughSpace(provider.id, available);
 
-  return { provider, available, pricing: pricingFor(provider, terms, config) };
+  const delivery =
+    terms.delivery === undefined ? undefined : priceDelivery(terms.delivery, provider, config);
+  return { provider, available, delivery, pricing: pricingFor(provider, terms, config, delivery) };
 }

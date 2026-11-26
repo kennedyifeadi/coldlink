@@ -1,9 +1,11 @@
 import * as z from 'zod';
+import { vehicleBandsSchema } from './deliveryPricing.js';
 import { koboSchema } from './money.js';
 import { paystackChannelSchema } from './payments.js';
 import { rateSchema } from './pricing.js';
 
-// The keys and meanings in PRD 5.15, plus paystack_channels (decision 90). Values live in the app_config table, never in code (PRD 0.2).
+// The keys and meanings in PRD 5.15, plus paystack_channels (decision 90) and delivery_vehicle_bands
+// (decision 138). Values live in the app_config table, never in code (PRD 0.2).
 const minutesSchema = z.int('Must be a whole number of minutes').positive('Must be at least 1');
 const hoursSchema = z.int('Must be a whole number of hours').nonnegative('Must be 0 or more');
 const radiusSchema = z.number().positive('Must be greater than 0');
@@ -33,10 +35,16 @@ export const appConfigSchema = z
     otp_required: z.boolean(),
     farmer_free_cancel_hours: hoursSchema,
     paystack_channels: channelsSchema,
+    delivery_vehicle_bands: vehicleBandsSchema,
   })
   .refine((config) => config.deposit_percent > config.commission_rate, {
     path: ['deposit_percent'],
     message: 'deposit_percent must be greater than commission_rate',
+  })
+  // delivery_requests.fee_kobo must be positive, and the fee is never below the minimum.
+  .refine((config) => config.delivery_min_fee_kobo > 0, {
+    path: ['delivery_min_fee_kobo'],
+    message: 'delivery_min_fee_kobo must be at least 1 kobo',
   })
   .refine((config) => config.search_default_radius_km <= config.search_max_radius_km, {
     path: ['search_default_radius_km'],

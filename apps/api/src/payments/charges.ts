@@ -14,6 +14,8 @@ import type { Config } from '../config.js';
 import type { Database } from '../db/client.js';
 import type { DB } from '../db/schema.js';
 import { inTransaction } from '../db/transaction.js';
+import { isStillPayable } from '../deliveries/rules.js';
+import { contextTypeFor, directionOf, lockDelivery } from '../deliveries/store.js';
 import { AppError } from '../errors.js';
 import { lockProvider } from '../providers/store.js';
 import {
@@ -31,6 +33,8 @@ export interface ChargeDependencies {
   appConfig: AppConfigReader;
   hooks: TransitionHooks;
   config: Pick<Config, 'webAppUrl'>;
+  /** The clock a delivery's window is judged by; the real one when left out. */
+  now?: () => Date;
 }
 
 /** The web app's route Paystack returns the farmer to, adding `?trxref=&reference=`. */
@@ -46,16 +50,117 @@ export interface StartedCharge {
   authorizationUrl: string;
 }
 
+/** What is being paid for: a booking awaiting payment, or a delivery requested after booking. */
+export type ChargeTarget = { bookingId: string } | { deliveryRequestId: string };
+
 type OpenCharge =
   | { kind: 'ready'; reference: string; authorizationUrl: string }
   | { kind: 'starting'; reference: string }
   | { kind: 'new'; reference: string; amountKobo: number };
 
+interface ChargeSubject {
+  bookingId: string;
+  deliveryRequestId: string | null;
+  amountKobo: number;
+}
+
+/** The subject's `initiated` charge, or a new one recorded for its amount. */
+async function openOrRecordCharge(
+  trx: Transaction<DB>,
+  subject: ChargeSubject,
+): Promise<OpenCharge> {
+  const charges = trx
+    .selectFrom('payments')
+    .select([
+      'provider_ref',
+      sql<string | null>`paystack_payload ->> 'authorization_url'`.as('authorization_url'),
+    ])
+    .where('booking_id', '=', subject.bookingId)
+    .where('status', '=', 'initiated');
+  const open = await (
+    subject.deliveryRequestId === null
+      ? charges.where('purpose', '=', 'booking_deposit')
+      : charges
+          .where('purpose', '=', 'delivery_fee')
+          .where('delivery_request_id', '=', subject.deliveryRequestId)
+  ).executeTakeFirst();
+  if (open !== undefined) {
+    return open.authorization_url === null
+      ? { kind: 'starting', reference: open.provider_ref }
+      : { kind: 'ready', reference: open.provider_ref, authorizationUrl: open.authorization_url };
+  }
+
+  const reference = generatePaymentReference('charge');
+  await trx
+    .insertInto('payments')
+    .values({
+      booking_id: subject.bookingId,
+      delivery_request_id: subject.deliveryRequestId,
+      provider_ref: reference,
+      purpose: subject.deliveryRequestId === null ? 'booking_deposit' : 'delivery_fee',
+      amount_kobo: subject.amountKobo,
+      status: 'initiated',
+    })
+    .execute();
+  return { kind: 'new', reference, amountKobo: subject.amountKobo };
+}
+
+async function lockBookingDates(trx: Transaction<DB>, bookingId: string) {
+  const booking = await trx
+    .selectFrom('bookings')
+    .select(['status', 'start_date', 'end_date'])
+    .where('id', '=', bookingId)
+    .forUpdate()
+    .executeTakeFirstOrThrow();
+  return { ...booking, status: booking.status as BookingStatus };
+}
+
+/**
+ * Finds the delivery's open charge, or records a new one for its fee, under its booking's lock and
+ * then its own (decision 143). Only the farmer's own unpaid `requested` delivery can be paid, while
+ * its booking takes it and its day is inside the window.
+ */
+function openDeliveryCharge(
+  db: Database,
+  payer: Payer,
+  deliveryRequestId: string,
+  now: Date,
+): Promise<OpenCharge> {
+  return inTransaction(db, async (trx) => {
+    const owned = await trx
+      .selectFrom('delivery_requests')
+      .select('context_id')
+      .where('id', '=', deliveryRequestId)
+      .where('requested_by', '=', payer.id)
+      .where('context_type', 'in', Object.values(contextTypeFor))
+      .executeTakeFirst();
+    if (owned === undefined) throw new AppError('not_found', 'Delivery not found');
+    const booking = await lockBookingDates(trx, owned.context_id);
+    const delivery = await lockDelivery(trx, deliveryRequestId);
+    const details = { delivery_request_id: deliveryRequestId, status: delivery.status };
+    if (delivery.status !== 'requested' || delivery.paid_at !== null) {
+      throw new AppError('conflict', 'This delivery is not awaiting payment', details);
+    }
+    const direction = directionOf(delivery.context_type);
+    if (!isStillPayable(direction, delivery.scheduled_for, booking, now)) {
+      throw new AppError('conflict', 'This delivery can no longer be paid for', {
+        ...details,
+        booking_status: booking.status,
+      });
+    }
+    return openOrRecordCharge(trx, {
+      bookingId: owned.context_id,
+      deliveryRequestId,
+      amountKobo: delivery.fee_kobo,
+    });
+  });
+}
+
 /**
  * Finds the booking's open charge, or records a new `initiated` one, under the booking's row lock,
  * so two calls at once never make two charges.
  */
-function openCharge(db: Database, payer: Payer, bookingId: string): Promise<OpenCharge> {
+function openBookingCharge(db: Database, payer: Payer, bookingId: string): Promise<OpenCharge> {
   return inTransaction(db, async (trx) => {
     const booking = await trx
       .selectFrom('bookings')
@@ -84,58 +189,41 @@ function openCharge(db: Database, payer: Payer, bookingId: string): Promise<Open
       });
     }
 
-    const open = await trx
-      .selectFrom('payments')
-      .select([
-        'provider_ref',
-        sql<string | null>`paystack_payload ->> 'authorization_url'`.as('authorization_url'),
-      ])
-      .where('booking_id', '=', bookingId)
-      .where('purpose', '=', 'booking_deposit')
-      .where('status', '=', 'initiated')
-      .executeTakeFirst();
-    if (open !== undefined) {
-      return open.authorization_url === null
-        ? { kind: 'starting', reference: open.provider_ref }
-        : {
-            kind: 'ready',
-            reference: open.provider_ref,
-            authorizationUrl: open.authorization_url,
-          };
-    }
-
-    const reference = generatePaymentReference('charge');
-    await trx
-      .insertInto('payments')
-      .values({
-        booking_id: bookingId,
-        provider_ref: reference,
-        purpose: 'booking_deposit',
-        amount_kobo: booking.total_charged_online_kobo,
-        status: 'initiated',
-      })
-      .execute();
-    return { kind: 'new', reference, amountKobo: booking.total_charged_online_kobo };
+    return openOrRecordCharge(trx, {
+      bookingId,
+      deliveryRequestId: null,
+      amountKobo: booking.total_charged_online_kobo,
+    });
   });
 }
 
 /**
- * Starts the farmer's payment for their `payment_pending` booking while its hold lasts, for the
- * booking's own online total, and returns Paystack's checkout page. Calling again while that
- * charge is open returns the same page (decision 92).
+ * Starts the farmer's payment, for their `payment_pending` booking while its hold lasts (for the
+ * booking's own online total) or for a delivery they requested after booking (for its fee), and
+ * returns Paystack's checkout page. Calling again while that charge is open returns the same page
+ * (decision 92).
  */
 export async function startCharge(
-  { db, gateway, appConfig, config }: ChargeDependencies,
+  { db, gateway, appConfig, config, now = () => new Date() }: ChargeDependencies,
   payer: Payer,
-  bookingId: string,
+  target: ChargeTarget,
 ): Promise<StartedCharge> {
   const { paystack_channels } = await appConfig.get();
-  const charge = await openCharge(db, payer, bookingId);
+  const charge =
+    'bookingId' in target
+      ? await openBookingCharge(db, payer, target.bookingId)
+      : await openDeliveryCharge(db, payer, target.deliveryRequestId, now());
   if (charge.kind === 'ready') return charge;
   if (charge.kind === 'starting') {
-    throw new AppError('conflict', 'The payment is still being set up. Try again shortly.', {
-      booking_id: bookingId,
-    });
+    const details =
+      'bookingId' in target
+        ? { booking_id: target.bookingId }
+        : { delivery_request_id: target.deliveryRequestId };
+    throw new AppError(
+      'conflict',
+      'The payment is still being set up. Try again shortly.',
+      details,
+    );
   }
 
   try {
@@ -179,8 +267,18 @@ export type ChargeOutcome =
   /** The amount or currency is not the booking's, so nothing changed. */
   | { kind: 'mismatch'; bookingId: string }
   | { kind: 'confirmed'; bookingId: string; transition: TransitionResult }
-  /** Paid, but the booking could no longer take it; the charge is refunded in full. */
-  | { kind: 'late'; bookingId: string; bookingStatus: BookingStatus };
+  /** A delivery's own charge, paid while the delivery could still take it; no booking change. */
+  | { kind: 'delivery_paid'; bookingId: string; deliveryRequestId: string }
+  /**
+   * Paid, but the booking, or the delivery when it is set, could no longer take it; the charge is
+   * refunded in full.
+   */
+  | {
+      kind: 'late';
+      bookingId: string;
+      bookingStatus: BookingStatus;
+      deliveryRequestId?: string;
+    };
 
 async function lockedBooking(trx: Transaction<DB>, bookingId: string) {
   return trx
@@ -226,7 +324,7 @@ async function canTakePayment(
  * provider's response clock starts at `paid_at` (decision 93); a late one is left as it is.
  */
 async function confirmCharge(
-  { db, appConfig, hooks }: SettleDependencies,
+  { db, appConfig, hooks, now = () => new Date() }: SettleDependencies,
   charge: GatewayCharge,
 ): Promise<ChargeOutcome> {
   const { provider_response_minutes } = await appConfig.get();
@@ -234,11 +332,24 @@ async function confirmCharge(
     const found = await trx
       .selectFrom('payments')
       .innerJoin('bookings', 'bookings.id', 'payments.booking_id')
-      .select(['payments.id', 'payments.booking_id', 'bookings.provider_id'])
+      .select([
+        'payments.id',
+        'payments.booking_id',
+        'payments.delivery_request_id',
+        'bookings.provider_id',
+      ])
       .where('payments.provider_ref', '=', charge.reference)
-      .where('payments.purpose', '=', 'booking_deposit')
+      .where('payments.purpose', 'in', ['booking_deposit', 'delivery_fee'])
       .executeTakeFirst();
     if (found === undefined) return { kind: 'unknown' };
+    if (found.delivery_request_id !== null) {
+      const deliveryCharge = {
+        id: found.id,
+        bookingId: found.booking_id,
+        deliveryRequestId: found.delivery_request_id,
+      };
+      return confirmDeliveryCharge(trx, deliveryCharge, charge, now());
+    }
     const bookingId = found.booking_id;
 
     await lockProvider(trx, found.provider_id);
@@ -286,6 +397,57 @@ async function confirmCharge(
   });
 }
 
+/**
+ * Records a paid delivery charge, once, with no booking transition (decision 143). Locks the
+ * booking, then the charge, then the delivery, the order every delivery path takes. A delivery that
+ * was cancelled meanwhile, or whose booking or day no longer allows it, is a late payment
+ * (decision 94): the charge is kept as paid and refunded in full.
+ */
+async function confirmDeliveryCharge(
+  trx: Transaction<DB>,
+  found: { id: string; bookingId: string; deliveryRequestId: string },
+  charge: GatewayCharge,
+  now: Date,
+): Promise<ChargeOutcome> {
+  const { bookingId, deliveryRequestId } = found;
+  const booking = await lockBookingDates(trx, bookingId);
+  const payment = await trx
+    .selectFrom('payments')
+    .select('status')
+    .where('id', '=', found.id)
+    .forUpdate()
+    .executeTakeFirstOrThrow();
+  if (payment.status !== 'initiated') return { kind: 'already_confirmed', bookingId };
+
+  const delivery = await lockDelivery(trx, deliveryRequestId);
+  if (charge.amountKobo !== delivery.fee_kobo || charge.currency !== 'NGN') {
+    return { kind: 'mismatch', bookingId };
+  }
+  await trx
+    .updateTable('payments')
+    .set({
+      status: 'success',
+      paid_at: sql<Date>`now()`,
+      paystack_payload: mergePayload({ charge: charge.record }),
+    })
+    .where('id', '=', found.id)
+    .execute();
+
+  const payable =
+    delivery.status === 'requested' &&
+    delivery.paid_at === null &&
+    isStillPayable(directionOf(delivery.context_type), delivery.scheduled_for, booking, now);
+  if (!payable) {
+    return { kind: 'late', bookingId, bookingStatus: booking.status, deliveryRequestId };
+  }
+  await trx
+    .updateTable('delivery_requests')
+    .set({ paid_at: sql<Date>`now()` })
+    .where('id', '=', deliveryRequestId)
+    .execute();
+  return { kind: 'delivery_paid', bookingId, deliveryRequestId };
+}
+
 export interface SettledCharge {
   outcome: ChargeOutcome;
   /** The work that must wait for the commit: the transition's hooks, or a late charge's refund. */
@@ -305,21 +467,33 @@ export async function settleCharge(
   switch (outcome.kind) {
     case 'confirmed':
       return { outcome, afterCommit: () => runAfterCommitHooks(deps.logger, outcome.transition) };
-    case 'late':
+    case 'delivery_paid':
+      deps.logger.info(
+        { ...log, bookingId: outcome.bookingId, deliveryRequestId: outcome.deliveryRequestId },
+        'Delivery fee paid',
+      );
+      return { outcome, afterCommit: () => Promise.resolve() };
+    case 'late': {
+      const { bookingId, bookingStatus, deliveryRequestId } = outcome;
+      const subject = deliveryRequestId === undefined ? {} : { deliveryRequestId };
       deps.logger.warn(
-        { ...log, bookingId: outcome.bookingId, bookingStatus: outcome.bookingStatus },
-        'Late payment for a booking that can no longer take it; refunding in full',
+        { ...log, bookingId, bookingStatus, ...subject },
+        deliveryRequestId === undefined
+          ? 'Late payment for a booking that can no longer take it; refunding in full'
+          : 'Late payment for a delivery that can no longer take it; refunding in full',
       );
       return {
         outcome,
         afterCommit: async () => {
           await refundBooking(deps, {
-            bookingId: outcome.bookingId,
+            bookingId,
+            ...subject,
             amount: 'full',
             reason: 'late_payment',
           });
         },
       };
+    }
     case 'mismatch':
       deps.logger.error(
         {

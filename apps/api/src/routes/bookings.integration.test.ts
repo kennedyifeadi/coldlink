@@ -130,6 +130,7 @@ describe.skipIf(noTestDatabase)('POST /bookings/quote against Postgres', () => {
       service_fee_kobo: 0,
       delivery_fee_kobo: 0,
       total_charged_online_kobo: 4_064_400,
+      delivery: null,
     });
   });
 

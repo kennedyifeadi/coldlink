@@ -21,6 +21,20 @@ const config: Record<string, unknown> = {
   otp_required: true,
   farmer_free_cancel_hours: 24,
   paystack_channels: ['card', 'bank', 'ussd', 'bank_transfer'],
+  delivery_vehicle_bands: {
+    crates: [
+      { vehicle_type: 'bike', below: 6 },
+      { vehicle_type: 'van', below: null },
+    ],
+    kg: [
+      { vehicle_type: 'bike', below: 150 },
+      { vehicle_type: 'van', below: null },
+    ],
+    sqm: [
+      { vehicle_type: 'bike', below: 1 },
+      { vehicle_type: 'van', below: null },
+    ],
+  },
 };
 
 const publicKeys = [
@@ -55,7 +69,7 @@ describe('GET /api/v1/config/public', () => {
     );
     expect(Object.keys(response.body as object).toSorted()).toEqual(publicKeys.toSorted());
     const privateKeys = appConfigKeys.filter((key) => !publicKeys.includes(key));
-    expect(privateKeys).toHaveLength(11);
+    expect(privateKeys).toHaveLength(12);
     for (const key of [...privateKeys, 'new_internal_key']) {
       expect(response.body).not.toHaveProperty(key);
     }

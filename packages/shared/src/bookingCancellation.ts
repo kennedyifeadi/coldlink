@@ -15,19 +15,24 @@ export interface FarmerCancellation {
   start_date: string;
   deposit_kobo: number;
   total_charged_online_kobo: number;
+  delivery_fee_kobo: number;
 }
 
 /**
- * What a farmer's cancellation refunds of the online payment (PRD 6.6): all of it before the
- * provider accepts; after that, the deposit but not the service fee if it is at least
- * `freeCancelHours` before 00:00 in Lagos on the start date, and nothing later.
+ * What a farmer's cancellation refunds of the booking's own part of the online payment (PRD 6.6):
+ * all of it before the provider accepts; after that, the deposit but not the service fee if it is
+ * at least `freeCancelHours` before 00:00 in Lagos on the start date, and nothing later. A delivery
+ * fee paid with the booking is not part of it: each delivery cancelled with the booking refunds
+ * its own fee (decision 144).
  */
 export function farmerCancellationRefundKobo(
   booking: FarmerCancellation,
   now: Date,
   freeCancelHours: number,
 ): number {
-  if (booking.status === 'pending_provider') return booking.total_charged_online_kobo;
+  if (booking.status === 'pending_provider') {
+    return booking.total_charged_online_kobo - booking.delivery_fee_kobo;
+  }
   const refundEndsAt = depositRefundEndsAt(booking.start_date, freeCancelHours);
   return now.getTime() <= refundEndsAt.getTime() ? booking.deposit_kobo : 0;
 }

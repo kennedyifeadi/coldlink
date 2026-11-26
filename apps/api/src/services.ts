@@ -2,6 +2,7 @@ import type { Logger } from 'pino';
 import { createTransitionHooks, type TransitionHooks } from './bookings/hooks.js';
 import type { Config } from './config.js';
 import type { Database } from './db/client.js';
+import { registerDeliveryHooks } from './deliveries/hooks.js';
 import {
   createProviderActionLinks,
   registerBookingSmsHooks,
@@ -49,6 +50,7 @@ export function createBookingServices({
 }: BookingServiceOptions): BookingServices {
   registerPayoutHooks(hooks);
   registerRefundHooks(hooks, { db, gateway, logger });
+  registerDeliveryHooks(hooks, { db, gateway, logger });
   const links = createProviderActionLinks(db, config.webAppUrl);
   const notifications = {
     store: notificationStore,

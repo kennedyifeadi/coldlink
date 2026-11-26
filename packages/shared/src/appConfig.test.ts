@@ -25,6 +25,20 @@ const placeholders = {
   otp_required: true,
   farmer_free_cancel_hours: 24,
   paystack_channels: ['card', 'bank', 'ussd', 'bank_transfer'],
+  delivery_vehicle_bands: {
+    crates: [
+      { vehicle_type: 'bike', below: 6 },
+      { vehicle_type: 'van', below: null },
+    ],
+    kg: [
+      { vehicle_type: 'bike', below: 150 },
+      { vehicle_type: 'van', below: null },
+    ],
+    sqm: [
+      { vehicle_type: 'bike', below: 1 },
+      { vehicle_type: 'van', below: null },
+    ],
+  },
 };
 
 function issuePaths(input: unknown): string[] {

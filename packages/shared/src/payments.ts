@@ -19,12 +19,14 @@ export const paystackChannels = [
 export type PaystackChannel = (typeof paystackChannels)[number];
 export const paystackChannelSchema = z.enum(paystackChannels);
 
-/** A booking charge's reference, which ColdLink makes and Paystack stores. */
+/** A charge's reference, which ColdLink makes and Paystack stores. */
 export const paymentReferenceSchema = z.string().regex(/^CLP-[0-9a-f]{20}$/);
 
-export const initializePaymentBodySchema = z.strictObject({
-  booking_id: z.uuid(),
-});
+/** Pays a booking awaiting payment, or a delivery requested after booking (decision 143). */
+export const initializePaymentBodySchema = z.union([
+  z.strictObject({ booking_id: z.uuid() }),
+  z.strictObject({ delivery_request_id: z.uuid() }),
+]);
 export type InitializePaymentBody = z.input<typeof initializePaymentBodySchema>;
 
 export const initializedPaymentSchema = z.strictObject({
@@ -40,5 +42,7 @@ export const paymentVerificationSchema = z.strictObject({
   payment_status: paymentStatusSchema,
   booking_id: z.uuid(),
   booking_status: bookingStatusSchema,
+  /** The delivery a delivery charge pays for; null for a booking's own charge. */
+  delivery_request_id: z.uuid().nullable(),
 });
 export type PaymentVerification = z.infer<typeof paymentVerificationSchema>;

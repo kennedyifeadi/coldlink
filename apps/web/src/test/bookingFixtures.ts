@@ -63,6 +63,7 @@ export const dugbeQuote = (changes: Partial<BookingQuote> = {}): BookingQuote =>
   service_fee_kobo: 0,
   delivery_fee_kobo: 0,
   total_charged_online_kobo: 1_050_000,
+  delivery: null,
   ...changes,
 });
 
@@ -144,5 +145,6 @@ export const verification = (changes: Partial<PaymentVerification> = {}): Paymen
   payment_status: 'success',
   booking_id: DUGBE_BOOKING_ID,
   booking_status: 'pending_provider',
+  delivery_request_id: null,
   ...changes,
 });

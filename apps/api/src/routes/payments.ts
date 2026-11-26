@@ -18,7 +18,12 @@ import {
   type AuthDependencies,
 } from '../middleware/auth.js';
 import { validate } from '../middleware/validate.js';
-import { settleCharge, startCharge, type ChargeDependencies } from '../payments/charges.js';
+import {
+  settleCharge,
+  startCharge,
+  type ChargeDependencies,
+  type ChargeTarget,
+} from '../payments/charges.js';
 import { maskReference } from '../payments/gateway.js';
 import { successfulChargeFromEvent } from '../payments/paystackGateway.js';
 import { chargeAndBookingStatus, findFarmerCharge } from '../payments/store.js';
@@ -53,18 +58,18 @@ export function paymentRoutes(deps: PaymentRouteDependencies): Router {
     ...farmerOnly,
     validate({ body: initializePaymentBodySchema }),
     async (req, res) => {
-      const { booking_id } = req.body as z.infer<typeof initializePaymentBodySchema>;
+      const body = req.body as z.infer<typeof initializePaymentBodySchema>;
+      const target: ChargeTarget =
+        'booking_id' in body
+          ? { bookingId: body.booking_id }
+          : { deliveryRequestId: body.delivery_request_id };
       const user = signedInUser(req);
-      const charge = await startCharge(
-        deps,
-        { id: user.id, coldlinkId: user.coldlink_id },
-        booking_id,
-      );
-      const body: InitializedPayment = {
+      const charge = await startCharge(deps, { id: user.id, coldlinkId: user.coldlink_id }, target);
+      const initialized: InitializedPayment = {
         authorization_url: charge.authorizationUrl,
         reference: charge.reference,
       };
-      res.set('Cache-Control', 'no-store').json(body);
+      res.set('Cache-Control', 'no-store').json(initialized);
     },
   );
 
@@ -99,6 +104,7 @@ export function paymentRoutes(deps: PaymentRouteDependencies): Router {
         payment_status: paymentStatusSchema.parse(current.payment_status),
         booking_id: current.id,
         booking_status: bookingStatusSchema.parse(current.status),
+        delivery_request_id: current.delivery_request_id,
       };
       res.set('Cache-Control', 'no-store').json(body);
     },

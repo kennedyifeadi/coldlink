@@ -14,6 +14,7 @@ const confirmed: FarmerCancellation = {
   start_date: '2026-12-01',
   deposit_kobo: 4_064_400,
   total_charged_online_kobo: 4_114_400,
+  delivery_fee_kobo: 0,
 };
 
 const at = (iso: string) => new Date(iso);
@@ -27,6 +28,18 @@ describe('farmerCancellationRefundKobo', () => {
   it('refunds everything before acceptance even after the start has passed', () => {
     const pending = { ...confirmed, status: 'pending_provider' } as const;
     expect(farmerCancellationRefundKobo(pending, at('2026-12-02T00:00:00Z'), 24)).toBe(4_114_400);
+  });
+
+  it("leaves a delivery fee paid with the booking to the delivery's own refund", () => {
+    const pending = {
+      ...confirmed,
+      status: 'pending_provider',
+      total_charged_online_kobo: 4_264_400,
+      delivery_fee_kobo: 150_000,
+    } as const;
+    expect(farmerCancellationRefundKobo(pending, at('2026-11-30T22:59:00Z'), 24)).toBe(4_114_400);
+    const accepted = { ...pending, status: 'confirmed' } as const;
+    expect(farmerCancellationRefundKobo(accepted, at('2026-11-20T09:00:00Z'), 24)).toBe(4_064_400);
   });
 
   it('refunds the deposit but not the service fee well before the start', () => {

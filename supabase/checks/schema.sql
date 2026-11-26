@@ -177,6 +177,7 @@ begin
     'public.delivery_requests_status_created_at_idx',
     'public.delivery_requests_partner_id_idx',
     'public.payments_delivery_request_id_idx',
+    'public.payments_delivery_request_refund_key',
     'public.produce_listings',
     'public.produce_listings_booking_id_key',
     'public.produce_listings_farmer_id_idx',
@@ -459,7 +460,12 @@ begin
       ('require_provider_approval', 'true', 'boolean', true),
       ('otp_required', 'true', 'boolean', true),
       ('farmer_free_cancel_hours', '24', 'number', true),
-      ('paystack_channels', '["card", "bank", "ussd", "bank_transfer"]', 'array', false)
+      ('paystack_channels', '["card", "bank", "ussd", "bank_transfer"]', 'array', false),
+      ('delivery_vehicle_bands',
+        '{"crates": [{"vehicle_type": "bike", "below": 6}, {"vehicle_type": "van", "below": null}],
+          "kg": [{"vehicle_type": "bike", "below": 150}, {"vehicle_type": "van", "below": null}],
+          "sqm": [{"vehicle_type": "bike", "below": 1}, {"vehicle_type": "van", "below": null}]}',
+        'object', true)
   ) as e(key, value, json_type, unconfirmed)
   full join public.app_config a
     on a.key = e.key
@@ -564,6 +570,29 @@ end;
 $$;
 
 rollback to savepoint payment_settings_rerun;
+
+-- The vehicle bands migration (decision 138) never overwrites what an admin has changed.
+savepoint vehicle_bands_rerun;
+
+update public.app_config
+set value = '{"crates": [{"vehicle_type": "van", "below": null}],
+  "kg": [{"vehicle_type": "van", "below": null}],
+  "sqm": [{"vehicle_type": "van", "below": null}]}'
+where key = 'delivery_vehicle_bands';
+
+\ir ../migrations/20261126090000_add_delivery_vehicle_bands.sql
+
+do $$
+begin
+  if (select value -> 'crates' from public.app_config where key = 'delivery_vehicle_bands')
+    <> '[{"vehicle_type": "van", "below": null}]'::jsonb
+  then
+    raise exception 'the vehicle bands migration overwrote a value an admin changed';
+  end if;
+end;
+$$;
+
+rollback to savepoint vehicle_bands_rerun;
 
 insert into public.users (phone, coldlink_id, created_at, updated_at)
 values ('+2348012345678', '4820193', '2000-01-01', '2000-01-01');
