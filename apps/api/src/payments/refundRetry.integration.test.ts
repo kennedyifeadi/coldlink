@@ -73,6 +73,78 @@ describe.skipIf(noTestDatabase)('refund retry', () => {
     };
   }
 
+  async function insertPaidDelivery(feeKobo: number): Promise<string> {
+    const point = sql<string>`extensions.st_setsrid(extensions.st_makepoint(3.9, 7.4), 4326)::extensions.geography`;
+    const { id } = await db()
+      .insertInto('delivery_requests')
+      .values({
+        context_type: 'booking_inbound',
+        context_id: booking.bookingId,
+        requested_by: booking.farmerId,
+        pickup_text: 'Farm',
+        pickup_location: point,
+        dropoff_text: 'Facility',
+        dropoff_location: point,
+        contact_phone: '+2348009000002',
+        load_description: 'Crates',
+        load_quantity: 5,
+        load_unit: 'crates',
+        distance_km: 0,
+        vehicle_type: 'bike',
+        fee_kobo: feeKobo,
+        partner_payout_kobo: 0,
+        platform_margin_kobo: feeKobo,
+        status: 'cancelled',
+        handover_code: '0427',
+        paid_at: sql<Date>`now()`,
+      })
+      .returning('id')
+      .executeTakeFirstOrThrow();
+    return id;
+  }
+
+  it("never takes a delivery's refund on the same charge for the booking's", async () => {
+    const services = jobServices(db());
+    const deps = { db: db(), gateway: services.payments.gateway, logger: services.logs.logger };
+    const fee = 245_000;
+    const deliveryRequestId = await insertPaidDelivery(fee);
+    await expect(
+      refundBooking(deps, {
+        bookingId: booking.bookingId,
+        deliveryRequestId,
+        amount: fee,
+        reason: 'delivery_cancelled',
+      }),
+    ).resolves.toBe('refunded');
+    services.payments.state.failRefunds = true;
+    await expect(
+      refundBooking(deps, {
+        bookingId: booking.bookingId,
+        amount: TOTAL - fee,
+        reason: 'rejected',
+      }),
+    ).resolves.toBe('failed');
+    services.payments.state.failRefunds = false;
+
+    await expect(retry(services)).resolves.toEqual({ ...NOTHING, refunded: 1 });
+
+    const { charge, refunds } = await rows();
+    const summary = refunds.map((row) => [
+      row.delivery_request_id,
+      row.amount_kobo,
+      row.status,
+      (row.paystack_payload as Record<string, unknown>).paystack_refund_id,
+    ]);
+    expect(summary).toEqual(
+      expect.arrayContaining([
+        [deliveryRequestId, fee, 'success', 'refund-1'],
+        [null, TOTAL - fee, 'success', 'refund-2'],
+      ]),
+    );
+    expect(summary).toHaveLength(2);
+    expect(charge?.status).toBe('refunded');
+  });
+
   it('resends a refund Paystack never made, on the same row', async () => {
     const services = jobServices(db());
     services.payments.state.failRefunds = true;
