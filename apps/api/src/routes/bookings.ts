@@ -37,6 +37,9 @@ import {
   toFarmerBookingSummary,
 } from '../bookings/views.js';
 import { inTransaction } from '../db/transaction.js';
+import { generateHandoverCode } from '../deliveries/handoverCode.js';
+import { checkScheduledFor, openWindow, toDeliveryQuote } from '../deliveries/pricing.js';
+import { insertDelivery, unfinishedPaidDeliveryFees } from '../deliveries/store.js';
 import { invalidBody } from '../errors.js';
 import {
   optionalAuth,
@@ -65,10 +68,15 @@ export interface BookingRouteDependencies extends AuthDependencies {
 const bookingParamsSchema = z.object({ id: z.uuid() });
 type BookingParams = z.infer<typeof bookingParamsSchema>;
 
+function bookingDates(period: StoragePeriod) {
+  return { start_date: period.startDate, end_date: period.endDate };
+}
+
 function toQuote(
   input: BookingQuoteInput,
   period: StoragePeriod,
-  { provider, available, pricing }: PricedBooking,
+  { provider, available, pricing, delivery }: PricedBooking,
+  now: Date,
 ): BookingQuote {
   return {
     provider_id: provider.id,
@@ -85,6 +93,10 @@ function toQuote(
     service_fee_kobo: pricing.service_fee_kobo,
     delivery_fee_kobo: pricing.delivery_fee_kobo,
     total_charged_online_kobo: pricing.total_charged_online_kobo,
+    delivery:
+      delivery === undefined
+        ? null
+        : toDeliveryQuote('inbound', delivery, openWindow('inbound', bookingDates(period), now)),
   };
 }
 
@@ -111,12 +123,14 @@ export function bookingRoutes(deps: BookingRouteDependencies): Router {
       const period = storagePeriod(input.start_date, input.days, now());
       const config = await appConfig.get();
       const priced = await priceBooking(db, input, period, config);
-      res.json(toQuote(input, period, priced));
+      res.json(toQuote(input, period, priced, now()));
     },
   );
 
   // PRD 6.3: the provider's row is locked before its visibility, terms and free capacity are
-  // checked, so two farmers racing for the last space are served one after the other.
+  // checked, so two farmers racing for the last space are served one after the other. An inbound
+  // delivery asked for with the booking is priced on the server, added to the online total and
+  // inserted in the same transaction, unpaid until the booking is (decision 142).
   router.post(
     '/bookings',
     ...farmerOnly,
@@ -127,11 +141,16 @@ export function bookingRoutes(deps: BookingRouteDependencies): Router {
       const period = storagePeriod(input.start_date, input.days, now());
       const cropCategoryId = await findCropCategoryId(db, input.crop_id);
       if (cropCategoryId === undefined) throw invalidBody('crop_id', 'Unknown crop');
+      const { delivery: details } = input;
+      if (details !== undefined) {
+        const window = openWindow('inbound', bookingDates(period), now());
+        checkScheduledFor(window, details.scheduled_for, 'delivery.scheduled_for');
+      }
       const config = await appConfig.get();
 
       const booking = await inTransaction(db, async (trx) => {
         await lockProvider(trx, input.provider_id);
-        const { provider, pricing } = await priceBooking(
+        const { provider, pricing, delivery } = await priceBooking(
           trx,
           { ...input, cropCategoryId },
           period,
@@ -154,6 +173,17 @@ export function bookingRoutes(deps: BookingRouteDependencies): Router {
           generateCode,
         );
         await recordBookingCreated(trx, id, farmerId);
+        if (details !== undefined && delivery !== undefined) {
+          await insertDelivery(trx, {
+            bookingId: id,
+            farmerId,
+            direction: 'inbound',
+            details,
+            facility: provider,
+            price: delivery,
+            handoverCode: generateHandoverCode(),
+          });
+        }
         return requireFarmerBookingDetail(trx, farmerId, id);
       });
       const terms = { now: now(), freeCancelHours: config.farmer_free_cancel_hours };
@@ -198,7 +228,10 @@ export function bookingRoutes(deps: BookingRouteDependencies): Router {
         const locked = await lockFarmerBooking(trx, farmerId, id);
         if (locked === undefined) throw new BookingNotFoundError(id);
         // The same preview GET /bookings/:id shows, so the farmer gets the refund they were told.
-        const preview = farmerCancellationPreview(locked, terms);
+        // The paid deliveries it cancels refund their own fees (decision 144), so the event's
+        // refund_kobo, which the refund hook pays, is the booking's part alone.
+        const deliveryRefund = await unfinishedPaidDeliveryFees(trx, id);
+        const preview = farmerCancellationPreview(locked, deliveryRefund, terms);
         // transitionBooking refuses every other status with a 409, so this 0 is never stored.
         const refund = preview.allowed ? preview.refund_kobo : 0;
         const transition = await transitionBooking(trx, hooks, {
@@ -206,7 +239,10 @@ export function bookingRoutes(deps: BookingRouteDependencies): Router {
           to: 'cancelled',
           actor: { type: 'farmer', id: farmerId },
           ...(reason === undefined ? {} : { reason }),
-          metadata: { refund_kobo: refund },
+          metadata: {
+            refund_kobo: refund - deliveryRefund,
+            delivery_refund_kobo: deliveryRefund,
+          },
         });
         return {
           result: transition,
