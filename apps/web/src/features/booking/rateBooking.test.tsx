@@ -140,9 +140,7 @@ describe('rating screen', FLOW_TIMEOUT, () => {
     await findHeading(ratingTitle);
     await user.click(sendButton());
 
-    expect(screen.getByRole('alert')).toHaveTextContent(
-      'Tap a star from 1 to 5 to rate your stay.',
-    );
+    expect(screen.getByRole('alert')).toHaveTextContent('Tap a star to rate your stay.');
     expect(requestsTo(fetchMock, 'POST', `/bookings/${DUGBE_BOOKING_ID}/rating`)).toEqual([]);
     await user.click(starButton(3));
     expect(screen.queryByRole('alert')).toBeNull();
@@ -192,7 +190,7 @@ describe('rating screen', FLOW_TIMEOUT, () => {
     await user.click(sendButton());
 
     const retry = await screen.findByRole('button', { name: 'Try again' }, SCREEN_TIMEOUT);
-    expect(screen.getByRole('alert')).toHaveTextContent('No network connection.');
+    expect(screen.getByRole('alert')).toHaveTextContent('No connection.');
     expect(starButton(3)).toHaveAttribute('aria-pressed', 'true');
     expect(screen.getByLabelText(/Anything to add\?/)).toHaveValue('Far from the road');
 

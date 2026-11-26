@@ -202,9 +202,7 @@ describe('My bookings', FLOW_TIMEOUT, () => {
     const user = renderApp('/bookings');
 
     expect(await findHeading("Couldn't load your bookings")).toBeVisible();
-    expect(
-      screen.getByText('Something went wrong on our side. Try again in a moment.'),
-    ).toBeVisible();
+    expect(screen.getByText('Something went wrong on our side. Try again.')).toBeVisible();
     await user.click(screen.getByRole('button', { name: 'Try again' }));
 
     expect(await findCard('CL-7KQ2M')).toBeVisible();
@@ -357,9 +355,7 @@ describe('cancelling a booking', FLOW_TIMEOUT, () => {
 
     expect(await findHeading('Booking cancelled')).toBeVisible();
     expect(
-      screen.getByText(
-        "We're refunding ₦10,500 to you. It can take a few days to reach your account.",
-      ),
+      screen.getByText("We're refunding ₦10,500. It can take a few days to reach you."),
     ).toBeVisible();
     expect(screen.getAllByText('Cancelled').length).toBeGreaterThan(0);
     const cancels = requestsTo(fetchMock, 'POST', `/bookings/${DUGBE_BOOKING_ID}/cancel`);
@@ -498,12 +494,12 @@ describe('Book again', FLOW_TIMEOUT, () => {
       errorResponse(409, 'conflict', {
         details: { provider_id: dugbe.provider.id, available_quantity: 0 },
       }),
-      'That cold room has no space for this booking now. Choose where you are to find others nearby. Your produce and amount are filled in.',
+      'That cold room has no space for this booking now. Choose where you are to find others. Your produce and amount are kept.',
     ],
     [
       'is gone',
       errorResponse(404, 'not_found'),
-      'That cold room is no longer taking bookings. Choose where you are to find others nearby. Your produce and amount are filled in.',
+      'That cold room has stopped taking bookings. Choose where you are to find others. Your produce and amount are kept.',
     ],
   ])(
     'falls back to search with the produce and amount filled in when the facility %s',
@@ -540,9 +536,7 @@ describe('Book again', FLOW_TIMEOUT, () => {
 
     await user.click(await screen.findByRole('button', { name: /^Book again at/ }, SCREEN_TIMEOUT));
 
-    expect(
-      await screen.findByText('Something went wrong on our side. Try again in a moment.'),
-    ).toBeVisible();
+    expect(await screen.findByText('Something went wrong on our side. Try again.')).toBeVisible();
     expect(currentPath()).toBe('/bookings');
   });
 

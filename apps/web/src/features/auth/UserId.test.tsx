@@ -30,9 +30,7 @@ describe('ColdLink ID screen', () => {
     renderApp('/userid');
     await screen.findByText('961 6651', undefined, SCREEN_TIMEOUT);
 
-    expect(
-      screen.getByText('Keep this ID safe. Give it when you contact ColdLink support.'),
-    ).toBeInTheDocument();
+    expect(screen.getByText('Give this ID when you contact ColdLink support.')).toBeInTheDocument();
     expect(screen.queryByText(/WhatsApp|USSD/)).not.toBeInTheDocument();
   });
 
@@ -82,7 +80,7 @@ describe('ColdLink ID screen', () => {
     await user.click(await screen.findByRole('button', { name: 'Sign out' }, SCREEN_TIMEOUT));
 
     expect(await screen.findByRole('alert')).toHaveTextContent(
-      'Something went wrong on our side. Try again in a moment.',
+      'Something went wrong on our side. Try again.',
     );
     expect(screen.getByText('961 6651')).toBeInTheDocument();
   });

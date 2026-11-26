@@ -101,7 +101,7 @@ describe('location step', FLOW_TIMEOUT, () => {
     expect(screen.queryByRole('button', { name: 'Bodija, Ibadan' })).not.toBeInTheDocument();
 
     await user.type(screen.getByLabelText('Search for your area'), 'xyz');
-    expect(screen.getByText(/No area called "ogboxyz" yet/)).toBeInTheDocument();
+    expect(screen.getByText(/No area called "ogboxyz"/)).toBeInTheDocument();
   });
 
   it('uses the device location, to about 100 m', async () => {
@@ -150,7 +150,7 @@ describe('location step', FLOW_TIMEOUT, () => {
     );
 
     expect(screen.getByRole('alert')).toHaveTextContent(
-      'Location is turned off for ColdLink. Pick your area or drop a pin instead.',
+      'Location is off for ColdLink. Pick your area or drop a pin.',
     );
     expect(screen.getByRole('button', { name: /^Continue/ })).toBeDisabled();
     expect(screen.getByRole('button', { name: 'Pick your area' })).toBeEnabled();
@@ -202,7 +202,7 @@ describe('produce step', FLOW_TIMEOUT, () => {
     await pickArea(user, 'Bodija, Ibadan');
 
     expect(await screen.findByRole('alert', undefined, SCREEN_TIMEOUT)).toHaveTextContent(
-      'Something went wrong on our side. Try again in a moment.',
+      'Something went wrong on our side. Try again.',
     );
     await user.click(screen.getByRole('button', { name: 'Try again' }));
 
@@ -237,9 +237,9 @@ describe('amount step', FLOW_TIMEOUT, () => {
   });
 
   it.each([
-    ['ten', 'Enter the amount as a number, like 10.'],
-    ['0', 'Enter an amount above 0.'],
-    ['-3', 'Enter an amount above 0.'],
+    ['ten', 'Enter a number, like 10.'],
+    ['0', 'Enter more than 0.'],
+    ['-3', 'Enter more than 0.'],
     ['2.5001', 'Use up to 3 numbers after the decimal point.'],
   ])('refuses %s without searching', async (typed, message) => {
     const { fetchMock, user } = await openAmountStep();
@@ -283,7 +283,7 @@ describe('amount step', FLOW_TIMEOUT, () => {
 
     // Enter only searched: it did not also step back, so Back returns to the amount step.
     await user.click(screen.getByRole('button', { name: 'Go back' }));
-    expect(await findHeading('How much do you want to store?')).toBeInTheDocument();
+    expect(await findHeading('How much, and for how long?')).toBeInTheDocument();
   });
 });
 
@@ -373,7 +373,7 @@ describe('results', FLOW_TIMEOUT, () => {
     await enterAmount(user, '10');
 
     expect(await screen.findByRole('status', undefined, SCREEN_TIMEOUT)).toHaveTextContent(
-      'No cold rooms had space close by, so we looked further. These are up to 100 km away.',
+      'Nothing close by had space, so we looked up to 100 km away.',
     );
     expect(await findHeading('Dugbe Fridge Fleet (Sample)')).toBeInTheDocument();
   });
@@ -387,9 +387,7 @@ describe('results', FLOW_TIMEOUT, () => {
     const user = renderApp('/location');
     await searchFromBodija(user);
 
-    expect(
-      await findHeading('No cold rooms with space for tomatoes were found nearby.'),
-    ).toBeInTheDocument();
+    expect(await findHeading('No cold rooms nearby have space for tomatoes.')).toBeInTheDocument();
     expect(screen.getByText('We looked up to 100 km away.')).toBeInTheDocument();
     expect(screen.getByText('Try a smaller amount or fewer days.')).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Try another location' }));
@@ -407,7 +405,7 @@ describe('results', FLOW_TIMEOUT, () => {
     await searchFromBodija(user);
 
     expect(await screen.findByRole('alert', undefined, SCREEN_TIMEOUT)).toHaveTextContent(
-      'Something went wrong on our side. Try again in a moment.',
+      'Something went wrong on our side. Try again.',
     );
     expect(screen.getByRole('button', { name: 'Change produce: Tomatoes' })).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Try again' }));

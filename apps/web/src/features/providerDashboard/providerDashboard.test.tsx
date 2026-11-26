@@ -291,7 +291,7 @@ describe('provider booking detail', () => {
     const user = renderApp(DETAIL);
 
     await user.click(await screen.findByRole('button', { name: 'Accept booking' }, SCREEN_TIMEOUT));
-    expect(await screen.findByText(/No network connection/)).toBeVisible();
+    expect(await screen.findByText(/No connection/)).toBeVisible();
     expect(screen.getByRole('heading', { name: 'Tomatoes, 10 crates' })).toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: 'Try again' }));

@@ -31,13 +31,11 @@ test('a farmer books and pays, the cold room answers and stores it, and the farm
     await page.getByRole('button', { name: 'Kishi', exact: true }).click();
     await page.getByRole('button', { name: 'Continue' }).click();
 
-    await expect(page.getByRole('heading', { name: 'What do you want to store?' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'What are you storing?' })).toBeVisible();
     await page.getByRole('button', { name: 'Tomatoes', exact: true }).click();
     await page.getByRole('button', { name: 'Continue' }).click();
 
-    await expect(
-      page.getByRole('heading', { name: 'How much do you want to store?' }),
-    ).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'How much, and for how long?' })).toBeVisible();
     await page.getByLabel('Amount', { exact: true }).fill('5');
     await page.getByRole('radio', { name: 'Crates' }).check();
     // Check-in opens on the start date (decision 99), so the booking starts today in Lagos.

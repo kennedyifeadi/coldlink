@@ -110,7 +110,7 @@ describe('paying for a new booking', FLOW_TIMEOUT, () => {
     await user.dblClick(pay);
 
     expect(await screen.findByRole('button', { name: 'Opening Paystack...' })).toBeDisabled();
-    expect(screen.getByText("Taking you to Paystack to pay. Don't close this page.")).toBeVisible();
+    expect(screen.getByText("Taking you to Paystack. Don't close this page.")).toBeVisible();
     answer(jsonResponse(201, dugbeBooking()));
     await vi.waitFor(() => expect(assign).toHaveBeenCalledTimes(1));
     expect(requestsTo(fetchMock, 'POST', '/bookings')).toHaveLength(1);
@@ -130,7 +130,7 @@ describe('paying for a new booking', FLOW_TIMEOUT, () => {
     expect(
       await screen.findByText('You pay now: ₦12,345.67', undefined, SCREEN_TIMEOUT),
     ).toBeVisible();
-    expect(screen.getByText(/Pay the balance of ₦987\.65 at Dugbe/)).toBeVisible();
+    expect(screen.getByText(/Pay the ₦987\.65 balance at Dugbe/)).toBeVisible();
     expect(screen.getByRole('button', { name: 'Pay ₦12,345.67' })).toBeVisible();
   });
 
@@ -207,7 +207,7 @@ describe('paying for a booking already made', FLOW_TIMEOUT, () => {
 
     expect(
       await screen.findByText(
-        "We're holding your space until 10:30 am on Tue, 10 Nov.",
+        'Your space is held until 10:30 am on Tue, 10 Nov.',
         undefined,
         SCREEN_TIMEOUT,
       ),
@@ -256,7 +256,7 @@ describe('paying for a booking already made', FLOW_TIMEOUT, () => {
     await user.click(await findPayButton());
 
     expect(
-      await screen.findByText('No network connection. Check your data or Wi-Fi, then try again.'),
+      await screen.findByText('No connection. Check your data, then try again.'),
     ).toBeVisible();
     await user.click(screen.getByRole('button', { name: 'Try again' }));
 

@@ -141,7 +141,7 @@ describe('coming back from Paystack', FLOW_TIMEOUT, () => {
     renderApp(paymentReturnPath);
 
     expect(await findHeading('Your money is coming back')).toBeVisible();
-    expect(screen.getByText(/Your payment of ₦10,500 reached us after the space/)).toBeVisible();
+    expect(screen.getByText(/Your ₦10,500 arrived after the space/)).toBeVisible();
     expect(screen.queryByRole('button', { name: /^Pay/ })).not.toBeInTheDocument();
   });
 

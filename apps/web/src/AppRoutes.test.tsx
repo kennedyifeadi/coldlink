@@ -78,9 +78,7 @@ describe('app routes', () => {
     const user = renderApp('/bookings');
 
     expect(await findHeading("Can't reach ColdLink")).toBeInTheDocument();
-    expect(
-      screen.getByText('No network connection. Check your data or Wi-Fi, then try again.'),
-    ).toBeInTheDocument();
+    expect(screen.getByText('No connection. Check your data, then try again.')).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Try again' }));
 
     expect(await findHeading('My bookings')).toBeInTheDocument();
