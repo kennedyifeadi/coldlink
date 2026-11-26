@@ -19,8 +19,8 @@ const Checking = () => {
   const { t } = useTranslation();
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen bg-background px-6">
-      <p role="status" className="text-copy-muted text-lead">
+    <div className="flex flex-col items-center justify-center min-h-screen bg-background px-5">
+      <p role="status" className="text-copy-muted text-body">
         {t('booking.paymentReturn.checking')}
       </p>
     </div>

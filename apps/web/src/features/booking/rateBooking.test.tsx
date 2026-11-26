@@ -110,7 +110,7 @@ describe('rating screen', FLOW_TIMEOUT, () => {
 
     await user.click(screen.getByRole('button', { name: 'See booking' }));
     await waitForPath(detailPath);
-    const card = (await findHeading('Your rating')).closest<HTMLElement>('.rounded-2xl')!;
+    const card = await screen.findByRole('region', { name: 'Your rating' }, SCREEN_TIMEOUT);
     expect(within(card).getByText('5 out of 5: Excellent')).toBeVisible();
     expect(screen.queryByRole('button', { name: 'Rate your stay' })).toBeNull();
   });
@@ -325,7 +325,7 @@ describe('rating from the booking detail', FLOW_TIMEOUT, () => {
     mockApi({ ...signedIn, [bookingRoute]: bookingReply(ratedBooking(3, 'Fine')) });
     renderApp(detailPath);
 
-    const card = (await findHeading('Your rating')).closest<HTMLElement>('.rounded-2xl')!;
+    const card = await screen.findByRole('region', { name: 'Your rating' }, SCREEN_TIMEOUT);
     expect(within(card).getByText('3 out of 5: Good')).toBeVisible();
     expect(within(card).getByText('Fine')).toBeVisible();
     expect(screen.queryByRole('button', { name: 'Rate your stay' })).toBeNull();

@@ -5,6 +5,7 @@ import { useQuery } from '@tanstack/react-query';
 import { cropsQuery } from '../../api/referenceData';
 import TopNavBar from '../../components/TopNavBar';
 import BottomNav from '../../components/BottomNav';
+import PageHeader from '../../components/ui/PageHeader';
 import PrimaryButton from '../../components/ui/PrimaryButton';
 import TextButton from '../../components/ui/TextButton';
 import { formatKobo } from '../../i18n/format';
@@ -65,18 +66,12 @@ const Review = () => {
   if (crops.isSuccess && booking.status === 'ready' && !crop) return <BrokenBookingLink />;
 
   return (
-    <div className="flex flex-col h-full min-h-screen bg-background relative pb-20">
+    <div className="flex flex-col min-h-screen bg-background pb-24">
       <TopNavBar title={navTitle} showBack={true} />
       <BookingProgress step="review" />
+      <PageHeader title={t('booking.review.title')} intro={t('booking.review.intro')} />
 
-      <div className="flex flex-col gap-4 px-5 pt-6 pb-6 flex-grow">
-        <div className="mb-2">
-          <h1 className="font-heading text-headline-lg font-bold text-ink mb-2 tracking-tight">
-            {t('booking.review.title')}
-          </h1>
-          <p className="text-copy-muted text-lead leading-relaxed">{t('booking.review.intro')}</p>
-        </div>
-
+      <div className="flex flex-col gap-4 px-5 pt-5 pb-6">
         {booking.status === 'ready' && crop ? (
           <>
             <BookingSummary
@@ -97,7 +92,7 @@ const Review = () => {
               <PriceBreakdown terms={booking.quote} facility={booking.provider.display_name} />
             )}
 
-            <div className="flex flex-col gap-2 mt-4">
+            <div className="flex flex-col gap-3 mt-2">
               {booking.quote ? (
                 <>
                   <PrimaryButton

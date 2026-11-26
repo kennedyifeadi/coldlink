@@ -27,6 +27,7 @@ const StatusHeader = ({ booking }: { booking: FarmerBooking }) => {
     booking.status === 'pending_provider' && booking.provider_response_due_at !== null
       ? {
           icon: Hourglass,
+          iconClass: 'text-accent-ink',
           title: t('booking.confirmation.waitingTitle', { facility }),
           body: t('booking.confirmation.waitingBody', {
             facility,
@@ -36,6 +37,7 @@ const StatusHeader = ({ booking }: { booking: FarmerBooking }) => {
       : booking.status === 'confirmed'
         ? {
             icon: CheckCircle2,
+            iconClass: 'text-primary-strong',
             title: t('booking.confirmation.confirmedTitle'),
             body: t('booking.confirmation.confirmedBody', {
               facility,
@@ -44,6 +46,7 @@ const StatusHeader = ({ booking }: { booking: FarmerBooking }) => {
           }
         : {
             icon: CircleDot,
+            iconClass: 'text-copy-muted',
             title: t('booking.confirmation.otherTitle'),
             body: t('booking.confirmation.statusValue', {
               status: t(`booking.status.${booking.status}`),
@@ -52,12 +55,10 @@ const StatusHeader = ({ booking }: { booking: FarmerBooking }) => {
   const Icon = header.icon;
 
   return (
-    <div className="flex flex-col items-center text-center mb-8">
-      <div className="w-16 h-16 bg-primary-faint rounded-full flex items-center justify-center text-primary-strong mb-4">
-        <Icon size={32} strokeWidth={2.5} aria-hidden="true" />
-      </div>
-      <h1 className="font-heading text-title font-bold text-ink mb-2">{header.title}</h1>
-      <p className="text-copy-muted text-body leading-relaxed max-w-sm">{header.body}</p>
+    <div className="px-5 pt-4 pb-6 rim">
+      <Icon size={32} strokeWidth={2} className={`mb-3 ${header.iconClass}`} aria-hidden="true" />
+      <h1 className="text-headline font-bold text-ink mb-2">{header.title}</h1>
+      <p className="text-copy-muted text-body">{header.body}</p>
     </div>
   );
 };
@@ -75,27 +76,25 @@ const PaymentDetails = ({ booking }: { booking: FarmerBooking }) => {
   const { t } = useTranslation();
 
   return (
-    <Card className="p-6 mb-8">
-      <h2 className="text-copy-muted text-label font-medium mb-5">
+    <Card className="p-5 mb-8">
+      <h2 className="font-semibold text-ink text-subtitle mb-4">
         {t('booking.confirmation.paymentTitle')}
       </h2>
-      <div className="mb-4">
+      <div className="mb-3">
         <SummaryRow
           label={t('booking.confirmation.paidOnline')}
           value={formatKobo(booking.total_charged_online_kobo)}
           variant="highlight"
         />
       </div>
-      <div className="h-[1px] bg-line mb-4 w-full"></div>
+      <div className="h-px bg-line mb-3 w-full" />
       <div className="mb-1.5">
         <SummaryRow
           label={t('booking.confirmation.dueAtFacility')}
           value={formatKobo(booking.balance_due_kobo)}
         />
       </div>
-      <p className="text-right text-copy-subtle text-caption">
-        {t('booking.confirmation.dueHint')}
-      </p>
+      <p className="text-right text-copy-muted text-label">{t('booking.confirmation.dueHint')}</p>
     </Card>
   );
 };
@@ -121,13 +120,13 @@ const ConfirmationSkeleton = () => {
 
   return (
     <div className="flex flex-col gap-4 px-5 pt-2">
-      <p role="status" className="text-copy-muted text-body text-center">
+      <p role="status" className="text-copy-muted text-label font-medium">
         {t('common.loading')}
       </p>
       <div aria-hidden="true" className="flex flex-col gap-4">
-        <div className="h-32 rounded-2xl bg-surface-muted" />
-        <div className="h-36 rounded-2xl bg-surface-muted" />
-        <div className="h-64 rounded-2xl bg-surface-muted" />
+        <div className="h-32 rounded-xl bg-surface-muted" />
+        <div className="h-36 rounded-xl bg-surface-muted" />
+        <div className="h-64 rounded-xl bg-surface-muted" />
       </div>
     </div>
   );
@@ -159,36 +158,38 @@ const Confirmation = () => {
   const booking = query.data;
 
   return (
-    <div className="flex flex-col h-full min-h-screen bg-background relative pb-10">
-      <div className="flex justify-center items-center px-4 py-6">
+    <div className="flex flex-col min-h-screen bg-background pb-10">
+      <div className="px-5 py-5">
         <img src={logoMain} alt={t('common.logoAlt')} width={138} height={32} />
       </div>
 
       {booking ? (
-        <div className="flex flex-col px-5 pt-2 flex-grow">
+        <div className="flex flex-col flex-grow">
           <StatusHeader booking={booking} />
 
-          <BookingCode code={booking.code} />
+          <div className="flex flex-col px-5 pt-5 flex-grow">
+            <BookingCode code={booking.code} />
 
-          <BookingDetails booking={booking} />
-          {isPaidAndStanding(booking.status) && <PaymentDetails booking={booking} />}
+            <BookingDetails booking={booking} />
+            {isPaidAndStanding(booking.status) && <PaymentDetails booking={booking} />}
 
-          <div className="flex flex-col gap-4 mt-auto">
-            <PrimaryButton onClick={() => void navigate(MY_BOOKINGS_PATH)}>
-              {t('booking.confirmation.viewBookings')}
-            </PrimaryButton>
-            <a
-              href={whatsappShareUrl(shareText(booking, t))}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="w-full min-h-12 py-4 flex items-center justify-center gap-2 bg-surface border border-line-strong text-ink font-medium text-lead hover:bg-surface-muted rounded-lg transition-colors"
-            >
-              <Share2 size={20} aria-hidden="true" />
-              {t('booking.confirmation.share')}
-            </a>
-            <TextButton onClick={() => void navigate('/')}>
-              {t('booking.confirmation.backHome')}
-            </TextButton>
+            <div className="flex flex-col gap-3 mt-auto">
+              <PrimaryButton onClick={() => void navigate(MY_BOOKINGS_PATH)}>
+                {t('booking.confirmation.viewBookings')}
+              </PrimaryButton>
+              <a
+                href={whatsappShareUrl(shareText(booking, t))}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-full min-h-12 px-5 flex items-center justify-center gap-2 border border-line-strong text-ink font-semibold text-body hover:bg-surface-muted rounded-full transition-colors"
+              >
+                <Share2 size={18} aria-hidden="true" />
+                {t('booking.confirmation.share')}
+              </a>
+              <TextButton onClick={() => void navigate('/')}>
+                {t('booking.confirmation.backHome')}
+              </TextButton>
+            </div>
           </div>
         </div>
       ) : (

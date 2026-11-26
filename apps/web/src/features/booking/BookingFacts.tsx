@@ -16,10 +16,10 @@ export const DetailRow = ({
   label: string;
   children: React.ReactNode;
 }) => (
-  <div className="flex items-start gap-4">
-    <Icon size={18} className="text-primary mt-0.5 shrink-0" aria-hidden="true" />
+  <div className="flex items-start gap-3">
+    <Icon size={18} className="text-copy-subtle mt-0.5 shrink-0" aria-hidden="true" />
     <div className="min-w-0">
-      <p className="text-ink text-label mb-0.5">{label}</p>
+      <p className="text-copy-muted text-label">{label}</p>
       {children}
     </div>
   </div>
@@ -31,25 +31,23 @@ export const BookingDetails = ({ booking }: { booking: FarmerBooking }) => {
   const { provider } = booking;
 
   return (
-    <Card className="p-6 mb-4">
-      <h2 className="text-copy-muted text-label font-medium mb-5">
+    <Card className="p-5 mb-4">
+      <h2 className="font-semibold text-ink text-subtitle mb-4">
         {t('booking.confirmation.detailsTitle')}
       </h2>
-      <div className="flex flex-col gap-5">
+      <div className="flex flex-col gap-4">
         <DetailRow icon={Home} label={t('booking.confirmation.coldRoom')}>
-          <p className="text-copy-muted text-body">{provider.display_name}</p>
+          <p className="text-ink text-body">{provider.display_name}</p>
         </DetailRow>
         <DetailRow icon={MapPin} label={t('booking.confirmation.address')}>
-          <p className="text-copy-muted text-body">{provider.address_text}</p>
+          <p className="text-ink text-body">{provider.address_text}</p>
           {provider.landmark && (
-            <p className="text-copy-muted text-body">
+            <p className="text-ink text-body">
               {t('booking.details.near', { landmark: provider.landmark })}
             </p>
           )}
           {provider.lga && (
-            <p className="text-copy-muted text-body">
-              {t('booking.detail.lga', { lga: provider.lga })}
-            </p>
+            <p className="text-ink text-body">{t('booking.detail.lga', { lga: provider.lga })}</p>
           )}
         </DetailRow>
         {provider.phone && (
@@ -64,7 +62,7 @@ export const BookingDetails = ({ booking }: { booking: FarmerBooking }) => {
           </DetailRow>
         )}
         <DetailRow icon={Leaf} label={t('booking.confirmation.produce')}>
-          <p className="text-copy-muted text-body">
+          <p className="text-ink text-body">
             {t('booking.confirmation.produceValue', {
               produce: booking.crop.name,
               amount: formatAmount(booking.quantity, booking.capacity_unit, t),
@@ -72,7 +70,7 @@ export const BookingDetails = ({ booking }: { booking: FarmerBooking }) => {
           </p>
         </DetailRow>
         <DetailRow icon={CalendarDays} label={t('booking.confirmation.dates')}>
-          <p className="text-copy-muted text-body">
+          <p className="text-ink text-body">
             {t('booking.confirmation.datesValue', {
               start: formatDate(booking.start_date),
               end: formatDate(booking.end_date),
@@ -90,14 +88,12 @@ export const BookingCode = ({ code }: { code: string }) => {
   const { t } = useTranslation();
 
   return (
-    <Card className="p-6 mb-4 text-center flex flex-col items-center">
-      <h2 className="text-copy-muted text-label font-medium tracking-widest uppercase mb-4">
+    <div className="rounded-xl border-2 border-primary p-5 mb-4">
+      <h2 className="text-copy-muted text-label font-medium">
         {t('booking.confirmation.codeTitle')}
       </h2>
-      <p className="border border-primary-soft text-primary-strong font-bold text-headline tracking-widest py-3 px-8 rounded-xl mb-4 inline-block bg-surface">
-        {code}
-      </p>
-      <p className="text-copy-muted text-body">{t('booking.confirmation.codeHint')}</p>
-    </Card>
+      <p className="text-ink font-bold text-display tracking-wider tabular-nums my-1">{code}</p>
+      <p className="text-copy-muted text-label">{t('booking.confirmation.codeHint')}</p>
+    </div>
   );
 };

@@ -6,7 +6,7 @@ import type { CapacityUnit } from '@coldlink/shared';
 import { isApiError } from '../../api/client';
 import { describeApiError } from '../../api/describeError';
 import TopNavBar from '../../components/TopNavBar';
-import Card from '../../components/ui/Card';
+import Notice from '../../components/ui/Notice';
 import PrimaryButton from '../../components/ui/PrimaryButton';
 import TextButton from '../../components/ui/TextButton';
 import StepProgress from '../../components/ui/StepProgress';
@@ -66,16 +66,14 @@ export const ProblemScreen = ({
   busy = false,
   secondary,
 }: ProblemScreenProps) => (
-  <div className="flex flex-col h-full min-h-screen bg-background pb-8">
+  <div className="flex flex-col min-h-screen bg-background pb-8">
     <TopNavBar title={navTitle} showBack={true} />
-    <div className="flex flex-col items-center text-center px-6 pt-16 mb-auto">
-      <div className="w-20 h-20 mb-8 bg-surface-muted rounded-full flex items-center justify-center text-primary-strong">
-        <Icon size={32} aria-hidden="true" />
-      </div>
-      <h1 className="font-heading text-headline font-bold text-ink mb-3">{title}</h1>
-      <p className="text-copy-muted text-lead leading-relaxed max-w-sm">{body}</p>
+    <div className="px-5 pt-12 pb-6 rim mb-auto">
+      <Icon size={28} className="text-copy-muted mb-4" aria-hidden="true" />
+      <h1 className="text-headline font-bold text-ink mb-2">{title}</h1>
+      <p className="text-copy-muted text-body">{body}</p>
     </div>
-    <div className="mt-12 px-6 flex flex-col gap-2">
+    <div className="mt-12 px-5 flex flex-col gap-3">
       <PrimaryButton onClick={onAction} disabled={busy}>
         {action}
       </PrimaryButton>
@@ -127,13 +125,13 @@ export const BookingSkeleton = () => {
 
   return (
     <div className="flex flex-col gap-4 px-5 pt-6">
-      <p role="status" className="text-copy-muted text-body text-center">
+      <p role="status" className="text-copy-muted text-label font-medium">
         {t('common.loading')}
       </p>
       <div aria-hidden="true" className="flex flex-col gap-4">
-        <div className="h-24 rounded-2xl bg-surface-muted" />
-        <div className="h-36 rounded-2xl bg-surface-muted" />
-        <div className="h-64 rounded-2xl bg-surface-muted" />
+        <div className="h-24 rounded-xl bg-surface-muted" />
+        <div className="h-36 rounded-xl bg-surface-muted" />
+        <div className="h-64 rounded-xl bg-surface-muted" />
       </div>
     </div>
   );
@@ -186,14 +184,8 @@ export const QuoteProblemNotice = ({ problem, asked }: QuoteProblemNoticeProps) 
     : problem.message;
 
   return (
-    <Card tone="muted" className="p-5">
-      <div role="alert" className="flex items-start gap-3">
-        <CircleAlert size={22} className="text-alert-strong shrink-0 mt-0.5" aria-hidden="true" />
-        <div>
-          <h2 className="font-heading font-semibold text-ink text-subtitle mb-1">{title}</h2>
-          <p className="text-copy text-body leading-relaxed">{body}</p>
-        </div>
-      </div>
-    </Card>
+    <Notice tone="error" role="alert" title={title}>
+      {body}
+    </Notice>
   );
 };

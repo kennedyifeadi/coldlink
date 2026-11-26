@@ -19,9 +19,9 @@ const BookAgainButton = ({ booking }: { booking: FarmerBookingSummary }) => {
         aria-label={t('booking.myBookings.bookAgainAt', {
           facility: booking.provider.display_name,
         })}
-        className="w-full min-h-12 py-3 flex items-center justify-center gap-2 bg-surface border border-line-strong text-ink font-medium text-lead hover:bg-surface-muted rounded-lg transition-colors disabled:text-copy-subtle disabled:cursor-not-allowed"
+        className="w-full min-h-12 px-5 flex items-center justify-center gap-2 border border-line-strong text-ink font-semibold text-body hover:bg-surface-muted rounded-full transition-colors disabled:text-copy-subtle disabled:cursor-not-allowed"
       >
-        <RotateCcw size={20} aria-hidden="true" />
+        <RotateCcw size={18} aria-hidden="true" />
         {bookAgain.isPending
           ? t('booking.myBookings.checkingSpace')
           : t('booking.myBookings.bookAgain')}

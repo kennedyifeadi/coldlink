@@ -304,7 +304,7 @@ describe('booking detail', FLOW_TIMEOUT, () => {
     mockApi({ ...signedIn, ...detail(confirmedBooking) });
     openDetail();
 
-    const history = (await findHeading('History')).closest<HTMLElement>('.rounded-2xl')!;
+    const history = await screen.findByRole('region', { name: 'History' }, SCREEN_TIMEOUT);
     const steps = within(history).getAllByRole('listitem');
     expect(steps.map((step) => step.textContent)).toEqual([
       'Waiting for payment10:00 am on Tue, 10 Nov',

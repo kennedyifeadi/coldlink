@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import { CircleCheck } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
 import type { TFunction } from 'i18next';
 import { useTranslation } from 'react-i18next';
@@ -17,7 +16,9 @@ import { describeApiError } from '../../api/describeError';
 import TopNavBar from '../../components/TopNavBar';
 import Card from '../../components/ui/Card';
 import CardTitle from '../../components/ui/CardTitle';
+import DangerButton from '../../components/ui/DangerButton';
 import ErrorMessage from '../../components/ui/ErrorMessage';
+import Notice from '../../components/ui/Notice';
 import PrimaryButton from '../../components/ui/PrimaryButton';
 import SummaryRow from '../../components/ui/SummaryRow';
 import TextButton from '../../components/ui/TextButton';
@@ -39,7 +40,7 @@ const PriceCard = ({ booking }: { booking: FarmerBooking }) => {
   const { t } = useTranslation();
 
   return (
-    <Card className="p-6 mb-4">
+    <Card className="p-5 mb-4">
       <CardTitle>{t('booking.detail.priceTitle')}</CardTitle>
       <div className="flex flex-col gap-3">
         <SummaryRow
@@ -52,7 +53,7 @@ const PriceCard = ({ booking }: { booking: FarmerBooking }) => {
           label={t('booking.review.storage', { count: booking.duration_days })}
           value={formatKobo(booking.storage_subtotal_kobo)}
         />
-        <div className="h-[1px] bg-line-strong w-full"></div>
+        <div className="h-px bg-line w-full" />
         <SummaryRow label={t('booking.detail.deposit')} value={formatKobo(booking.deposit_kobo)} />
         <SummaryRow
           label={t('booking.detail.serviceFee')}
@@ -110,7 +111,7 @@ const TimesCard = ({ booking }: { booking: FarmerBooking }) => {
   if (rows.length === 0) return null;
 
   return (
-    <Card className="p-6 mb-4">
+    <Card className="p-5 mb-4">
       <CardTitle>{t('booking.detail.timesTitle')}</CardTitle>
       <div className="flex flex-col gap-3">
         {rows.map((row) => (
@@ -141,8 +142,8 @@ const CancelPolicy = ({ booking }: { booking: FarmerBooking }) => {
 
   return (
     <div className="flex flex-col gap-3 mb-5">
-      <p className="text-copy text-body leading-relaxed">{policy}</p>
-      <p className="font-heading font-bold text-title text-ink">
+      <p className="text-copy text-body">{policy}</p>
+      <p className="font-bold text-title text-ink tabular-nums">
         {t('booking.detail.refundNow', { amount: formatKobo(cancellation.refund_kobo) })}
       </p>
     </div>
@@ -153,18 +154,12 @@ const CancelledNotice = ({ result }: { result: CancelledBooking }) => {
   const { t } = useTranslation();
 
   return (
-    <div role="status" className="flex gap-3 bg-primary-faint rounded-2xl p-5 mb-4">
-      <CircleCheck size={22} className="text-primary-strong shrink-0 mt-0.5" aria-hidden="true" />
-      <div>
-        <h2 className="font-heading font-semibold text-ink text-subtitle mb-1">
-          {t('booking.detail.cancelledTitle')}
-        </h2>
-        <p className="text-copy text-body leading-relaxed">
-          {result.refund_kobo > 0
-            ? t('booking.detail.refunded', { amount: formatKobo(result.refund_kobo) })
-            : t('booking.detail.noRefund')}
-        </p>
-      </div>
+    <div className="mb-4">
+      <Notice tone="done" title={t('booking.detail.cancelledTitle')}>
+        {result.refund_kobo > 0
+          ? t('booking.detail.refunded', { amount: formatKobo(result.refund_kobo) })
+          : t('booking.detail.noRefund')}
+      </Notice>
     </div>
   );
 };
@@ -210,24 +205,19 @@ const CancelSection = ({ booking, refresh, onCancelled }: CancelSectionProps) =>
   }
 
   return (
-    <Card tone="muted" className="p-5 mb-4">
-      <h2 className="font-heading font-semibold text-ink text-subtitle mb-3">
+    <Card className="p-5 mb-4">
+      <h2 className="font-semibold text-ink text-subtitle mb-3">
         {t('booking.detail.cancelTitle')}
       </h2>
       {confirming ? (
         <>
           <CancelPolicy booking={booking} />
-          <div className="flex flex-col gap-2">
-            <button
-              type="button"
-              onClick={() => cancel.mutate()}
-              disabled={cancel.isPending}
-              className="w-full min-h-12 py-3 rounded-lg font-medium text-lead bg-alert-strong text-white hover:bg-alert disabled:bg-disabled disabled:cursor-not-allowed transition-colors"
-            >
+          <div className="flex flex-col gap-3">
+            <DangerButton onClick={() => cancel.mutate()} disabled={cancel.isPending}>
               {cancel.isPending
                 ? t('booking.detail.cancelling')
                 : t('booking.detail.confirmCancel')}
-            </button>
+            </DangerButton>
             <TextButton onClick={() => setConfirming(false)} disabled={cancel.isPending}>
               {t('booking.detail.keep')}
             </TextButton>
@@ -249,6 +239,8 @@ const CancelSection = ({ booking, refresh, onCancelled }: CancelSectionProps) =>
   );
 };
 
+const RATING_HEADING_ID = 'your-rating-title';
+
 /** A completed booking's rating, or the way to give one (PRD 7.8). */
 const RatingCard = ({ booking }: { booking: FarmerBooking }) => {
   const { t } = useTranslation();
@@ -256,19 +248,17 @@ const RatingCard = ({ booking }: { booking: FarmerBooking }) => {
 
   if (booking.rating !== null) {
     return (
-      <Card className="p-6 mb-4">
-        <CardTitle>{t('booking.rating.yourRating')}</CardTitle>
+      <Card className="p-5 mb-4" labelledBy={RATING_HEADING_ID}>
+        <CardTitle id={RATING_HEADING_ID}>{t('booking.rating.yourRating')}</CardTitle>
         <RatingSummary rating={booking.rating} />
       </Card>
     );
   }
   if (!canRateBooking(booking)) return null;
   return (
-    <Card className="p-6 mb-4">
-      <h2 className="font-heading font-semibold text-ink text-subtitle mb-2">
-        {t('booking.rating.askTitle')}
-      </h2>
-      <p className="text-copy text-body leading-relaxed mb-5">
+    <Card className="p-5 mb-4">
+      <h2 className="font-semibold text-ink text-subtitle mb-1">{t('booking.rating.askTitle')}</h2>
+      <p className="text-copy-muted text-body mb-4">
         {t('booking.rating.askBody', { facility: booking.provider.display_name })}
       </p>
       <PrimaryButton onClick={() => void navigate(bookingRatingPath(booking.id))}>
@@ -313,33 +303,34 @@ const BookingDetail = () => {
   };
 
   return (
-    <div className="flex flex-col h-full min-h-screen bg-background relative pb-10">
+    <div className="flex flex-col min-h-screen bg-background pb-10">
       <TopNavBar title={t('booking.detail.navTitle')} showBack={true} />
 
       {booking ? (
-        <div className="flex flex-col px-5 pt-6">
-          <div className="flex flex-col items-start gap-3 mb-6">
+        <>
+          <div className="flex flex-col items-start gap-3 px-5 pt-6 pb-5 rim">
             <StatusBadge status={booking.status} />
-            <h1 className="font-heading text-headline font-bold text-ink">
+            <h1 className="text-headline-lg font-bold text-ink tracking-tight">
               {booking.provider.display_name}
             </h1>
             <BookingCountdown booking={booking} />
           </div>
-
-          {cancelled && <CancelledNotice result={cancelled} />}
-          <BookingCode code={booking.code} />
-          <BookingDetails booking={booking} />
-          <RatingCard booking={booking} />
-          <PriceCard booking={booking} />
-          <TimesCard booking={booking} />
-          <StatusHistory history={booking.status_history} />
-          <CancelSection
-            booking={booking}
-            refresh={() => query.refetch()}
-            onCancelled={onCancelled}
-          />
-          {canBookAgain(booking) && <BookAgainButton booking={booking} />}
-        </div>
+          <div className="flex flex-col px-5 pt-5">
+            {cancelled && <CancelledNotice result={cancelled} />}
+            <BookingCode code={booking.code} />
+            <BookingDetails booking={booking} />
+            <RatingCard booking={booking} />
+            <PriceCard booking={booking} />
+            <TimesCard booking={booking} />
+            <StatusHistory history={booking.status_history} />
+            <CancelSection
+              booking={booking}
+              refresh={() => query.refetch()}
+              onCancelled={onCancelled}
+            />
+            {canBookAgain(booking) && <BookAgainButton booking={booking} />}
+          </div>
+        </>
       ) : (
         <BookingSkeleton />
       )}

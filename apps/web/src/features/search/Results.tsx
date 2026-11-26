@@ -1,5 +1,5 @@
 import React from 'react';
-import { Info, Leaf, MapPin, Scale, SearchX, type LucideIcon } from 'lucide-react';
+import { Pencil } from 'lucide-react';
 import { Navigate, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
@@ -9,6 +9,8 @@ import BottomNav from '../../components/BottomNav';
 import PrimaryButton from '../../components/ui/PrimaryButton';
 import TextButton from '../../components/ui/TextButton';
 import ErrorMessage from '../../components/ui/ErrorMessage';
+import Notice from '../../components/ui/Notice';
+import PageHeader from '../../components/ui/PageHeader';
 import { describeApiError } from '../../api/describeError';
 import { searchQueryKey, searchStorage } from '../../api/search';
 import { formatNumber } from '../../i18n/format';
@@ -22,21 +24,21 @@ import { formatAmount } from './units';
 const SKELETON_COUNT = 3;
 const RESULTS_STALE_MS = 60_000;
 
-interface SummaryPillProps {
-  icon: LucideIcon;
+interface SummaryChipProps {
   label: string;
   changeLabel: string;
   onClick: () => void;
 }
 
-const SummaryPill = ({ icon: Icon, label, changeLabel, onClick }: SummaryPillProps) => (
+const SummaryChip = ({ label, changeLabel, onClick }: SummaryChipProps) => (
   <button
     type="button"
     onClick={onClick}
     aria-label={changeLabel}
-    className="flex items-center gap-1.5 bg-primary-soft text-ink px-3.5 min-h-9 rounded-full font-medium text-label hover:bg-primary-muted transition-colors"
+    className="inline-flex items-center gap-1.5 border border-line-strong text-ink px-3.5 min-h-10 rounded-full font-medium text-label hover:border-primary hover:bg-primary-faint transition-colors"
   >
-    <Icon size={14} aria-hidden="true" /> {label}
+    {label}
+    <Pencil size={12} className="text-copy-subtle" aria-hidden="true" />
   </button>
 );
 
@@ -50,22 +52,19 @@ const EmptyResults = ({ crop, radiusKm }: EmptyResultsProps) => {
   const { t } = useTranslation();
 
   return (
-    <div className="flex flex-col items-center text-center pt-6">
-      <div className="w-20 h-20 mb-6 bg-surface-muted rounded-full flex items-center justify-center text-primary-strong">
-        <SearchX size={32} aria-hidden="true" />
-      </div>
-      <h2 className="font-heading text-headline font-bold text-ink mb-3">
+    <div className="flex flex-col px-5 pt-8">
+      <h2 className="text-title font-bold text-ink mb-2">
         {t('search.results.emptyTitle', { crop: crop.name.toLowerCase() })}
       </h2>
-      <p className="text-copy-muted text-lead leading-relaxed mb-6">
+      <p className="text-copy-muted text-body mb-5">
         {t('search.results.emptyBody', { radius: formatNumber(radiusKm) })}
       </p>
-      <ul className="text-left text-copy text-body flex flex-col gap-2 mb-8 list-disc pl-5 self-stretch">
+      <ul className="text-ink text-body flex flex-col gap-2 mb-8 list-disc pl-5 marker:text-primary">
         <li>{t('search.results.emptyTips.amount')}</li>
         <li>{t('search.results.emptyTips.unit')}</li>
         <li>{t('search.results.emptyTips.place')}</li>
       </ul>
-      <div className="flex flex-col gap-2 self-stretch">
+      <div className="flex flex-col gap-3">
         <PrimaryButton onClick={() => void navigate(SEARCH_STEPS.place)}>
           {t('search.results.tryAnotherLocation')}
         </PrimaryButton>
@@ -88,18 +87,17 @@ const ResultList = ({ response, body }: ResultListProps) => {
 
   return (
     <>
-      {response.expanded_radius && (
-        <div role="status" className="flex gap-3 bg-accent-faint text-accent-ink rounded-xl p-4">
-          <Info size={20} className="shrink-0 mt-0.5" aria-hidden="true" />
-          <p className="text-body leading-relaxed">
+      <div className="flex flex-col gap-4 px-5 pt-5">
+        {response.expanded_radius && (
+          <Notice tone="waiting">
             {t('search.results.widened', { radius: formatNumber(response.radius_km) })}
-          </p>
-        </div>
-      )}
-      <p className="text-copy-muted text-body">
-        {t('search.results.count', { count: response.data.length })}
-      </p>
-      <ul className="flex flex-col gap-6">
+          </Notice>
+        )}
+        <p className="text-copy-muted text-label font-medium">
+          {t('search.results.count', { count: response.data.length })}
+        </p>
+      </div>
+      <ul className="divide-y divide-line">
         {response.data.map((result) => (
           <li key={result.provider.id}>
             <ResultCard
@@ -151,66 +149,58 @@ const Results = () => {
   });
 
   return (
-    <div className="flex flex-col h-full min-h-screen bg-background relative pb-20">
+    <div className="flex flex-col min-h-screen bg-background pb-24">
       <TopNavBar title={t('search.results.navTitle')} showBack={true} />
 
-      <div className="flex flex-col gap-6 px-4 pt-6 pb-6 flex-grow">
-        <div>
-          <h1 className="font-heading text-headline-lg font-bold text-ink mb-4 tracking-tight">
-            {t('search.results.title')}
-          </h1>
-          <div className="flex flex-wrap items-center gap-2">
-            <SummaryPill
-              icon={Leaf}
-              label={crop.name}
-              changeLabel={t('search.results.changeCrop', { value: crop.name })}
-              onClick={() => void navigate(SEARCH_STEPS.crop)}
-            />
-            <SummaryPill
-              icon={MapPin}
-              label={placeLabel(place, t)}
-              changeLabel={t('search.results.changePlace', { value: placeLabel(place, t) })}
-              onClick={() => void navigate(SEARCH_STEPS.place)}
-            />
-            <SummaryPill
-              icon={Scale}
-              label={amountSummary}
-              changeLabel={t('search.results.changeAmountLabel', { value: amountSummary })}
-              onClick={() => void navigate(SEARCH_STEPS.amount)}
-            />
-          </div>
+      <PageHeader title={t('search.results.title')}>
+        <div className="flex flex-wrap items-center gap-2">
+          <SummaryChip
+            label={crop.name}
+            changeLabel={t('search.results.changeCrop', { value: crop.name })}
+            onClick={() => void navigate(SEARCH_STEPS.crop)}
+          />
+          <SummaryChip
+            label={placeLabel(place, t)}
+            changeLabel={t('search.results.changePlace', { value: placeLabel(place, t) })}
+            onClick={() => void navigate(SEARCH_STEPS.place)}
+          />
+          <SummaryChip
+            label={amountSummary}
+            changeLabel={t('search.results.changeAmountLabel', { value: amountSummary })}
+            onClick={() => void navigate(SEARCH_STEPS.amount)}
+          />
         </div>
+      </PageHeader>
 
-        {search.isPending && (
-          <>
-            <p role="status" className="text-copy-muted text-body">
-              {t('search.results.loading')}
-            </p>
-            <div className="flex flex-col gap-6">
-              {Array.from({ length: SKELETON_COUNT }, (_, index) => (
-                <ResultCardSkeleton key={index} />
-              ))}
-            </div>
-          </>
-        )}
-
-        {search.isError && (
-          <div className="flex flex-col gap-4">
-            <ErrorMessage>{describeApiError(search.error, t)}</ErrorMessage>
-            <PrimaryButton onClick={() => void search.refetch()} disabled={search.isFetching}>
-              {t('common.tryAgain')}
-            </PrimaryButton>
+      {search.isPending && (
+        <>
+          <p role="status" className="text-copy-muted text-label font-medium px-5 pt-5">
+            {t('search.results.loading')}
+          </p>
+          <div className="divide-y divide-line">
+            {Array.from({ length: SKELETON_COUNT }, (_, index) => (
+              <ResultCardSkeleton key={index} />
+            ))}
           </div>
-        )}
+        </>
+      )}
 
-        {search.isSuccess && search.data.data.length === 0 && (
-          <EmptyResults crop={crop} radiusKm={search.data.radius_km} />
-        )}
+      {search.isError && (
+        <div className="flex flex-col gap-4 px-5 pt-6">
+          <ErrorMessage>{describeApiError(search.error, t)}</ErrorMessage>
+          <PrimaryButton onClick={() => void search.refetch()} disabled={search.isFetching}>
+            {t('common.tryAgain')}
+          </PrimaryButton>
+        </div>
+      )}
 
-        {search.isSuccess && search.data.data.length > 0 && (
-          <ResultList response={search.data} body={amount} />
-        )}
-      </div>
+      {search.isSuccess && search.data.data.length === 0 && (
+        <EmptyResults crop={crop} radiusKm={search.data.radius_km} />
+      )}
+
+      {search.isSuccess && search.data.data.length > 0 && (
+        <ResultList response={search.data} body={amount} />
+      )}
 
       <BottomNav activeTab="find" />
     </div>

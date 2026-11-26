@@ -1,20 +1,15 @@
 import React, { lazy, Suspense, useState, type ReactNode } from 'react';
-import {
-  CheckCircle2,
-  Crosshair,
-  Info,
-  MapPin,
-  MapPinned,
-  Search,
-  type LucideIcon,
-} from 'lucide-react';
+import { Check, Crosshair, MapPin, MapPinned, Search, type LucideIcon } from 'lucide-react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import TopNavBar from '../../components/TopNavBar';
 import BottomActionBar from '../../components/ui/BottomActionBar';
 import PrimaryButton from '../../components/ui/PrimaryButton';
 import ErrorMessage from '../../components/ui/ErrorMessage';
+import Notice from '../../components/ui/Notice';
+import PageHeader from '../../components/ui/PageHeader';
 import StepProgress from '../../components/ui/StepProgress';
+import { inputClasses } from '../../components/ui/inputStyles';
 import { areas, type AreaId } from './areas';
 import {
   SEARCH_STEPS,
@@ -42,37 +37,41 @@ interface OptionButtonProps {
   icon: LucideIcon;
   selected: boolean;
   onClick: () => void;
-  children: ReactNode;
+  title: string;
+  hint?: string;
 }
 
-const OptionButton = ({ icon: Icon, selected, onClick, children }: OptionButtonProps) => (
+const OptionButton = ({ icon: Icon, selected, onClick, title, hint }: OptionButtonProps) => (
   <button
     type="button"
     onClick={onClick}
     aria-pressed={selected}
-    className={`flex items-center w-full min-h-14 p-4 rounded-xl transition-all text-left ${
-      selected
-        ? 'bg-primary-faint border border-primary shadow-sm'
-        : 'bg-surface-muted border border-transparent hover:bg-surface-sunken'
+    className={`flex items-center gap-4 w-full min-h-16 px-4 py-3 text-left transition-colors ${
+      selected ? 'bg-primary-faint' : 'bg-surface hover:bg-surface-muted'
     }`}
   >
-    <div
-      className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 mr-4 ${
-        selected ? 'bg-primary-soft' : 'bg-surface-sunken'
-      }`}
-    >
-      <Icon size={20} className="text-primary-strong" />
-    </div>
-    <div className="flex-grow">{children}</div>
-    {selected && <CheckCircle2 size={20} className="text-primary-strong shrink-0 ml-2" />}
+    <Icon
+      size={22}
+      className={`shrink-0 ${selected ? 'text-primary-strong' : 'text-copy-muted'}`}
+      aria-hidden="true"
+    />
+    <span className="flex-grow">
+      <span className="block font-semibold text-ink text-body">{title}</span>
+      {hint && <span className="block text-copy-muted text-label">{hint}</span>}
+    </span>
+    {selected && <Check size={20} className="text-primary-strong shrink-0" aria-hidden="true" />}
   </button>
 );
 
+const Panel = ({ children }: { children: ReactNode }) => (
+  <div className="flex flex-col gap-3 px-4 pb-4 bg-primary-faint">{children}</div>
+);
+
 const Confirmed = ({ children }: { children: string }) => (
-  <div className="flex items-center gap-2 bg-primary-faint border border-primary-muted rounded-xl px-4 py-3">
-    <CheckCircle2 size={16} className="text-primary-strong shrink-0" />
-    <span className="text-ink text-body font-medium">{children}</span>
-  </div>
+  <p className="flex items-center gap-2 text-primary-strong text-body font-semibold">
+    <Check size={18} className="shrink-0" aria-hidden="true" />
+    {children}
+  </p>
 );
 
 const MapPlaceholder = () => {
@@ -135,78 +134,55 @@ const Location = () => {
   );
 
   return (
-    <div className="flex flex-col h-full min-h-screen bg-background relative">
+    <div className="flex flex-col min-h-screen bg-background">
       <TopNavBar title={t('search.location.navTitle')} showBack={true} />
       <StepProgress step={1} count={3} label={t('search.step', { step: 1, count: 3 })} />
+      <PageHeader title={t('search.location.title')} intro={t('search.location.intro')} />
 
-      <div className="flex flex-col px-6 pt-8 pb-28 flex-grow overflow-y-auto">
-        {notice && (
-          <div
-            role="status"
-            className="flex gap-3 bg-accent-faint text-accent-ink rounded-xl p-4 mb-6"
-          >
-            <Info size={20} className="shrink-0 mt-0.5" aria-hidden="true" />
-            <p className="text-body leading-relaxed">{t(`search.location.${notice}`)}</p>
-          </div>
-        )}
-        <div className="flex justify-center mb-6">
-          <div className="w-20 h-20 bg-surface-muted rounded-full flex items-center justify-center">
-            <MapPin size={32} className="text-primary-strong" />
-          </div>
-        </div>
+      <div className="flex flex-col gap-5 px-5 pt-5 pb-32">
+        {notice && <Notice tone="waiting">{t(`search.location.${notice}`)}</Notice>}
 
-        <div className="text-center mb-8">
-          <h1 className="font-heading text-headline font-bold text-ink mb-3">
-            {t('search.location.title')}
-          </h1>
-          <p className="text-copy-muted text-lead leading-relaxed max-w-sm mx-auto">
-            {t('search.location.intro')}
-          </p>
-        </div>
-
-        <div className="flex flex-col gap-4">
-          <OptionButton icon={Crosshair} selected={mode === 'device'} onClick={handleUseDevice}>
-            <div className="font-semibold text-copy text-lead">
-              {t('search.location.useCurrent')}
-            </div>
-            <div className="text-copy-muted text-label mt-0.5">
-              {t('search.location.useCurrentHint')}
-            </div>
-          </OptionButton>
-
-          {mode === 'device' && device.state.status === 'locating' && (
-            <p role="status" className="text-copy-muted text-body px-1">
-              {t('search.location.locating')}
-            </p>
-          )}
-          {mode === 'device' && device.state.status === 'located' && (
-            <Confirmed>{t('search.place.device')}</Confirmed>
-          )}
-          {mode === 'device' && device.state.status === 'failed' && (
-            <ErrorMessage>{t(failureKeys[device.state.reason])}</ErrorMessage>
+        <div className="border border-line rounded-xl overflow-hidden divide-y divide-line">
+          <OptionButton
+            icon={Crosshair}
+            selected={mode === 'device'}
+            onClick={handleUseDevice}
+            title={t('search.location.useCurrent')}
+            hint={t('search.location.useCurrentHint')}
+          />
+          {mode === 'device' && (
+            <Panel>
+              {device.state.status === 'locating' && (
+                <p role="status" className="text-copy-muted text-body">
+                  {t('search.location.locating')}
+                </p>
+              )}
+              {device.state.status === 'located' && (
+                <Confirmed>{t('search.place.device')}</Confirmed>
+              )}
+              {device.state.status === 'failed' && (
+                <ErrorMessage>{t(failureKeys[device.state.reason])}</ErrorMessage>
+              )}
+            </Panel>
           )}
 
-          <div className="flex items-center justify-center gap-4 my-2">
-            <div className="h-[1px] bg-line-strong flex-grow"></div>
-            <span className="text-copy-subtle text-label font-medium">
-              {t('search.location.or')}
-            </span>
-            <div className="h-[1px] bg-line-strong flex-grow"></div>
-          </div>
-
-          <OptionButton icon={Search} selected={mode === 'area'} onClick={() => setMode('area')}>
-            <div className="font-semibold text-copy text-lead">{t('search.location.pickArea')}</div>
-          </OptionButton>
-
+          <OptionButton
+            icon={Search}
+            selected={mode === 'area'}
+            onClick={() => setMode('area')}
+            title={t('search.location.pickArea')}
+          />
           {mode === 'area' && (
-            <div className="flex flex-col gap-3">
+            <Panel>
               <div className="relative">
                 <label htmlFor="area-search" className="sr-only">
                   {t('search.location.searchLabel')}
                 </label>
-                <div className="absolute left-4 top-1/2 -translate-y-1/2 text-copy-subtle">
-                  <Search size={18} />
-                </div>
+                <Search
+                  size={18}
+                  className="absolute left-4 top-1/2 -translate-y-1/2 text-copy-subtle"
+                  aria-hidden="true"
+                />
                 <input
                   id="area-search"
                   type="text"
@@ -217,47 +193,51 @@ const Location = () => {
                     setAreaQuery(e.target.value);
                     setAreaId(undefined);
                   }}
-                  className="w-full pl-12 pr-4 py-3.5 bg-surface border border-line-strong rounded-xl text-body placeholder-copy-subtle outline-none focus:border-primary-strong focus:ring-1 focus:ring-primary-strong transition-all"
+                  className={`${inputClasses()} pl-11`}
                 />
               </div>
 
               {areaId ? (
                 <Confirmed>{t(`search.areas.${areaId}`)}</Confirmed>
               ) : matchingAreas.length > 0 ? (
-                <ul className="bg-surface border border-line rounded-xl overflow-hidden shadow-sm">
+                <ul className="bg-surface border border-line rounded-xl overflow-hidden divide-y divide-line max-h-72 overflow-y-auto">
                   {matchingAreas.map(({ id }) => (
-                    <li key={id} className="border-b border-line last:border-b-0">
+                    <li key={id}>
                       <button
                         type="button"
                         onClick={() => {
                           setAreaId(id);
                           setAreaQuery(t(`search.areas.${id}`));
                         }}
-                        className="flex items-center gap-3 w-full text-left px-4 py-3.5 hover:bg-primary-faint transition-colors"
+                        className="flex items-center gap-3 w-full min-h-12 text-left px-4 py-3 hover:bg-primary-faint transition-colors"
                       >
-                        <MapPin size={16} className="text-copy-subtle shrink-0" />
-                        <span className="text-copy text-body">{t(`search.areas.${id}`)}</span>
+                        <MapPin
+                          size={16}
+                          className="text-copy-subtle shrink-0"
+                          aria-hidden="true"
+                        />
+                        <span className="text-ink text-body">{t(`search.areas.${id}`)}</span>
                       </button>
                     </li>
                   ))}
                 </ul>
               ) : (
-                <p className="text-copy-muted text-body px-1">
+                <p className="text-copy-muted text-body">
                   {t('search.location.noAreaMatch', { query: areaQuery.trim() })}
                 </p>
               )}
-            </div>
+            </Panel>
           )}
 
-          <OptionButton icon={MapPinned} selected={mode === 'pin'} onClick={() => setMode('pin')}>
-            <div className="font-semibold text-copy text-lead">{t('search.location.dropPin')}</div>
-            <div className="text-copy-muted text-label mt-0.5">
-              {t('search.location.dropPinHint')}
-            </div>
-          </OptionButton>
-
+          <OptionButton
+            icon={MapPinned}
+            selected={mode === 'pin'}
+            onClick={() => setMode('pin')}
+            title={t('search.location.dropPin')}
+            hint={t('search.location.dropPinHint')}
+          />
           {mode === 'pin' && (
-            <div className="flex flex-col gap-3">
+            <Panel>
               <Suspense fallback={<MapPlaceholder />}>
                 <PinMap
                   pin={pin}
@@ -266,7 +246,7 @@ const Location = () => {
                 />
               </Suspense>
               {pin && <Confirmed>{t('search.location.pinDropped')}</Confirmed>}
-            </div>
+            </Panel>
           )}
         </div>
       </div>

@@ -1,5 +1,5 @@
 import React, { type ReactNode } from 'react';
-import { CircleAlert, TimerOff } from 'lucide-react';
+import { TimerOff } from 'lucide-react';
 import { Navigate, useLocation, useNavigate, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -10,8 +10,9 @@ import { describeApiError } from '../../api/describeError';
 import { cropsQuery } from '../../api/referenceData';
 import TopNavBar from '../../components/TopNavBar';
 import BottomNav from '../../components/BottomNav';
-import Card from '../../components/ui/Card';
 import ErrorMessage from '../../components/ui/ErrorMessage';
+import Notice from '../../components/ui/Notice';
+import PageHeader from '../../components/ui/PageHeader';
 import PrimaryButton from '../../components/ui/PrimaryButton';
 import { formatKobo, formatLagosTime } from '../../i18n/format';
 import { useSessionStore } from '../../session/sessionContext';
@@ -52,19 +53,12 @@ const PaymentScreen = ({ children }: { children: ReactNode }) => {
   const { t } = useTranslation();
 
   return (
-    <div className="flex flex-col h-full min-h-screen bg-background relative pb-20">
+    <div className="flex flex-col min-h-screen bg-background pb-24">
       <TopNavBar title={t('booking.payment.navTitle')} showBack={true} />
       <BookingProgress step="pay" />
+      <PageHeader title={t('booking.payment.title')} intro={t('booking.payment.intro')} />
 
-      <div className="flex flex-col gap-4 px-5 pt-6 pb-6 flex-grow">
-        <div className="mb-2">
-          <h1 className="font-heading text-headline-lg font-bold text-ink mb-2 tracking-tight">
-            {t('booking.payment.title')}
-          </h1>
-          <p className="text-copy-muted text-lead leading-relaxed">{t('booking.payment.intro')}</p>
-        </div>
-        {children}
-      </div>
+      <div className="flex flex-col gap-4 px-5 pt-5 pb-6">{children}</div>
 
       <BottomNav activeTab="find" />
     </div>
@@ -76,12 +70,12 @@ const PaymentSkeleton = () => {
 
   return (
     <PaymentScreen>
-      <p role="status" className="text-copy-muted text-body">
+      <p role="status" className="text-copy-muted text-label font-medium">
         {t('booking.loading')}
       </p>
       <div aria-hidden="true" className="flex flex-col gap-4">
-        <div className="h-64 rounded-2xl bg-surface-muted" />
-        <div className="h-28 rounded-2xl bg-surface-sunken" />
+        <div className="h-64 rounded-xl bg-surface-muted" />
+        <div className="h-28 rounded-xl bg-surface-sunken" />
       </div>
     </PaymentScreen>
   );
@@ -99,17 +93,14 @@ const PayButton = ({ terms, attempt, onPay }: PayButtonProps) => {
   const failure = attempt.error instanceof PaymentStepError ? attempt.error.cause : attempt.error;
 
   return (
-    <div className="flex flex-col gap-3 mt-4">
+    <div className="flex flex-col gap-3 mt-2">
       {attempt.redirecting && (
         <p role="status" className="text-copy-muted text-body">
           {t('booking.payment.openingNote')}
         </p>
       )}
       {failure !== null && <ErrorMessage>{describeApiError(failure, t)}</ErrorMessage>}
-      <PrimaryButton
-        onClick={onPay}
-        disabled={attempt.redirecting}
-      >
+      <PrimaryButton onClick={onPay} disabled={attempt.redirecting}>
         {attempt.redirecting
           ? t('booking.payment.opening')
           : isApiError(failure, 'network')
@@ -124,19 +115,9 @@ const PriceChangedNotice = () => {
   const { t } = useTranslation();
 
   return (
-    <Card tone="muted" className="p-5">
-      <div role="alert" className="flex items-start gap-3">
-        <CircleAlert size={22} className="text-alert-strong shrink-0 mt-0.5" aria-hidden="true" />
-        <div>
-          <h2 className="font-heading font-semibold text-ink text-subtitle mb-1">
-            {t('booking.payment.priceChangedTitle')}
-          </h2>
-          <p className="text-copy text-body leading-relaxed">
-            {t('booking.payment.priceChangedBody')}
-          </p>
-        </div>
-      </div>
-    </Card>
+    <Notice tone="error" role="alert" title={t('booking.payment.priceChangedTitle')}>
+      {t('booking.payment.priceChangedBody')}
+    </Notice>
   );
 };
 

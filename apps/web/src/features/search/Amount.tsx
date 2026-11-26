@@ -12,8 +12,10 @@ import TopNavBar from '../../components/TopNavBar';
 import BottomActionBar from '../../components/ui/BottomActionBar';
 import PrimaryButton from '../../components/ui/PrimaryButton';
 import ErrorMessage from '../../components/ui/ErrorMessage';
+import PageHeader from '../../components/ui/PageHeader';
 import QuantityStepper from '../../components/ui/QuantityStepper';
 import StepProgress from '../../components/ui/StepProgress';
+import { inputClasses, labelClasses } from '../../components/ui/inputStyles';
 import { SEARCH_STEPS, useSearchFlow } from './searchFlow';
 import { UNIT_CHOICES } from './units';
 
@@ -72,24 +74,15 @@ const Amount = () => {
   };
 
   return (
-    <form
-      onSubmit={handleSubmit}
-      noValidate
-      className="flex flex-col h-full min-h-screen bg-background relative"
-    >
+    <form onSubmit={handleSubmit} noValidate className="flex flex-col min-h-screen bg-background">
       <TopNavBar title={t('search.amount.navTitle')} showBack={true} />
       <StepProgress step={3} count={3} label={t('search.step', { step: 3, count: 3 })} />
 
-      <div className="flex flex-col gap-8 px-6 pt-8 pb-32 flex-grow overflow-y-auto">
-        <div>
-          <h1 className="font-heading text-headline-lg font-bold text-ink mb-3 leading-tight tracking-tight">
-            {t('search.amount.title')}
-          </h1>
-          <p className="text-copy-muted text-lead leading-relaxed">{t('search.amount.intro')}</p>
-        </div>
+      <PageHeader title={t('search.amount.title')} intro={t('search.amount.intro')} />
 
+      <div className="flex flex-col gap-7 px-5 pt-6 pb-32">
         <div>
-          <label htmlFor="quantity" className="block text-label font-medium text-copy mb-2">
+          <label htmlFor="quantity" className={labelClasses}>
             {t('search.amount.quantityLabel')}
           </label>
           <input
@@ -105,14 +98,10 @@ const Amount = () => {
               setQuantity(e.target.value);
               setQuantityError(undefined);
             }}
-            className={`w-full px-4 py-3.5 text-subtitle text-copy bg-surface border rounded-lg placeholder-copy-subtle outline-none focus:ring-1 transition-all ${
-              quantityError
-                ? 'border-alert-strong focus:ring-alert-strong'
-                : 'border-line-strong focus:border-primary-strong focus:ring-primary-strong'
-            }`}
+            className={`${inputClasses(quantityError !== undefined)} text-subtitle`}
           />
           {quantityError && (
-            <div className="mt-3">
+            <div className="mt-2">
               <ErrorMessage id={QUANTITY_ERROR_ID}>
                 {t(`search.amount.quantityErrors.${quantityError}`)}
               </ErrorMessage>
@@ -121,15 +110,15 @@ const Amount = () => {
         </div>
 
         <fieldset>
-          <legend className="block text-label font-medium text-copy mb-1">
+          <legend className="block text-label font-semibold text-ink mb-1">
             {t('search.amount.unitLegend')}
           </legend>
-          <p className="text-copy-muted text-body mb-3">{t('search.amount.unitHint')}</p>
-          <div className="flex flex-col gap-2">
+          <p className="text-copy-muted text-label mb-3">{t('search.amount.unitHint')}</p>
+          <div className="flex flex-col border border-line rounded-xl divide-y divide-line overflow-hidden">
             {UNIT_CHOICES.map((option) => (
               <label
                 key={option}
-                className="flex items-center gap-3 min-h-12 px-4 py-3 rounded-xl border border-transparent bg-surface-muted cursor-pointer transition-all has-checked:bg-primary-faint has-checked:border-primary has-focus-visible:outline-2 has-focus-visible:outline-primary-strong"
+                className="flex items-center gap-3 min-h-13 px-4 py-3 bg-surface cursor-pointer transition-colors hover:bg-surface-muted has-checked:bg-primary-faint has-focus-visible:outline-2 has-focus-visible:-outline-offset-2 has-focus-visible:outline-primary"
               >
                 <input
                   type="radio"
@@ -137,9 +126,9 @@ const Amount = () => {
                   value={option}
                   checked={unit === option}
                   onChange={() => setUnit(option)}
-                  className="w-5 h-5 accent-primary-strong shrink-0"
+                  className="w-5 h-5 accent-primary shrink-0"
                 />
-                <span className="text-copy text-body font-medium">
+                <span className="text-ink text-body font-medium">
                   {t(`search.units.${option}.name`)}
                 </span>
               </label>
@@ -148,7 +137,7 @@ const Amount = () => {
         </fieldset>
 
         <div>
-          <h2 className="block text-label font-medium text-copy mb-3">
+          <h2 className="text-label font-semibold text-ink mb-1.5">
             {t('search.amount.daysTitle')}
           </h2>
           <QuantityStepper
@@ -162,7 +151,7 @@ const Amount = () => {
         </div>
 
         <div>
-          <label htmlFor="start-date" className="block text-label font-medium text-copy mb-2">
+          <label htmlFor="start-date" className={labelClasses}>
             {t('search.amount.startLabel')}
           </label>
           <input
@@ -176,14 +165,10 @@ const Amount = () => {
               setStartDate(e.target.value);
               setStartDateError(false);
             }}
-            className={`w-full px-4 py-3.5 text-body text-copy bg-surface border rounded-lg outline-none focus:ring-1 transition-all ${
-              startDateError
-                ? 'border-alert-strong focus:ring-alert-strong'
-                : 'border-line-strong focus:border-primary-strong focus:ring-primary-strong'
-            }`}
+            className={inputClasses(startDateError)}
           />
           {startDateError && (
-            <div className="mt-3">
+            <div className="mt-2">
               <ErrorMessage id={START_DATE_ERROR_ID}>{t('search.amount.startError')}</ErrorMessage>
             </div>
           )}
