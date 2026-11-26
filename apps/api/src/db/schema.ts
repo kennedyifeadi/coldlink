@@ -150,6 +150,7 @@ export interface DeliveryRequests {
   load_quantity: Numeric;
   load_unit: string;
   notes: string | null;
+  paid_at: Timestamp | null;
   partner_id: string | null;
   partner_payout_kobo: number;
   picked_up_at: Timestamp | null;

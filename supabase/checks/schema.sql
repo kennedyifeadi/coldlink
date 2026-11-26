@@ -177,6 +177,7 @@ begin
     'public.delivery_requests_status_created_at_idx',
     'public.delivery_requests_partner_id_idx',
     'public.payments_delivery_request_id_idx',
+    'public.payments_delivery_request_refund_key',
     'public.produce_listings',
     'public.produce_listings_booking_id_key',
     'public.produce_listings_farmer_id_idx',
