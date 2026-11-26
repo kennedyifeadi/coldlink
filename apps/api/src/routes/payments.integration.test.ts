@@ -379,6 +379,7 @@ describe.skipIf(noTestDatabase)('payments against Postgres', () => {
         payment_status: 'success',
         booking_id: booking.bookingId,
         booking_status: 'pending_provider',
+        delivery_request_id: null,
       });
       expect((await bookingRow(db(), booking.bookingId)).provider_response_due_at).not.toBeNull();
     });

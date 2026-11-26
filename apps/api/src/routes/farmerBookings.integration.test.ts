@@ -631,6 +631,7 @@ describe.skipIf(noTestDatabase)('farmer booking endpoints against Postgres', () 
       const events = await eventRows(db(), booking.id);
       expect(events.find((event) => event.to_status === 'cancelled')?.metadata).toEqual({
         refund_kobo: refund,
+        delivery_refund_kobo: 0,
       });
     });
 
