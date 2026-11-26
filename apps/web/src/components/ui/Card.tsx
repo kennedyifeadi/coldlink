@@ -6,17 +6,25 @@ interface CardProps {
   children: ReactNode;
   tone?: CardTone;
   className?: string;
+  /** The id of the card's heading: the card becomes a section named by it. */
+  labelledBy?: string;
 }
 
 const toneClasses: Record<CardTone, string> = {
-  surface: 'bg-surface shadow-card',
+  surface: 'bg-surface border border-line',
   muted: 'bg-surface-muted',
 };
 
-const Card = ({ children, tone = 'surface', className = '' }: CardProps) => (
-  <div className={`rounded-2xl border border-line ${toneClasses[tone]} ${className}`}>
-    {children}
-  </div>
-);
+const Card = ({ children, tone = 'surface', className = '', labelledBy }: CardProps) => {
+  const classes = `rounded-xl ${toneClasses[tone]} ${className}`;
+
+  return labelledBy ? (
+    <section aria-labelledby={labelledBy} className={classes}>
+      {children}
+    </section>
+  ) : (
+    <div className={classes}>{children}</div>
+  );
+};
 
 export default Card;

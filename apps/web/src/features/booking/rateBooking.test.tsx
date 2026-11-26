@@ -110,7 +110,7 @@ describe('rating screen', FLOW_TIMEOUT, () => {
 
     await user.click(screen.getByRole('button', { name: 'See booking' }));
     await waitForPath(detailPath);
-    const card = (await findHeading('Your rating')).closest<HTMLElement>('.rounded-2xl')!;
+    const card = await screen.findByRole('region', { name: 'Your rating' }, SCREEN_TIMEOUT);
     expect(within(card).getByText('5 out of 5: Excellent')).toBeVisible();
     expect(screen.queryByRole('button', { name: 'Rate your stay' })).toBeNull();
   });
@@ -140,9 +140,7 @@ describe('rating screen', FLOW_TIMEOUT, () => {
     await findHeading(ratingTitle);
     await user.click(sendButton());
 
-    expect(screen.getByRole('alert')).toHaveTextContent(
-      'Tap a star from 1 to 5 to rate your stay.',
-    );
+    expect(screen.getByRole('alert')).toHaveTextContent('Tap a star to rate your stay.');
     expect(requestsTo(fetchMock, 'POST', `/bookings/${DUGBE_BOOKING_ID}/rating`)).toEqual([]);
     await user.click(starButton(3));
     expect(screen.queryByRole('alert')).toBeNull();
@@ -192,7 +190,7 @@ describe('rating screen', FLOW_TIMEOUT, () => {
     await user.click(sendButton());
 
     const retry = await screen.findByRole('button', { name: 'Try again' }, SCREEN_TIMEOUT);
-    expect(screen.getByRole('alert')).toHaveTextContent('No network connection.');
+    expect(screen.getByRole('alert')).toHaveTextContent('No connection.');
     expect(starButton(3)).toHaveAttribute('aria-pressed', 'true');
     expect(screen.getByLabelText(/Anything to add\?/)).toHaveValue('Far from the road');
 
@@ -325,7 +323,7 @@ describe('rating from the booking detail', FLOW_TIMEOUT, () => {
     mockApi({ ...signedIn, [bookingRoute]: bookingReply(ratedBooking(3, 'Fine')) });
     renderApp(detailPath);
 
-    const card = (await findHeading('Your rating')).closest<HTMLElement>('.rounded-2xl')!;
+    const card = await screen.findByRole('region', { name: 'Your rating' }, SCREEN_TIMEOUT);
     expect(within(card).getByText('3 out of 5: Good')).toBeVisible();
     expect(within(card).getByText('Fine')).toBeVisible();
     expect(screen.queryByRole('button', { name: 'Rate your stay' })).toBeNull();

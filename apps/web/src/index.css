@@ -1,46 +1,25 @@
 @import 'tailwindcss';
 
-/* Latin subset only: farmers are on limited data. One variable file per family covers every weight. */
+/* Latin subset only: farmers are on limited data. One variable file covers every weight. */
 @font-face {
-  font-family: 'Nunito Variable';
+  font-family: 'Figtree Variable';
   font-style: normal;
   font-display: swap;
-  font-weight: 200 1000;
-  src: url('@fontsource-variable/nunito/files/nunito-latin-wght-normal.woff2')
+  font-weight: 300 900;
+  src: url('@fontsource-variable/figtree/files/figtree-latin-wght-normal.woff2')
     format('woff2-variations');
   unicode-range:
     U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329,
     U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
 }
 
+/* A local fallback resized to Figtree's metrics, so text doesn't reflow when it swaps in. */
 @font-face {
-  font-family: 'Fraunces Variable';
-  font-style: normal;
-  font-display: swap;
-  font-weight: 100 900;
-  src: url('@fontsource-variable/fraunces/files/fraunces-latin-wght-normal.woff2')
-    format('woff2-variations');
-  unicode-range:
-    U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329,
-    U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
-}
-
-/* Local fallbacks resized to the brand fonts' metrics, so text doesn't reflow when they swap in. */
-@font-face {
-  font-family: 'Nunito Fallback';
+  font-family: 'Figtree Fallback';
   src: local('Arial');
-  size-adjust: 101.91%;
-  ascent-override: 99.2%;
-  descent-override: 34.64%;
-  line-gap-override: 0%;
-}
-
-@font-face {
-  font-family: 'Fraunces Fallback';
-  src: local('Georgia Bold'), local('Georgia-Bold');
-  size-adjust: 96.71%;
-  ascent-override: 101.13%;
-  descent-override: 26.37%;
+  size-adjust: 98%;
+  ascent-override: 97%;
+  descent-override: 25.5%;
   line-gap-override: 0%;
 }
 
@@ -49,62 +28,63 @@
   --color-white: #ffffff;
   --color-black: #000000;
 
-  --color-primary: #7fb069;
-  --color-primary-hover: #8cb878;
-  --color-primary-strong: #517646;
-  --color-primary-muted: #ccdfc3;
-  --color-primary-soft: #dfebda;
-  --color-primary-faint: #f0f6ed;
+  /* ColdLink green: fill bars, selection and the primary button. White text on it is 6:1. */
+  --color-primary: #17723f;
+  --color-primary-hover: #12603a;
+  --color-primary-strong: #11603a;
+  --color-primary-muted: #b9d8c5;
+  --color-primary-soft: #e5f2ea;
+  --color-primary-faint: #f2f8f4;
 
-  --color-accent: #f0a93e;
-  --color-accent-soft: #f4c378;
-  --color-accent-faint: #f9ddb2;
-  --color-accent-ink: #543b16;
+  /* Amber is for waiting states only; text on it uses accent-ink, never the fill colour. */
+  --color-accent: #e8962c;
+  --color-accent-soft: #f6c987;
+  --color-accent-faint: #fdf1dc;
+  --color-accent-ink: #6e4300;
 
-  --color-alert: #e2654a;
-  --color-alert-strong: #aa4c38;
-  --color-alert-faint: #f8e2dc;
+  --color-alert: #d33a2c;
+  --color-alert-strong: #b3261e;
+  --color-alert-faint: #fdecea;
 
-  --color-ink: #233d22;
-  --color-copy: #262b25;
-  --color-copy-muted: #4e554b;
-  --color-copy-subtle: #5f665c;
-  --color-disabled: #bfc3b6;
+  --color-ink: #0f1a13;
+  --color-copy: #1d2822;
+  --color-copy-muted: #4d5a52;
+  --color-copy-subtle: #5f6b63;
+  --color-disabled: #a9b3ad;
 
-  --color-background: #f6f7ee;
-  --color-surface: #fffdf7;
-  --color-surface-muted: #eef0e4;
-  --color-surface-sunken: #e4e7d9;
-  --color-line: #e8eadf;
-  --color-line-strong: #d6d9cc;
+  --color-background: #ffffff;
+  --color-surface: #ffffff;
+  --color-surface-muted: #f3f6f4;
+  --color-surface-sunken: #e8ede9;
+  --color-line: #e3e8e4;
+  --color-line-strong: #c8d1cb;
+
+  /* Wide screens: the page around the centred phone column. */
+  --color-canvas: #eef2ef;
 
   --color-flag-green: #008751;
 
-  --font-sans: 'Nunito Variable', 'Nunito Fallback', ui-sans-serif, system-ui, sans-serif;
-  --font-heading: 'Fraunces Variable', 'Fraunces Fallback', Georgia, serif;
+  --font-sans: 'Figtree Variable', 'Figtree Fallback', ui-sans-serif, system-ui, sans-serif;
 
   --text-*: initial;
-  --text-caption: 0.75rem;
-  --text-caption--line-height: 1rem;
+  --text-caption: 0.8125rem;
+  --text-caption--line-height: 1.125rem;
   --text-label: 0.875rem;
   --text-label--line-height: 1.25rem;
   --text-body: 1rem;
   --text-body--line-height: 1.5rem;
   --text-lead: 1.0625rem;
-  --text-lead--line-height: 1.625rem;
+  --text-lead--line-height: 1.5rem;
   --text-subtitle: 1.125rem;
-  --text-subtitle--line-height: 1.75rem;
+  --text-subtitle--line-height: 1.5rem;
   --text-title: 1.25rem;
-  --text-title--line-height: 1.75rem;
+  --text-title--line-height: 1.625rem;
   --text-headline: 1.5rem;
-  --text-headline--line-height: 2rem;
-  --text-headline-lg: 1.625rem;
+  --text-headline--line-height: 1.875rem;
+  --text-headline-lg: 1.75rem;
   --text-headline-lg--line-height: 2.125rem;
-  --text-display: 1.875rem;
-  --text-display--line-height: 2.25rem;
-
-  --shadow-card: 0 2px 10px rgb(35 61 34 / 0.04);
-  --shadow-bar: 0 -2px 10px rgb(35 61 34 / 0.04);
+  --text-display: 2rem;
+  --text-display--line-height: 2.375rem;
 
   --animate-fade-in-late: fade-in 200ms ease-out 400ms forwards;
 
@@ -129,14 +109,38 @@
 }
 
 @layer base {
+  html,
   body {
-    background-color: var(--color-background);
+    background-color: var(--color-canvas);
+  }
+
+  html {
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  body {
     color: var(--color-copy);
+  }
+
+  h1,
+  h2,
+  h3 {
+    text-wrap: balance;
+  }
+
+  ::selection {
+    background-color: var(--color-primary-soft);
+    color: var(--color-ink);
+  }
+
+  input,
+  textarea {
+    caret-color: var(--color-primary);
   }
 
   /* Inputs draw their own focus ring with utilities, which override this. */
   :focus-visible {
-    outline: 2px solid var(--color-primary-strong);
+    outline: 2px solid var(--color-primary);
     outline-offset: 2px;
   }
 }

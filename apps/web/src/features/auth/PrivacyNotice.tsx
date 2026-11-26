@@ -1,7 +1,7 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import TopNavBar from '../../components/TopNavBar';
-import Card from '../../components/ui/Card';
+import PageHeader from '../../components/ui/PageHeader';
 
 type Section = 'collect' | 'why' | 'share' | 'rights';
 
@@ -11,33 +11,30 @@ const PrivacyNotice = () => {
   const { t } = useTranslation();
 
   return (
-    <div className="flex flex-col h-full min-h-screen bg-background relative">
+    <div className="flex flex-col min-h-screen bg-background">
       <TopNavBar title={t('privacy.navTitle')} showBack={true} />
 
-      <main className="flex flex-col px-5 pt-6 pb-10">
-        <h1 className="font-heading text-headline-lg font-bold text-ink mb-2 tracking-tight">
-          {t('privacy.title')}
-        </h1>
-        <p className="text-copy-muted text-lead leading-relaxed mb-6">{t('privacy.intro')}</p>
+      <main className="flex flex-col pb-10">
+        <PageHeader title={t('privacy.title')} intro={t('privacy.intro')} />
 
-        <div className="flex flex-col gap-4">
+        <div className="flex flex-col divide-y divide-line">
           {sections.map((key) => (
-            <Card key={key} tone="muted" className="p-5">
-              <h2 className="font-heading font-semibold text-ink text-title mb-3">
+            <section key={key} className="px-5 py-6">
+              <h2 className="font-semibold text-ink text-subtitle mb-3">
                 {t(`privacy.sections.${key}.title`)}
               </h2>
-              <ul className="flex flex-col gap-2 list-disc pl-5 marker:text-primary-strong">
+              <ul className="flex flex-col gap-2 list-disc pl-5 marker:text-primary">
                 {t(`privacy.sections.${key}.items`, { returnObjects: true }).map((item) => (
-                  <li key={item} className="text-body text-copy leading-relaxed">
+                  <li key={item} className="text-body text-ink">
                     {item}
                   </li>
                 ))}
               </ul>
-            </Card>
+            </section>
           ))}
         </div>
 
-        <p className="text-copy-muted text-body leading-relaxed mt-6">{t('privacy.law')}</p>
+        <p className="text-copy-muted text-label px-5 pt-2">{t('privacy.law')}</p>
       </main>
     </div>
   );

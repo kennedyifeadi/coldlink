@@ -96,15 +96,9 @@ describe('facility settings', () => {
     expect(capacityInput()).toHaveValue('40');
     expect(priceInput()).toHaveValue('525.5');
     expect(
-      screen.getByText(
-        "Measured in crates. The unit can't be changed, because your bookings are counted in it.",
-      ),
+      screen.getByText("Measured in crates. This can't change, because your bookings use it."),
     ).toBeInTheDocument();
-    expect(
-      screen.getByText(
-        'In naira. A new price is for new bookings only. Bookings already made keep their price.',
-      ),
-    ).toBeInTheDocument();
+    expect(screen.getByText('In naira. A new price is for new bookings only.')).toBeInTheDocument();
     expect(screen.queryByRole('radio')).toBeNull();
     expect(screen.getByText('+234803***4567')).toBeInTheDocument();
     expect(screen.getByText('Not given')).toBeInTheDocument();
@@ -198,7 +192,7 @@ describe('facility settings', () => {
     await user.click(save());
 
     expect(
-      await screen.findByText('No network connection. Check your data or Wi-Fi, then try again.'),
+      await screen.findByText('No connection. Check your data, then try again.'),
     ).toBeInTheDocument();
     expect(priceInput()).toHaveValue('700');
 
@@ -220,7 +214,7 @@ describe('facility settings', () => {
 
     expect(
       screen.getByText(
-        'You have 7.5 crates booked today. Those bookings stand. New bookings only fit in the space left.',
+        'You have 7.5 crates booked today. Those stand; new bookings only fit the space left.',
       ),
     ).toBeInTheDocument();
     await user.click(save());
@@ -236,9 +230,7 @@ describe('facility settings', () => {
     await user.click(screen.getByRole('button', { name: 'Pause bookings' }));
     expect(await screen.findByText('Bookings paused')).toBeInTheDocument();
     expect(
-      screen.getByText(
-        "Farmers can't find or book this facility. Bookings you already have stand.",
-      ),
+      screen.getByText("Farmers can't find or book it. Bookings you have stand."),
     ).toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: 'Take bookings again' }));
@@ -255,7 +247,7 @@ describe('facility settings', () => {
     await user.click(screen.getByRole('button', { name: 'Pause bookings' }));
 
     expect(
-      await screen.findByText('No network connection. Check your data or Wi-Fi, then try again.'),
+      await screen.findByText('No connection. Check your data, then try again.'),
     ).toBeInTheDocument();
     expect(screen.getByText('Taking bookings')).toBeInTheDocument();
   });
@@ -358,9 +350,7 @@ describe('earnings', () => {
 
     expect(await screen.findByText('No payouts yet', {}, SCREEN_TIMEOUT)).toBeInTheDocument();
     expect(
-      screen.getByText(
-        "A payout is owed to you once you check a booking's produce in. It will show here.",
-      ),
+      screen.getByText("Payouts show here once you check a booking's produce in."),
     ).toBeInTheDocument();
     expect(screen.getAllByText('₦0')).toHaveLength(2);
     expect(screen.queryByRole('button', { name: 'Show more' })).toBeNull();

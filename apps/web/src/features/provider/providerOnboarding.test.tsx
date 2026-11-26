@@ -339,7 +339,7 @@ describe('submitting', FLOW_TIMEOUT, () => {
 
     expect(await findHeading('Pending approval')).toBeInTheDocument();
     expect(
-      screen.getByText(/Farmers can't see or book your storage until it's approved/),
+      screen.getByText(/Farmers can't see or book it until it's approved/),
     ).toBeInTheDocument();
     expect(screen.getByText('40 crates at ₦525.50 per crate per day')).toBeInTheDocument();
   });
@@ -440,7 +440,7 @@ describe('submitting', FLOW_TIMEOUT, () => {
 
     expect(
       await screen.findByText(
-        'No network connection. Check your data or Wi-Fi, then try again.',
+        'No connection. Check your data, then try again.',
         undefined,
         SCREEN_TIMEOUT,
       ),
@@ -477,7 +477,7 @@ describe('photos', FLOW_TIMEOUT, () => {
 
     expect(
       await screen.findByText(
-        'No network connection. Check your data or Wi-Fi, then try again.',
+        'No connection. Check your data, then try again.',
         undefined,
         SCREEN_TIMEOUT,
       ),

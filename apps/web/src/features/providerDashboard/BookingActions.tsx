@@ -1,5 +1,4 @@
 import React, { useRef, useState } from 'react';
-import { Hourglass, Wallet } from 'lucide-react';
 import type { TFunction } from 'i18next';
 import { useTranslation } from 'react-i18next';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
@@ -9,8 +8,11 @@ import { isApiError } from '../../api/client';
 import { describeApiError } from '../../api/describeError';
 import { actOnBooking, facilityKey, type ProviderBookingAction } from '../../api/providerBookings';
 import Card from '../../components/ui/Card';
+import DangerButton from '../../components/ui/DangerButton';
 import ErrorMessage from '../../components/ui/ErrorMessage';
+import Notice from '../../components/ui/Notice';
 import PrimaryButton from '../../components/ui/PrimaryButton';
+import SecondaryButton from '../../components/ui/SecondaryButton';
 import TextButton from '../../components/ui/TextButton';
 import { formatDate, formatKobo, formatLagosTime } from '../../i18n/format';
 import { useSessionStore } from '../../session/sessionContext';
@@ -28,12 +30,6 @@ const conflictMessage = (action: ProviderBookingAction, error: unknown, t: TFunc
   if (action === 'collect') return t('provider.booking.conflict.collect');
   return t('provider.booking.conflict.answer');
 };
-
-/** An outlined button for the action beside the primary one. */
-export const secondaryButton =
-  'w-full min-h-12 py-3 rounded-lg font-medium text-lead bg-surface border border-line-strong text-ink hover:bg-surface-muted disabled:text-copy-subtle disabled:cursor-not-allowed transition-colors';
-const dangerButton =
-  'w-full min-h-12 py-3 rounded-lg font-medium text-lead bg-alert-strong text-white hover:bg-alert disabled:bg-disabled disabled:cursor-not-allowed transition-colors';
 
 export interface ActionOutcome {
   action: ProviderBookingAction;
@@ -109,35 +105,24 @@ const BookingActions = ({ booking, onOutcome }: BookingActionsProps) => {
     return (
       <div className="flex flex-col gap-3 mb-6">
         {due && (
-          <div className="flex items-start gap-3 rounded-2xl bg-accent-faint text-accent-ink px-5 py-4">
-            <Hourglass size={20} aria-hidden="true" className="shrink-0 mt-0.5" />
-            <div>
-              <p className="font-semibold text-lead">
-                {t('provider.booking.answerBy', formatLagosTime(due))}
-              </p>
-              <p className="text-body">{t('provider.booking.answerByHint')}</p>
-            </div>
-          </div>
+          <Notice tone="waiting" title={t('provider.booking.answerBy', formatLagosTime(due))}>
+            {t('provider.booking.answerByHint')}
+          </Notice>
         )}
         {errorNotice}
         {confirmingReject ? (
-          <Card tone="muted" className="p-5">
-            <p className="text-ink text-lead font-medium mb-4">
+          <Card className="p-5">
+            <p className="text-ink text-body font-semibold mb-4">
               {t('provider.booking.rejectQuestion')}
             </p>
-            <div className="flex flex-col gap-2">
-              <button
-                type="button"
-                onClick={() => run('reject')}
-                disabled={busy}
-                className={dangerButton}
-              >
+            <div className="flex flex-col gap-3">
+              <DangerButton onClick={() => run('reject')} disabled={busy}>
                 {label(
                   'reject',
                   t('provider.booking.confirmReject'),
                   t('provider.booking.rejecting'),
                 )}
-              </button>
+              </DangerButton>
               <TextButton onClick={() => setConfirmingReject(false)} disabled={busy}>
                 {t('provider.booking.keep')}
               </TextButton>
@@ -148,14 +133,9 @@ const BookingActions = ({ booking, onOutcome }: BookingActionsProps) => {
             <PrimaryButton onClick={() => run('accept')} disabled={busy}>
               {label('accept', t('provider.booking.accept'), t('provider.booking.accepting'))}
             </PrimaryButton>
-            <button
-              type="button"
-              onClick={() => setConfirmingReject(true)}
-              disabled={busy}
-              className={secondaryButton}
-            >
+            <SecondaryButton onClick={() => setConfirmingReject(true)} disabled={busy}>
               {t('provider.booking.reject')}
-            </button>
+            </SecondaryButton>
           </>
         )}
       </div>
@@ -164,11 +144,11 @@ const BookingActions = ({ booking, onOutcome }: BookingActionsProps) => {
 
   if (booking.status === 'confirmed') {
     return (
-      <Card className="p-6 mb-6">
-        <h2 className="font-heading font-semibold text-ink text-subtitle mb-2">
+      <Card className="p-5 mb-6">
+        <h2 className="font-semibold text-ink text-subtitle mb-1">
           {t('provider.booking.checkInTitle')}
         </h2>
-        <p className="text-copy text-body leading-relaxed mb-5">
+        <p className="text-copy-muted text-body mb-4">
           {t('provider.booking.checkInBody', { date: formatDate(booking.start_date) })}
         </p>
         <div className="flex flex-col gap-3">
@@ -183,24 +163,21 @@ const BookingActions = ({ booking, onOutcome }: BookingActionsProps) => {
 
   if (booking.status === 'in_storage') {
     return (
-      <Card className="p-6 mb-6">
-        <p className="flex items-center gap-2 text-copy-muted text-body mb-1">
-          <Wallet size={18} className="text-primary shrink-0" aria-hidden="true" />
+      <div className="rounded-xl border-2 border-primary p-5 mb-6">
+        <p className="text-copy-muted text-label font-medium">
           {t('provider.booking.collectLabel')}
         </p>
-        <p className="font-heading font-bold text-display text-primary-strong break-words mb-2">
+        <p className="font-bold text-display text-ink tabular-nums break-words my-1">
           {formatKobo(booking.balance_due_kobo)}
         </p>
-        <p className="text-copy text-body leading-relaxed mb-5">
-          {t('provider.booking.collectBody')}
-        </p>
+        <p className="text-copy-muted text-body mb-4">{t('provider.booking.collectBody')}</p>
         <div className="flex flex-col gap-3">
           {errorNotice}
           <PrimaryButton onClick={() => run('collect')} disabled={busy}>
             {label('collect', t('provider.booking.collect'), t('provider.booking.collecting'))}
           </PrimaryButton>
         </div>
-      </Card>
+      </div>
     );
   }
 

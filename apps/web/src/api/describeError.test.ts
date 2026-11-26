@@ -8,16 +8,13 @@ const messageFor = (code: ApiErrorCode, retryAfterSeconds?: number) =>
 
 describe('describeApiError', () => {
   it.each<[ApiErrorCode, string]>([
-    ['otp_invalid', 'That code is wrong or has expired. Check the SMS or send a new code.'],
-    ['consent_required', 'To create your ColdLink ID, agree to the privacy notice.'],
-    [
-      'account_disabled',
-      'This account is turned off. Contact ColdLink support to turn it back on.',
-    ],
-    ['network', 'No network connection. Check your data or Wi-Fi, then try again.'],
-    ['unauthorized', "You've been signed out. Sign in again to continue."],
-    ['internal', 'Something went wrong on our side. Try again in a moment.'],
-    ['unexpected_response', 'Something went wrong on our side. Try again in a moment.'],
+    ['otp_invalid', 'That code is wrong or expired. Check the SMS or get a new code.'],
+    ['consent_required', 'Agree to the privacy notice to create your ColdLink ID.'],
+    ['account_disabled', 'This account is turned off. Contact ColdLink support.'],
+    ['network', 'No connection. Check your data, then try again.'],
+    ['unauthorized', "You've been signed out. Sign in to continue."],
+    ['internal', 'Something went wrong on our side. Try again.'],
+    ['unexpected_response', 'Something went wrong on our side. Try again.'],
   ])('explains %s', (code, message) => {
     expect(messageFor(code)).toBe(message);
   });
@@ -32,12 +29,12 @@ describe('describeApiError', () => {
   });
 
   it('asks to wait a little when the API gives no wait', () => {
-    expect(messageFor('rate_limited')).toBe('Too many tries. Wait a little, then try again.');
+    expect(messageFor('rate_limited')).toBe('Too many tries. Wait a moment, then try again.');
   });
 
   it('never shows the raw message, even for an unknown error', () => {
     expect(describeApiError(new Error('TypeError: x is undefined'), i18n.t)).toBe(
-      'Something went wrong on our side. Try again in a moment.',
+      'Something went wrong on our side. Try again.',
     );
   });
 });

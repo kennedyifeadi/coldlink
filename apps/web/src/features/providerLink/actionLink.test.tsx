@@ -94,7 +94,7 @@ describe('provider action link', () => {
     await user.click(screen.getByRole('button', { name: 'Yes, reject it' }));
 
     expect(await findHeading('Booking rejected')).toBeInTheDocument();
-    expect(screen.getByText('The farmer will get a full refund.', { exact: false })).toBeVisible();
+    expect(screen.getByText('The farmer gets a full refund.', { exact: false })).toBeVisible();
     expect(sentActions(fetchMock)).toEqual(['reject']);
   });
 
@@ -158,7 +158,7 @@ describe('provider action link', () => {
     const user = renderApp(LINK);
 
     expect(await findHeading("Couldn't load this booking")).toBeInTheDocument();
-    expect(screen.getByText(/No network connection/)).toBeInTheDocument();
+    expect(screen.getByText(/No connection/)).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Try again' }));
 
     expect(await findHeading('New booking at Bodija Cold Room')).toBeInTheDocument();
@@ -174,7 +174,7 @@ describe('provider action link', () => {
 
     await user.click(await acceptButton());
 
-    expect(await screen.findByRole('alert')).toHaveTextContent(/No network connection/);
+    expect(await screen.findByRole('alert')).toHaveTextContent(/No connection/);
     expect(screen.getByRole('heading', { name: 'New booking at Bodija Cold Room' })).toBeVisible();
     await user.click(screen.getByRole('button', { name: 'Accept booking' }));
 
@@ -187,9 +187,7 @@ describe('provider action link', () => {
     renderApp(LINK);
 
     expect(await findHeading("Couldn't load this booking")).toBeInTheDocument();
-    expect(
-      screen.getByText('Something went wrong on our side. Try again in a moment.'),
-    ).toBeInTheDocument();
+    expect(screen.getByText('Something went wrong on our side. Try again.')).toBeInTheDocument();
   });
 
   it('sends no referrer while the page is open, and restores the page after', async () => {

@@ -11,7 +11,7 @@ const TextButton = ({ children, onClick, disabled = false }: TextButtonProps) =>
     type="button"
     onClick={onClick}
     disabled={disabled}
-    className="w-full min-h-12 py-3 font-medium text-lead rounded-lg transition-colors text-primary-strong hover:bg-surface-muted disabled:text-copy-subtle disabled:hover:bg-transparent disabled:cursor-not-allowed"
+    className="w-full min-h-12 px-5 font-semibold text-body rounded-full border border-line-strong text-primary-strong transition-colors hover:bg-primary-faint hover:border-primary-muted disabled:text-copy-subtle disabled:border-line disabled:hover:bg-transparent disabled:cursor-not-allowed"
   >
     {children}
   </button>

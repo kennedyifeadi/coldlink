@@ -160,10 +160,10 @@ const ProduceStep = () => {
                   type="button"
                   aria-pressed={selected}
                   onClick={() => toggle(category.id)}
-                  className={`flex items-center gap-2 min-h-12 pl-3 pr-4 rounded-full border transition-all ${
+                  className={`flex items-center gap-2 min-h-12 pl-3 pr-4 rounded-full border transition-colors ${
                     selected
-                      ? 'bg-primary-soft border-primary text-ink shadow-sm'
-                      : 'bg-surface-muted border-transparent text-copy hover:bg-surface-sunken'
+                      ? 'bg-primary-faint border-primary ring-1 ring-primary text-ink'
+                      : 'bg-surface border-line-strong text-ink hover:bg-surface-muted'
                   }`}
                 >
                   {selected ? (

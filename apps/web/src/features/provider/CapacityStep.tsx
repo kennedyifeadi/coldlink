@@ -27,11 +27,7 @@ const CapacityStep = () => {
       title={t('provider.capacity.title')}
       intro={t('provider.capacity.intro')}
       onSubmit={() => continueWith(readCapacity(form))}
-      action={
-        <PrimaryButton type="submit" withArrow>
-          {t('common.continue')}
-        </PrimaryButton>
-      }
+      action={<PrimaryButton type="submit">{t('common.continue')}</PrimaryButton>}
     >
       <ChoiceList
         name="capacity-unit"
@@ -75,10 +71,10 @@ const CapacityStep = () => {
       />
 
       <div>
-        <h2 className="block text-label font-medium text-copy mb-1">
+        <h2 className="block text-label font-semibold text-ink mb-1">
           {t('provider.capacity.minDaysTitle')}
         </h2>
-        <p className="text-copy-muted text-body mb-3">{t('provider.capacity.minDaysHint')}</p>
+        <p className="text-copy-muted text-label mb-3">{t('provider.capacity.minDaysHint')}</p>
         <QuantityStepper
           value={form.minDays}
           onChange={(minDays) => change('min_storage_days', { minDays })}
@@ -90,11 +86,11 @@ const CapacityStep = () => {
       </div>
 
       <fieldset>
-        <legend className="block text-label font-medium text-copy mb-1">
+        <legend className="block text-label font-semibold text-ink mb-1">
           {t('provider.capacity.temperatureLegend')}
           <span className="text-copy-subtle font-normal"> {t('provider.onboarding.optional')}</span>
         </legend>
-        <p className="text-copy-muted text-body mb-3">{t('provider.capacity.temperatureHint')}</p>
+        <p className="text-copy-muted text-label mb-3">{t('provider.capacity.temperatureHint')}</p>
         <div className="grid grid-cols-2 gap-3">
           <TextField
             id="temp-min"

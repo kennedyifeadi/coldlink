@@ -17,9 +17,9 @@ const VerificationBadge = ({ status }: { status: VerificationStatus }) => {
 
   return (
     <span
-      className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-label font-semibold ${classes}`}
+      className={`inline-flex w-fit items-center gap-1.5 px-3 py-1 rounded-full text-label font-semibold ${classes}`}
     >
-      <Icon size={16} aria-hidden="true" className="shrink-0" />
+      <Icon size={14} strokeWidth={2.5} aria-hidden="true" className="shrink-0" />
       {t(`provider.status.${status}`)}
     </span>
   );

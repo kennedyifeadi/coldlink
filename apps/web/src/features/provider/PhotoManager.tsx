@@ -48,18 +48,15 @@ const PhotoManager = ({ photos, hint }: { photos: PhotoManagerState; hint?: stri
 
   return (
     <section aria-labelledby="photos-heading" className="flex flex-col gap-3">
-      <h2 id="photos-heading" className="font-heading font-semibold text-ink text-subtitle">
+      <h2 id="photos-heading" className="font-semibold text-ink text-subtitle">
         {t('provider.photos.count', { count: items.length, max: MAX_PROVIDER_PHOTOS })}
       </h2>
-      {hint && <p className="text-copy-muted text-body -mt-1">{hint}</p>}
+      {hint && <p className="text-copy-muted text-label -mt-1">{hint}</p>}
 
       {items.length > 0 && (
         <ul aria-live="polite" className="flex flex-col gap-3">
           {items.map((item, index) => (
-            <li
-              key={item.key}
-              className="flex gap-4 p-3 rounded-2xl border border-line bg-surface shadow-card"
-            >
+            <li key={item.key} className="flex gap-4 p-3 rounded-xl border border-line bg-surface">
               <img
                 src={item.preview}
                 alt={t('provider.photos.photoAlt', { number: index + 1 })}
@@ -68,7 +65,7 @@ const PhotoManager = ({ photos, hint }: { photos: PhotoManagerState; hint?: stri
                 className="w-20 h-20 rounded-xl object-cover bg-surface-muted shrink-0"
               />
               <div className="flex flex-col gap-2 min-w-0 flex-grow">
-                <p className="font-medium text-copy text-body">
+                <p className="font-medium text-ink text-body">
                   {t('provider.photos.photoName', { number: index + 1 })}
                 </p>
                 <StatusLine item={item} />
@@ -102,9 +99,9 @@ const PhotoManager = ({ photos, hint }: { photos: PhotoManagerState; hint?: stri
       )}
 
       {freeSlots > 0 && (
-        <label className="flex flex-col items-center justify-center gap-2 min-h-28 px-4 py-5 rounded-2xl border-2 border-dashed border-line-strong bg-surface-muted text-center cursor-pointer hover:bg-surface-sunken transition-colors has-focus-visible:outline-2 has-focus-visible:outline-primary-strong">
+        <label className="flex flex-col items-center justify-center gap-2 min-h-28 px-4 py-5 rounded-xl border-2 border-dashed border-line-strong bg-surface-muted text-center cursor-pointer hover:bg-surface-sunken transition-colors has-focus-visible:outline-2 has-focus-visible:outline-primary">
           <ImagePlus size={28} className="text-primary-strong" aria-hidden="true" />
-          <span className="font-semibold text-copy text-lead">
+          <span className="font-semibold text-ink text-body">
             {items.length === 0 ? t('provider.photos.add') : t('provider.photos.addMore')}
           </span>
           <span className="text-copy-muted text-label">

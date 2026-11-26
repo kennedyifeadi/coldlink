@@ -1,5 +1,5 @@
 import React from 'react';
-import { CalendarDays, CheckCircle2, Hourglass, Leaf, Wallet } from 'lucide-react';
+import { CalendarDays, CheckCircle2, Hourglass, Leaf } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useInfiniteQuery } from '@tanstack/react-query';
 import {
@@ -12,6 +12,7 @@ import { describeApiError } from '../../api/describeError';
 import { providerPayoutsQuery } from '../../api/providerBookings';
 import TopNavBar from '../../components/TopNavBar';
 import Card from '../../components/ui/Card';
+import PageHeader from '../../components/ui/PageHeader';
 import ErrorMessage from '../../components/ui/ErrorMessage';
 import SummaryRow from '../../components/ui/SummaryRow';
 import TextButton from '../../components/ui/TextButton';
@@ -29,17 +30,14 @@ const TotalsCard = ({ earnings }: { earnings: Earnings }) => {
   const { t } = useTranslation();
 
   return (
-    <Card className="p-6 mb-8">
-      <p className="flex items-center gap-2 text-copy-muted text-body mb-1">
-        <Wallet size={18} className="text-primary shrink-0" aria-hidden="true" />
-        {t('provider.dashboard.owed')}
-      </p>
-      <p className="font-heading font-bold text-display text-primary-strong break-words mb-4">
+    <div className="rounded-xl border-2 border-primary p-5 mb-8">
+      <p className="text-copy-muted text-label font-medium">{t('provider.dashboard.owed')}</p>
+      <p className="font-bold text-display text-ink tabular-nums break-words mt-1 mb-4">
         {formatKobo(earnings.owed_kobo)}
       </p>
       <SummaryRow label={t('provider.dashboard.paid')} value={formatKobo(earnings.paid_kobo)} />
-      <p className="text-copy-subtle text-label mt-4">{t('provider.dashboard.earningsHint')}</p>
-    </Card>
+      <p className="text-copy-muted text-label mt-4">{t('provider.dashboard.earningsHint')}</p>
+    </div>
   );
 };
 
@@ -68,19 +66,19 @@ const PayoutCard = ({ payout }: { payout: ProviderPayout }) => {
   return (
     <Card className="p-5">
       <div className="flex items-center justify-between gap-3 flex-wrap mb-3">
-        <p className="font-heading font-bold text-title text-ink">
-          {formatKobo(payout.amount_kobo)}
-        </p>
+        <p className="font-bold text-title text-ink">{formatKobo(payout.amount_kobo)}</p>
         <PayoutStatus status={payout.status} />
       </div>
       <div className="flex flex-col gap-2">
-        <p className="text-primary-strong font-bold text-body tracking-widest">{booking.code}</p>
+        <p className="text-copy-muted font-semibold text-label tracking-wider tabular-nums">
+          {booking.code}
+        </p>
         <p className="flex items-center gap-2 text-ink text-body font-medium">
-          <Leaf size={16} className="text-primary shrink-0" aria-hidden="true" />
+          <Leaf size={16} className="text-copy-subtle shrink-0" aria-hidden="true" />
           {booking.crop.name}
         </p>
         <p className="flex items-center gap-2 text-copy-muted text-body">
-          <CalendarDays size={16} className="text-primary shrink-0" aria-hidden="true" />
+          <CalendarDays size={16} className="text-copy-subtle shrink-0" aria-hidden="true" />
           {t('provider.card.dates', {
             start: formatDate(booking.start_date),
             end: formatDate(booking.end_date),
@@ -108,8 +106,8 @@ const EmptyPayouts = () => {
   const { t } = useTranslation();
 
   return (
-    <Card tone="muted" className="p-6 text-center">
-      <p className="font-heading font-semibold text-ink text-subtitle mb-2">
+    <Card tone="muted" className="p-5">
+      <p className="font-semibold text-ink text-subtitle mb-1">
         {t('provider.earnings.emptyTitle')}
       </p>
       <p className="text-copy-muted text-body">{t('provider.earnings.emptyBody')}</p>
@@ -149,22 +147,17 @@ const ProviderEarnings = () => {
   const earnings = pages?.at(-1)?.earnings;
 
   return (
-    <div className="flex flex-col h-full min-h-screen bg-background relative pb-10">
+    <div className="flex flex-col min-h-screen bg-background pb-10">
       <TopNavBar title={navTitle} showBack={true} />
+      <PageHeader title={t('provider.earnings.title')} />
       <div className="flex flex-col px-5 pt-6">
-        <h1 className="font-heading text-headline font-bold text-ink mb-6">
-          {t('provider.earnings.title')}
-        </h1>
         {payouts === undefined || earnings === undefined ? (
           <ListSkeleton label={t('provider.earnings.loading')} />
         ) : (
           <>
             <TotalsCard earnings={earnings} />
             <section aria-labelledby="payouts-heading">
-              <h2
-                id="payouts-heading"
-                className="font-heading font-semibold text-ink text-title mb-3"
-              >
+              <h2 id="payouts-heading" className="font-semibold text-ink text-title mb-3">
                 {t('provider.earnings.payoutsTitle')}
               </h2>
               {payouts.length === 0 ? (

@@ -1,12 +1,10 @@
 import React, { type ReactNode } from 'react';
-import { ArrowRight } from 'lucide-react';
 
 interface PrimaryButtonProps {
   children: ReactNode;
   onClick?: () => void;
   type?: 'button' | 'submit';
   disabled?: boolean;
-  withArrow?: boolean;
   compact?: boolean;
 }
 
@@ -15,28 +13,21 @@ const PrimaryButton = ({
   onClick,
   type = 'button',
   disabled = false,
-  withArrow = false,
   compact = false,
 }: PrimaryButtonProps) => {
-  const sizeClasses = compact ? 'py-3.5' : 'py-4 text-subtitle';
+  const sizeClasses = compact ? 'min-h-12 px-5 text-body' : 'min-h-14 px-6 text-subtitle';
   const stateClasses = disabled
-    ? 'bg-primary-muted text-ink/50 cursor-not-allowed'
-    : `bg-primary hover:bg-primary-hover text-ink ${compact ? '' : 'shadow-md'}`;
+    ? 'bg-surface-sunken text-copy-subtle cursor-not-allowed'
+    : 'bg-primary text-white hover:bg-primary-hover active:scale-[0.98]';
 
   return (
     <button
       type={type}
       onClick={onClick}
       disabled={disabled}
-      className={`group flex items-center justify-center w-full rounded-lg font-medium transition-all ${sizeClasses} ${stateClasses}`}
+      className={`flex items-center justify-center w-full rounded-full font-semibold transition-[background-color,transform] duration-150 ease-out ${sizeClasses} ${stateClasses}`}
     >
-      <span>{children}</span>
-      {withArrow && (
-        <ArrowRight
-          size={20}
-          className="ml-2 transition-transform duration-300 group-hover:translate-x-1.5"
-        />
-      )}
+      {children}
     </button>
   );
 };

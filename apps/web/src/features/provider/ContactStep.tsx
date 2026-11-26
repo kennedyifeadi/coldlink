@@ -25,11 +25,7 @@ const ContactStep = () => {
       title={t('provider.contact.title')}
       intro={t('provider.contact.intro')}
       onSubmit={() => continueWith(readContact(form))}
-      action={
-        <PrimaryButton type="submit" withArrow>
-          {t('common.continue')}
-        </PrimaryButton>
-      }
+      action={<PrimaryButton type="submit">{t('common.continue')}</PrimaryButton>}
     >
       <TextField
         id="display-name"

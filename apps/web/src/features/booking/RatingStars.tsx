@@ -39,7 +39,7 @@ export const StarPicker = ({ value, onChange, disabled, describedBy }: StarPicke
 
   return (
     <fieldset aria-describedby={describedBy}>
-      <legend className="block text-label font-medium text-copy mb-3">
+      <legend className="block text-label font-semibold text-ink mb-3">
         {t('booking.rating.starsLabel')}
       </legend>
       <div className="grid grid-cols-5 gap-2">
@@ -53,7 +53,7 @@ export const StarPicker = ({ value, onChange, disabled, describedBy }: StarPicke
               disabled={disabled}
               aria-pressed={value === stars}
               aria-label={t('booking.rating.outOf', { stars })}
-              className={`flex flex-col items-center justify-center gap-1 min-h-16 rounded-2xl border transition-colors disabled:cursor-not-allowed ${
+              className={`flex flex-col items-center justify-center gap-1 min-h-16 rounded-xl border transition-[background-color,border-color,transform] duration-150 active:scale-95 disabled:cursor-not-allowed ${
                 value === stars
                   ? 'bg-accent-faint border-accent-ink'
                   : 'bg-surface border-line-strong hover:bg-surface-muted'

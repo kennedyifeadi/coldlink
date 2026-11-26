@@ -11,13 +11,15 @@ interface StatusHistoryProps {
   viewer?: StatusViewer;
 }
 
+const HEADING_ID = 'status-history-title';
+
 /** Each status the booking entered and when, on the Lagos clock, oldest first. */
 const StatusHistory = ({ history, viewer }: StatusHistoryProps) => {
   const { t } = useTranslation();
 
   return (
-    <Card className="p-6 mb-4">
-      <CardTitle>{t('booking.detail.historyTitle')}</CardTitle>
+    <Card className="p-5 mb-4" labelledBy={HEADING_ID}>
+      <CardTitle id={HEADING_ID}>{t('booking.detail.historyTitle')}</CardTitle>
       <ol className="flex flex-col">
         {history.map((change, index) => (
           <li key={`${change.status}-${change.at}`} className="flex gap-4">

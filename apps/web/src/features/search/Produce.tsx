@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { CheckCircle2, Search } from 'lucide-react';
+import { Check, Search } from 'lucide-react';
 import { Navigate, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
@@ -8,8 +8,10 @@ import TopNavBar from '../../components/TopNavBar';
 import BottomActionBar from '../../components/ui/BottomActionBar';
 import PrimaryButton from '../../components/ui/PrimaryButton';
 import ErrorMessage from '../../components/ui/ErrorMessage';
+import PageHeader from '../../components/ui/PageHeader';
 import StepProgress from '../../components/ui/StepProgress';
 import TextButton from '../../components/ui/TextButton';
+import { inputClasses } from '../../components/ui/inputStyles';
 import { cropsQuery } from '../../api/referenceData';
 import { describeApiError } from '../../api/describeError';
 import { produceIcon } from './produceIcons';
@@ -22,13 +24,13 @@ const matches = (crop: Crop, query: string) =>
 // Name under the icon, as on the original produce screen: at 360 px a name beside the icon gets
 // too little width for words like "Watermelon".
 const TILE_CLASSES =
-  'flex flex-col items-center justify-center gap-2 min-h-28 px-3 py-4 rounded-2xl border text-center';
+  'flex flex-col items-center justify-center gap-2 min-h-24 px-3 py-4 rounded-xl border text-center';
 
 const ProduceSkeleton = () => (
   <div aria-hidden="true" className="grid grid-cols-2 gap-3">
     {Array.from({ length: 8 }, (_, index) => (
-      <div key={index} className={`${TILE_CLASSES} bg-surface-muted border-transparent`}>
-        <div className="w-10 h-10 rounded-full bg-surface-sunken shrink-0" />
+      <div key={index} className={`${TILE_CLASSES} border-line`}>
+        <div className="w-6 h-6 rounded bg-surface-sunken shrink-0" />
         <div className="h-4 w-2/3 rounded bg-surface-sunken" />
       </div>
     ))}
@@ -55,25 +57,22 @@ const Produce = () => {
   const shown = crops.data?.data.filter((crop) => matches(crop, query)) ?? [];
 
   return (
-    <div className="flex flex-col h-full min-h-screen bg-background relative">
+    <div className="flex flex-col min-h-screen bg-background">
       <TopNavBar title={t('search.produce.navTitle')} showBack={true} />
       <StepProgress step={2} count={3} label={t('search.step', { step: 2, count: 3 })} />
 
-      <div className="flex flex-col px-6 pt-8 pb-28 flex-grow overflow-y-auto">
-        <div className="mb-6">
-          <h1 className="font-heading text-headline-lg font-bold text-ink mb-3 leading-tight tracking-tight">
-            {t('search.produce.title')}
-          </h1>
-          <p className="text-copy-muted text-lead leading-relaxed">{t('search.produce.intro')}</p>
-        </div>
+      <PageHeader title={t('search.produce.title')} />
 
-        <div className="relative mb-6">
+      <div className="flex flex-col px-5 pt-5 pb-32">
+        <div className="relative mb-5">
           <label htmlFor="produce-filter" className="sr-only">
             {t('search.produce.filterLabel')}
           </label>
-          <div className="absolute left-4 top-1/2 -translate-y-1/2 text-copy-subtle">
-            <Search size={18} />
-          </div>
+          <Search
+            size={18}
+            className="absolute left-4 top-1/2 -translate-y-1/2 text-copy-subtle"
+            aria-hidden="true"
+          />
           <input
             id="produce-filter"
             type="search"
@@ -81,7 +80,7 @@ const Produce = () => {
             placeholder={t('search.produce.filterPlaceholder')}
             value={filter}
             onChange={(e) => setFilter(e.target.value)}
-            className="w-full pl-12 pr-4 py-3.5 bg-surface border border-line-strong rounded-xl text-body placeholder-copy-subtle outline-none focus:border-primary-strong focus:ring-1 focus:ring-primary-strong transition-all"
+            className={`${inputClasses()} pl-11`}
           />
         </div>
 
@@ -121,28 +120,24 @@ const Produce = () => {
                   type="button"
                   onClick={() => setSelected(crop)}
                   aria-pressed={isSelected}
-                  className={`relative ${TILE_CLASSES} transition-all ${
+                  className={`relative ${TILE_CLASSES} transition-colors ${
                     isSelected
-                      ? 'bg-primary-soft border-primary shadow-sm'
-                      : 'bg-surface-muted border-transparent hover:bg-surface-sunken'
+                      ? 'bg-primary-faint border-primary ring-1 ring-primary'
+                      : 'bg-surface border-line hover:border-line-strong hover:bg-surface-muted'
                   }`}
                 >
-                  <div
-                    className={`w-10 h-10 rounded-full flex items-center justify-center bg-surface shadow-sm shrink-0 ${
-                      isSelected ? 'text-primary-strong' : 'text-ink'
-                    }`}
-                  >
-                    <Icon size={20} strokeWidth={2} />
-                  </div>
-                  <span
-                    className={`font-medium text-body leading-snug ${isSelected ? 'text-ink' : 'text-copy'}`}
-                  >
-                    {crop.name}
-                  </span>
+                  <Icon
+                    size={24}
+                    strokeWidth={1.75}
+                    className={isSelected ? 'text-primary-strong' : 'text-copy-muted'}
+                    aria-hidden="true"
+                  />
+                  <span className="font-medium text-body leading-snug text-ink">{crop.name}</span>
                   {isSelected && (
-                    <CheckCircle2
+                    <Check
                       size={16}
-                      className="absolute top-2 right-2 text-primary-strong"
+                      strokeWidth={2.5}
+                      className="absolute top-2.5 right-2.5 text-primary-strong"
                       aria-hidden="true"
                     />
                   )}
@@ -154,7 +149,7 @@ const Produce = () => {
       </div>
 
       <BottomActionBar>
-        <PrimaryButton onClick={handleContinue} disabled={!selected} withArrow>
+        <PrimaryButton onClick={handleContinue} disabled={!selected}>
           {t('common.continue')}
         </PrimaryButton>
       </BottomActionBar>

@@ -9,11 +9,11 @@ import { searchQueryKey } from '../../api/search';
 import TopNavBar from '../../components/TopNavBar';
 import Card from '../../components/ui/Card';
 import CardTitle from '../../components/ui/CardTitle';
+import PageHeader from '../../components/ui/PageHeader';
 import SummaryRow from '../../components/ui/SummaryRow';
 import BottomActionBar from '../../components/ui/BottomActionBar';
 import PrimaryButton from '../../components/ui/PrimaryButton';
 import { formatKobo, formatNumber } from '../../i18n/format';
-import { facilityTypeIcons } from '../search/facilityTypeIcons';
 import { Rating } from '../search/ResultCard';
 import { readDraft, useSearchFlow } from '../search/searchFlow';
 import { formatAmount } from '../search/units';
@@ -45,25 +45,15 @@ const useSearchedDistance = (providerId: string) => {
 
 const Photos = ({ provider }: { provider: PublicProvider }) => {
   const { t } = useTranslation();
-  const TypeIcon = facilityTypeIcons[provider.facility_type];
 
-  if (provider.photos.length === 0) {
-    return (
-      <div
-        aria-hidden="true"
-        className="w-full h-40 rounded-2xl bg-primary-soft text-primary-strong flex items-center justify-center"
-      >
-        <TypeIcon size={56} strokeWidth={1.5} />
-      </div>
-    );
-  }
+  if (provider.photos.length === 0) return null;
   const single = provider.photos.length === 1;
   return (
-    <ul className="flex gap-3 overflow-x-auto snap-x snap-mandatory -mx-4 px-4 pb-1">
+    <ul className="flex gap-3 overflow-x-auto snap-x snap-mandatory scrollbar-hide px-5 pt-5">
       {provider.photos.map((photo, index) => (
         <li
           key={photo.id}
-          className={`snap-start shrink-0 aspect-[4/3] rounded-2xl overflow-hidden bg-surface-muted ${single ? 'w-full' : 'w-[85%]'}`}
+          className={`snap-start scroll-ml-5 shrink-0 aspect-[4/3] rounded-xl overflow-hidden bg-surface-muted ${single ? 'w-full' : 'w-[85%]'}`}
         >
           <img
             src={photo.url}
@@ -156,18 +146,17 @@ const DetailsSkeleton = () => {
 
   return (
     <>
-      <p role="status" className="text-copy-muted text-body">
+      <p role="status" className="text-copy-muted text-label font-medium px-5 pt-5">
         {t('booking.loading')}
       </p>
-      <div aria-hidden="true" className="flex flex-col gap-6">
-        <div className="w-full h-40 rounded-2xl bg-surface-sunken" />
+      <div aria-hidden="true" className="flex flex-col gap-5 px-5 pt-4">
+        <div className="w-full aspect-[4/3] rounded-xl bg-surface-sunken" />
         <div className="flex flex-col gap-2">
           <div className="h-8 w-3/4 rounded bg-surface-sunken" />
           <div className="h-5 w-1/3 rounded bg-surface-muted" />
           <div className="h-5 w-2/3 rounded bg-surface-muted" />
         </div>
-        <div className="h-36 rounded-2xl bg-surface-muted" />
-        <div className="h-24 rounded-2xl bg-surface-muted" />
+        <div className="h-36 rounded-xl bg-surface-muted" />
       </div>
     </>
   );
@@ -176,72 +165,74 @@ const DetailsSkeleton = () => {
 const Facility = ({ route, provider, quote, problem }: ReadyBooking) => {
   const { t } = useTranslation();
   const distance = useSearchedDistance(provider.id);
-  const TypeIcon = facilityTypeIcons[provider.facility_type];
 
   return (
     <>
       <Photos provider={provider} />
 
-      <div>
-        <h1 className="font-heading text-headline font-bold text-ink leading-tight mb-2">
-          {provider.display_name}
-        </h1>
-        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mb-3">
-          <span className="flex items-center gap-1.5 text-copy-muted text-label">
-            <TypeIcon size={16} aria-hidden="true" />
-            {t(`search.facilityTypes.${provider.facility_type}`)}
+      <PageHeader
+        title={provider.display_name}
+        intro={
+          <span className="flex flex-wrap items-center gap-x-2 text-label">
+            <span>{t(`search.facilityTypes.${provider.facility_type}`)}</span>
+            <span aria-hidden="true" className="text-line-strong">
+              ·
+            </span>
+            <Rating average={provider.avg_rating} count={provider.rating_count} />
           </span>
-          <Rating average={provider.avg_rating} count={provider.rating_count} />
-        </div>
-        <div className="flex items-start gap-1.5 text-copy text-body">
-          <MapPin size={16} className="shrink-0 mt-0.5 text-copy-muted" aria-hidden="true" />
+        }
+      >
+        <div className="flex items-start gap-2 text-ink text-body">
+          <MapPin size={18} className="shrink-0 mt-0.5 text-copy-subtle" aria-hidden="true" />
           <div>
             <p>{provider.address_text}</p>
             {provider.landmark && (
-              <p className="text-copy-muted">
+              <p className="text-copy-muted text-label">
                 {t('booking.details.near', { landmark: provider.landmark })}
               </p>
             )}
             {distance !== undefined && (
-              <p className="text-copy-muted">
+              <p className="text-copy-muted text-label">
                 {t('booking.details.distance', { distance: formatNumber(distance) })}
               </p>
             )}
           </div>
         </div>
+      </PageHeader>
+
+      <div className="flex flex-col gap-5 px-5 pt-5">
+        {problem && (
+          <QuoteProblemNotice
+            problem={problem}
+            asked={{ quantity: route.intent.quantity, unit: route.intent.capacity_unit }}
+          />
+        )}
+
+        <SpaceCard provider={provider} quote={quote} problem={problem} />
+        <FacilityCard provider={provider} />
+
+        {provider.description && (
+          <p className="text-copy text-body leading-relaxed">{provider.description}</p>
+        )}
+
+        {provider.categories.length > 0 && (
+          <div>
+            <h2 className="font-semibold text-ink text-subtitle mb-3">
+              {t('booking.details.storesTitle')}
+            </h2>
+            <ul className="flex flex-wrap gap-2">
+              {provider.categories.map((category) => (
+                <li
+                  key={category.id}
+                  className="border border-line-strong text-ink px-3 py-1 rounded-full text-label font-medium"
+                >
+                  {category.name}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
       </div>
-
-      {problem && (
-        <QuoteProblemNotice
-          problem={problem}
-          asked={{ quantity: route.intent.quantity, unit: route.intent.capacity_unit }}
-        />
-      )}
-
-      <SpaceCard provider={provider} quote={quote} problem={problem} />
-      <FacilityCard provider={provider} />
-
-      {provider.description && (
-        <p className="text-copy text-body leading-relaxed">{provider.description}</p>
-      )}
-
-      {provider.categories.length > 0 && (
-        <div>
-          <h2 className="font-heading font-semibold text-ink text-subtitle mb-3">
-            {t('booking.details.storesTitle')}
-          </h2>
-          <ul className="flex flex-wrap gap-2">
-            {provider.categories.map((category) => (
-              <li
-                key={category.id}
-                className="bg-primary-soft text-ink px-3 py-1 rounded-full text-label font-medium"
-              >
-                {category.name}
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
     </>
   );
 };
@@ -258,13 +249,11 @@ const Details = () => {
   if (booking.status === 'failed') return <LoadFailed navTitle={navTitle} {...booking} />;
 
   return (
-    <div className="flex flex-col h-full min-h-screen bg-background relative pb-28">
+    <div className="flex flex-col min-h-screen bg-background pb-32">
       <TopNavBar title={navTitle} showBack={true} />
       <BookingProgress step="details" />
 
-      <div className="flex flex-col gap-6 px-4 pt-6 pb-6 flex-grow">
-        {booking.status === 'loading' ? <DetailsSkeleton /> : <Facility {...booking} />}
-      </div>
+      {booking.status === 'loading' ? <DetailsSkeleton /> : <Facility {...booking} />}
 
       {booking.status === 'ready' && (
         <BottomActionBar>
@@ -279,7 +268,6 @@ const Details = () => {
                   bookingStepPath('review', booking.route.providerId, booking.route.intent),
                 )
               }
-              withArrow
             >
               {t('booking.details.continue')}
             </PrimaryButton>

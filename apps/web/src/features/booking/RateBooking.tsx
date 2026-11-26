@@ -15,6 +15,8 @@ import { isApiError } from '../../api/client';
 import { describeApiError } from '../../api/describeError';
 import TopNavBar from '../../components/TopNavBar';
 import Card from '../../components/ui/Card';
+import PageHeader from '../../components/ui/PageHeader';
+import { inputClasses } from '../../components/ui/inputStyles';
 import ErrorMessage from '../../components/ui/ErrorMessage';
 import PrimaryButton from '../../components/ui/PrimaryButton';
 import { bookingDetailPath } from '../../session/routes';
@@ -60,24 +62,22 @@ const Rated = ({ booking, rating, justNow }: RatedProps) => {
   const navigate = useNavigate();
 
   return (
-    <div className="flex flex-col h-full min-h-screen bg-background pb-10">
+    <div className="flex flex-col min-h-screen bg-background pb-10">
       <TopNavBar title={t('booking.rating.navTitle')} showBack={true} />
-      <div className="flex flex-col px-5 pt-6">
-        <div role="status" className="flex gap-3 mb-6">
-          <CircleCheck size={28} className="text-primary-strong shrink-0 mt-1" aria-hidden="true" />
-          <div>
-            <h1 className="font-heading text-headline font-bold text-ink mb-2">
-              {justNow
-                ? t('booking.rating.thanksTitle', { facility: booking.provider.display_name })
-                : t('booking.rating.ratedTitle')}
-            </h1>
-            <p className="text-copy-muted text-lead leading-relaxed">
-              {justNow ? t('booking.rating.thanksBody') : t('booking.rating.ratedBody')}
-            </p>
-          </div>
-        </div>
-        <Card className="p-6 mb-6">
-          <h2 className="font-heading font-semibold text-ink text-subtitle mb-3">
+      <div role="status" className="px-5 pt-6 pb-5">
+        <CircleCheck size={28} className="text-primary-strong mb-3" aria-hidden="true" />
+        <h1 className="text-headline font-bold text-ink mb-1">
+          {justNow
+            ? t('booking.rating.thanksTitle', { facility: booking.provider.display_name })
+            : t('booking.rating.ratedTitle')}
+        </h1>
+        <p className="text-copy-muted text-body">
+          {justNow ? t('booking.rating.thanksBody') : t('booking.rating.ratedBody')}
+        </p>
+      </div>
+      <div className="flex flex-col px-5 pt-5">
+        <Card className="p-5 mb-6" labelledBy="your-rating-title">
+          <h2 id="your-rating-title" className="font-semibold text-ink text-subtitle mb-3">
             {t('booking.rating.yourRating')}
           </h2>
           <RatingSummary rating={rating} />
@@ -139,66 +139,65 @@ const RatingForm = ({ booking, onRated, onRefused }: RatingFormProps) => {
     send.isError && !isApiError(send.error, 'conflict') && !isApiError(send.error, 'not_found');
 
   return (
-    <form onSubmit={submit} noValidate className="flex flex-col px-5 pt-6">
-      <h1 className="font-heading text-headline font-bold text-ink mb-2">
-        {t('booking.rating.title', { facility: booking.provider.display_name })}
-      </h1>
-      <p className="text-copy-muted text-lead leading-relaxed mb-6">
-        {t('booking.rating.intro', { code: booking.code })}
-      </p>
+    <form onSubmit={submit} noValidate className="flex flex-col">
+      <PageHeader
+        title={t('booking.rating.title', { facility: booking.provider.display_name })}
+        intro={t('booking.rating.intro', { code: booking.code })}
+      />
+      <div className="flex flex-col px-5 pt-5">
+        <div className="mb-6">
+          <StarPicker
+            value={stars}
+            onChange={(value) => {
+              setStars(value);
+              setMissingStars(false);
+            }}
+            disabled={busy}
+            describedBy={missingStars ? STARS_ERROR_ID : undefined}
+          />
+          {missingStars && (
+            <div className="mt-2">
+              <ErrorMessage id={STARS_ERROR_ID}>{t('booking.rating.chooseStars')}</ErrorMessage>
+            </div>
+          )}
+        </div>
 
-      <Card className="p-5 mb-4">
-        <StarPicker
-          value={stars}
-          onChange={(value) => {
-            setStars(value);
-            setMissingStars(false);
-          }}
-          disabled={busy}
-          describedBy={missingStars ? STARS_ERROR_ID : undefined}
-        />
-        {missingStars && (
-          <div className="mt-2">
-            <ErrorMessage id={STARS_ERROR_ID}>{t('booking.rating.chooseStars')}</ErrorMessage>
-          </div>
-        )}
-      </Card>
+        <div className="mb-6">
+          <label htmlFor={COMMENT_ID} className="block text-label font-semibold text-ink mb-1">
+            {t('booking.rating.commentLabel')}
+            <span className="text-copy-subtle font-normal"> {t('booking.rating.optional')}</span>
+          </label>
+          <p id={`${COMMENT_ID}-hint`} className="text-copy-muted text-label mb-3">
+            {t('booking.rating.commentHint')}
+          </p>
+          <textarea
+            id={COMMENT_ID}
+            value={comment}
+            onChange={(event) => setComment(event.target.value)}
+            maxLength={RATING_COMMENT_MAX_LENGTH}
+            rows={4}
+            disabled={busy}
+            aria-describedby={`${COMMENT_ID}-hint ${COMMENT_ID}-count`}
+            className={`${inputClasses()} resize-y disabled:bg-surface-muted`}
+          />
+          <p id={`${COMMENT_ID}-count`} className="text-copy-muted text-label mt-2 text-right">
+            {t('booking.rating.commentCount', {
+              count: comment.length,
+              max: RATING_COMMENT_MAX_LENGTH,
+            })}
+          </p>
+        </div>
 
-      <Card className="p-5 mb-6">
-        <label htmlFor={COMMENT_ID} className="block text-label font-medium text-copy mb-2">
-          {t('booking.rating.commentLabel')}
-          <span className="text-copy-subtle font-normal"> {t('booking.rating.optional')}</span>
-        </label>
-        <p id={`${COMMENT_ID}-hint`} className="text-copy-muted text-body mb-3">
-          {t('booking.rating.commentHint')}
-        </p>
-        <textarea
-          id={COMMENT_ID}
-          value={comment}
-          onChange={(event) => setComment(event.target.value)}
-          maxLength={RATING_COMMENT_MAX_LENGTH}
-          rows={4}
-          disabled={busy}
-          aria-describedby={`${COMMENT_ID}-hint ${COMMENT_ID}-count`}
-          className="w-full px-4 py-3.5 text-body text-copy bg-surface border border-line-strong rounded-lg placeholder-copy-subtle outline-none focus:border-primary-strong focus:ring-1 focus:ring-primary-strong transition-all resize-y disabled:bg-surface-muted"
-        />
-        <p id={`${COMMENT_ID}-count`} className="text-copy-subtle text-label mt-2 text-right">
-          {t('booking.rating.commentCount', {
-            count: comment.length,
-            max: RATING_COMMENT_MAX_LENGTH,
-          })}
-        </p>
-      </Card>
-
-      <div className="flex flex-col gap-3">
-        {failed && !busy && <ErrorMessage>{describeApiError(send.error, t)}</ErrorMessage>}
-        <PrimaryButton type="submit" disabled={busy}>
-          {busy
-            ? t('booking.rating.sending')
-            : failed && isApiError(send.error, 'network')
-              ? t('common.tryAgain')
-              : t('booking.rating.submit')}
-        </PrimaryButton>
+        <div className="flex flex-col gap-3">
+          {failed && !busy && <ErrorMessage>{describeApiError(send.error, t)}</ErrorMessage>}
+          <PrimaryButton type="submit" disabled={busy}>
+            {busy
+              ? t('booking.rating.sending')
+              : failed && isApiError(send.error, 'network')
+                ? t('common.tryAgain')
+                : t('booking.rating.submit')}
+          </PrimaryButton>
+        </div>
       </div>
     </form>
   );
@@ -247,7 +246,7 @@ const RateBooking = () => {
   };
 
   return (
-    <div className="flex flex-col h-full min-h-screen bg-background relative pb-10">
+    <div className="flex flex-col min-h-screen bg-background pb-10">
       <TopNavBar title={navTitle} showBack={true} />
       {booking ? (
         <RatingForm booking={booking} onRated={onRated} onRefused={() => void query.refetch()} />

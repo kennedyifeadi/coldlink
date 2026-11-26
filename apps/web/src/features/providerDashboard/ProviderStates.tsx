@@ -24,12 +24,12 @@ export const FacilityNotFound = ({ navTitle }: { navTitle: string }) => {
 
 export const ListSkeleton = ({ label, rows = 2 }: { label: string; rows?: number }) => (
   <div className="flex flex-col gap-4">
-    <p role="status" className="text-copy-muted text-body text-center">
+    <p role="status" className="text-copy-muted text-label font-medium">
       {label}
     </p>
     <div aria-hidden="true" className="flex flex-col gap-4">
       {Array.from({ length: rows }, (_, index) => (
-        <div key={index} className="h-36 rounded-2xl bg-surface-muted" />
+        <div key={index} className="h-32 rounded-xl bg-surface-muted" />
       ))}
     </div>
   </div>

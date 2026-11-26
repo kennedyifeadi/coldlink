@@ -2,19 +2,13 @@ import React, { type ReactNode } from 'react';
 import type { LucideIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import ErrorMessage from '../../components/ui/ErrorMessage';
+import { inputClasses, labelClasses } from '../../components/ui/inputStyles';
 
 const errorId = (id: string) => `${id}-error`;
 const hintId = (id: string) => `${id}-hint`;
 
 const describedBy = (id: string, hint: boolean, error: boolean) =>
   [hint && hintId(id), error && errorId(id)].filter(Boolean).join(' ') || undefined;
-
-const inputClasses = (invalid: boolean) =>
-  `w-full px-4 py-3.5 text-body text-copy bg-surface border rounded-lg placeholder-copy-subtle outline-none focus:ring-1 transition-all ${
-    invalid
-      ? 'border-alert-strong focus:ring-alert-strong'
-      : 'border-line-strong focus:border-primary-strong focus:ring-primary-strong'
-  }`;
 
 const FieldLabel = ({
   htmlFor,
@@ -27,7 +21,7 @@ const FieldLabel = ({
 }) => {
   const { t } = useTranslation();
   return (
-    <label htmlFor={htmlFor} className="block text-label font-medium text-copy mb-2">
+    <label htmlFor={htmlFor} className={labelClasses}>
       {children}
       {optional && (
         <span className="text-copy-subtle font-normal"> {t('provider.onboarding.optional')}</span>
@@ -38,14 +32,14 @@ const FieldLabel = ({
 
 const FieldError = ({ id, error }: { id: string; error: string | undefined }) =>
   error ? (
-    <div className="mt-3">
+    <div className="mt-2">
       <ErrorMessage id={errorId(id)}>{error}</ErrorMessage>
     </div>
   ) : null;
 
 const FieldHint = ({ id, hint }: { id: string; hint: string | undefined }) =>
   hint ? (
-    <p id={hintId(id)} className="text-copy-muted text-body mb-2 -mt-1">
+    <p id={hintId(id)} className="text-copy-muted text-label mb-2">
       {hint}
     </p>
   ) : null;
@@ -184,37 +178,39 @@ export const ChoiceList = <T extends string>({
 
   return (
     <fieldset aria-describedby={describedBy(id, hint !== undefined, error !== undefined)}>
-      <legend className="block text-label font-medium text-copy mb-1">
+      <legend className="block text-label font-semibold text-ink mb-1">
         {legend}
         {optional && (
           <span className="text-copy-subtle font-normal"> {t('provider.onboarding.optional')}</span>
         )}
       </legend>
       {hint ? (
-        <p id={hintId(id)} className="text-copy-muted text-body mb-3">
+        <p id={hintId(id)} className="text-copy-muted text-label mb-3">
           {hint}
         </p>
       ) : (
         <div className="mb-2" />
       )}
-      <div className="flex flex-col gap-2">
+      <div className="flex flex-col border border-line rounded-xl divide-y divide-line overflow-hidden">
         {choices.map(({ value: option, label, icon: Icon }) => (
-          <div key={option} className="flex flex-col gap-2">
-            <label className="flex items-center gap-3 min-h-12 px-4 py-3 rounded-xl border border-transparent bg-surface-muted cursor-pointer transition-all has-checked:bg-primary-faint has-checked:border-primary has-focus-visible:outline-2 has-focus-visible:outline-primary-strong">
+          <div key={option} className="flex flex-col">
+            <label className="flex items-center gap-3 min-h-13 px-4 py-3 bg-surface cursor-pointer transition-colors hover:bg-surface-muted has-checked:bg-primary-faint has-focus-visible:outline-2 has-focus-visible:-outline-offset-2 has-focus-visible:outline-primary">
               <input
                 type="radio"
                 name={name}
                 value={option}
                 checked={value === option}
                 onChange={() => onChange(option)}
-                className="w-5 h-5 accent-primary-strong shrink-0"
+                className="w-5 h-5 accent-primary shrink-0"
               />
               {Icon && (
                 <Icon size={20} className="text-primary-strong shrink-0" aria-hidden="true" />
               )}
-              <span className="text-copy text-body font-medium">{label}</span>
+              <span className="text-ink text-body font-medium">{label}</span>
             </label>
-            {value === option && detail?.(option)}
+            {value === option && detail && (
+              <div className="px-4 pb-4 bg-primary-faint">{detail(option)}</div>
+            )}
           </div>
         ))}
       </div>

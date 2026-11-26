@@ -271,9 +271,7 @@ describe('booking screen states', FLOW_TIMEOUT, () => {
     renderApp(dugbeDetailsPath);
 
     expect(await findHeading("Couldn't load this cold room")).toBeInTheDocument();
-    expect(
-      screen.getByText('Something went wrong on our side. Try again in a moment.'),
-    ).toBeInTheDocument();
+    expect(screen.getByText('Something went wrong on our side. Try again.')).toBeInTheDocument();
     expect(screen.queryByText(/Unrecognized key/)).not.toBeInTheDocument();
   });
 
@@ -288,9 +286,7 @@ describe('booking screen states', FLOW_TIMEOUT, () => {
     const user = renderApp(dugbeDetailsPath);
 
     expect(await findHeading("Couldn't load this cold room")).toBeInTheDocument();
-    expect(
-      screen.getByText('No network connection. Check your data or Wi-Fi, then try again.'),
-    ).toBeInTheDocument();
+    expect(screen.getByText('No connection. Check your data, then try again.')).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Try again' }));
 
     expect(await findHeading('Dugbe Fridge Fleet (Sample)')).toBeInTheDocument();

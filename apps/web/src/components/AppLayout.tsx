@@ -18,7 +18,7 @@ const AppLayout = () => {
   useScrollToTopOnNavigate();
 
   return (
-    <div className="min-h-screen bg-background relative max-w-107.5 mx-auto shadow-xl overflow-hidden">
+    <div className="min-h-screen bg-background relative max-w-107.5 mx-auto overflow-hidden min-[431px]:border-x min-[431px]:border-line">
       <Suspense fallback={<RouteFallback />}>
         <Outlet />
       </Suspense>

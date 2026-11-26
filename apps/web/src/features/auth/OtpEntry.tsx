@@ -6,6 +6,7 @@ import logoMain from '../../assets/logo_main.webp';
 import PrimaryButton from '../../components/ui/PrimaryButton';
 import TextButton from '../../components/ui/TextButton';
 import ErrorMessage from '../../components/ui/ErrorMessage';
+import { labelClasses } from '../../components/ui/inputStyles';
 import { requestOtp, verifyOtp } from '../../api/auth';
 import { isApiError } from '../../api/client';
 import { describeApiError } from '../../api/describeError';
@@ -27,8 +28,8 @@ interface CodeSlotsProps {
 }
 
 const slotBorders = {
-  invalid: 'border-alert-strong',
-  active: 'border-primary-strong ring-1 ring-primary-strong',
+  invalid: 'border-alert',
+  active: 'border-primary ring-4 ring-primary-soft',
   idle: 'border-line-strong',
 };
 
@@ -49,9 +50,9 @@ const CodeSlots = ({ code, focused, invalid }: CodeSlotsProps) => {
         return (
           <div
             key={slot}
-            className={`h-14 flex items-center justify-center rounded-lg border bg-surface text-headline font-bold text-ink tabular-nums transition-colors ${border}`}
+            className={`h-14 flex items-center justify-center rounded-xl border bg-surface text-headline font-bold text-ink tabular-nums transition-[border-color,box-shadow] ${border}`}
           >
-            {code[slot] ?? (active ? <span className="w-0.5 h-6 bg-primary-strong" /> : '')}
+            {code[slot] ?? (active ? <span className="w-0.5 h-6 bg-primary" /> : '')}
           </div>
         );
       })}
@@ -109,33 +110,31 @@ const OtpEntryForm = ({ pending }: { pending: PendingSignIn }) => {
   const phone = formatPhoneForDisplay(pending.phone);
 
   return (
-    <div className="flex flex-col h-full min-h-screen bg-background p-6 relative">
-      <div className="flex items-center mt-8 mb-16">
-        <img src={logoMain} alt={t('common.logoAlt')} width={190} height={44} />
+    <div className="flex flex-col min-h-screen bg-background">
+      <div className="px-5 pt-6">
+        <img src={logoMain} alt={t('common.logoAlt')} width={164} height={38} />
       </div>
 
-      <div className="mb-auto">
-        <h1 className="font-heading text-display font-bold text-ink tracking-tight leading-tight mb-4">
+      <div className="px-5 pt-14 pb-5">
+        <h1 className="text-display font-bold text-ink tracking-tight mb-3">
           {t('auth.otp.title')}
         </h1>
-        <p className="text-copy-muted text-lead leading-relaxed">
-          {t('auth.otp.intro', { phone })}
-        </p>
+        <p className="text-copy-muted text-lead">{t('auth.otp.intro', { phone })}</p>
         <Link
           to={SIGN_IN_PATH}
-          className="inline-block mt-2 py-2 text-primary-strong font-medium text-lead underline"
+          className="inline-flex items-center min-h-11 text-primary-strong font-semibold text-body underline underline-offset-2"
         >
           {t('auth.otp.changeNumber')}
         </Link>
       </div>
 
-      <form onSubmit={handleSubmit} noValidate className="w-full mt-12 pb-8">
+      <form onSubmit={handleSubmit} noValidate className="w-full px-5 pt-6 pb-8">
         {(import.meta.env.DEV || env.VITE_SHOW_DEV_CODE) && pending.devCode && (
           <DevCodeHint code={pending.devCode} onUse={setCode} />
         )}
 
-        <div className="mb-8">
-          <label htmlFor="otp-code" className="block text-label font-medium text-copy mb-2">
+        <div className="mb-6">
+          <label htmlFor="otp-code" className={labelClasses}>
             {t('auth.otp.codeLabel')}
           </label>
           <div className="relative">
@@ -159,26 +158,22 @@ const OtpEntryForm = ({ pending }: { pending: PendingSignIn }) => {
             />
           </div>
           {failure !== undefined && (
-            <div className="mt-3">
+            <div className="mt-2">
               <ErrorMessage id={CODE_ERROR_ID}>{describeApiError(failure, t)}</ErrorMessage>
             </div>
           )}
           {resend.isSuccess && (
-            <p role="status" className="mt-3 text-body text-copy-muted">
+            <p role="status" className="mt-2 text-label text-primary-strong font-medium">
               {t('auth.otp.resent', { phone })}
             </p>
           )}
         </div>
 
-        <PrimaryButton
-          type="submit"
-          disabled={code.length < CODE_LENGTH || verify.isPending}
-          withArrow
-        >
+        <PrimaryButton type="submit" disabled={code.length < CODE_LENGTH || verify.isPending}>
           {verify.isPending ? t('auth.otp.checking') : t('common.continue')}
         </PrimaryButton>
 
-        <div className="mt-4">
+        <div className="mt-3">
           <TextButton
             onClick={() => resend.mutate()}
             disabled={countdown.remaining > 0 || resend.isPending}

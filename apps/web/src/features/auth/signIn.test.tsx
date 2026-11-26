@@ -85,13 +85,9 @@ describe('phone screen', () => {
     [
       'network failure',
       () => Promise.reject(new TypeError('Failed to fetch')),
-      'No network connection. Check your data or Wi-Fi, then try again.',
+      'No connection. Check your data, then try again.',
     ],
-    [
-      'internal',
-      errorResponse(500, 'internal'),
-      'Something went wrong on our side. Try again in a moment.',
-    ],
+    ['internal', errorResponse(500, 'internal'), 'Something went wrong on our side. Try again.'],
   ])('explains %s when asking for a code', async (_, reply, message) => {
     mockApi({ ...signedOut, 'POST /auth/otp/request': reply });
     const user = renderApp('/onboarding');
@@ -114,7 +110,7 @@ describe('code screen', () => {
 
     await enterPhone(user);
     expect(
-      await screen.findByText('We sent a 6-digit code by SMS to +234 803 123 4567.', {
+      await screen.findByText('We sent a 6-digit code to +234 803 123 4567.', {
         normalizer: (text) => text.replace(/\s+/g, ' '),
       }),
     ).toBeInTheDocument();
@@ -152,13 +148,9 @@ describe('code screen', () => {
   });
 
   it.each<[ErrorCode, number, string]>([
-    ['otp_invalid', 400, 'That code is wrong or has expired. Check the SMS or send a new code.'],
-    [
-      'account_disabled',
-      403,
-      'This account is turned off. Contact ColdLink support to turn it back on.',
-    ],
-    ['rate_limited', 429, 'Too many tries. Wait a little, then try again.'],
+    ['otp_invalid', 400, 'That code is wrong or expired. Check the SMS or get a new code.'],
+    ['account_disabled', 403, 'This account is turned off. Contact ColdLink support.'],
+    ['rate_limited', 429, 'Too many tries. Wait a moment, then try again.'],
   ])('explains %s and stays on the code screen', async (code, status, message) => {
     mockApi({
       ...signedOut,
@@ -251,7 +243,7 @@ describe('resend', () => {
     await user.click(screen.getByRole('button', { name: 'Send a new code' }));
 
     expect(await screen.findByRole('status')).toHaveTextContent(
-      /We sent a new code to \+234\s803\s123\s4567\./,
+      /New code sent to \+234\s803\s123\s4567\./,
     );
     expect(screen.getByRole('button', { name: 'Send a new code in 1:30' })).toBeDisabled();
     expect(requestsTo(fetchMock, 'POST', '/auth/otp/request')).toHaveLength(2);
@@ -349,9 +341,7 @@ describe('consent', () => {
 
     await user.click(screen.getByRole('checkbox'));
     await user.click(screen.getByRole('button', { name: 'Create my ColdLink ID' }));
-    expect(await screen.findByRole('alert')).toHaveTextContent(
-      'That code is wrong or has expired.',
-    );
+    expect(await screen.findByRole('alert')).toHaveTextContent('That code is wrong or expired.');
     await user.click(screen.getByRole('button', { name: 'Get a new code' }));
 
     expect(await screen.findByRole('heading', { name: 'Enter your code' })).toBeInTheDocument();
