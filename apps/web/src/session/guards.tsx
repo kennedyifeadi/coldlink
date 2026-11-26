@@ -16,7 +16,7 @@ const SessionUnavailable = ({ error }: { error: unknown }) => {
 
   return (
     <div className="flex flex-col min-h-screen bg-background pb-8">
-      <div className="px-5 pt-24 pb-6 rim mb-auto">
+      <div className="px-5 pt-24 pb-6 mb-auto">
         <WifiOff size={28} className="text-copy-muted mb-4" aria-hidden="true" />
         <h1 className="text-headline font-bold text-ink mb-2">{t('session.unavailable.title')}</h1>
         <p className="text-copy-muted text-body">{describeApiError(error, t)}</p>

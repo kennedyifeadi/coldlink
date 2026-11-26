@@ -55,7 +55,7 @@ const StatusHeader = ({ booking }: { booking: FarmerBooking }) => {
   const Icon = header.icon;
 
   return (
-    <div className="px-5 pt-4 pb-6 rim">
+    <div className="px-5 pt-4 pb-6">
       <Icon size={32} strokeWidth={2} className={`mb-3 ${header.iconClass}`} aria-hidden="true" />
       <h1 className="text-headline font-bold text-ink mb-2">{header.title}</h1>
       <p className="text-copy-muted text-body">{header.body}</p>

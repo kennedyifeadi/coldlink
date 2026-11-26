@@ -54,7 +54,7 @@ const Onboarding = () => {
         <img src={logoMain} alt={t('common.logoAlt')} width={164} height={38} />
       </div>
 
-      <div className="px-5 pt-14 pb-6 rim">
+      <div className="px-5 pt-14 pb-6">
         <h1 className="text-display font-bold text-ink tracking-tight mb-3">
           {t('auth.onboarding.title')}
         </h1>

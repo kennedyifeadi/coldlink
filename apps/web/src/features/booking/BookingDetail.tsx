@@ -308,7 +308,7 @@ const BookingDetail = () => {
 
       {booking ? (
         <>
-          <div className="flex flex-col items-start gap-3 px-5 pt-6 pb-5 rim">
+          <div className="flex flex-col items-start gap-3 px-5 pt-6 pb-5">
             <StatusBadge status={booking.status} />
             <h1 className="text-headline-lg font-bold text-ink tracking-tight">
               {booking.provider.display_name}

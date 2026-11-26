@@ -64,7 +64,7 @@ const Rated = ({ booking, rating, justNow }: RatedProps) => {
   return (
     <div className="flex flex-col min-h-screen bg-background pb-10">
       <TopNavBar title={t('booking.rating.navTitle')} showBack={true} />
-      <div role="status" className="px-5 pt-6 pb-5 rim">
+      <div role="status" className="px-5 pt-6 pb-5">
         <CircleCheck size={28} className="text-primary-strong mb-3" aria-hidden="true" />
         <h1 className="text-headline font-bold text-ink mb-1">
           {justNow

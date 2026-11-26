@@ -115,7 +115,7 @@ const OtpEntryForm = ({ pending }: { pending: PendingSignIn }) => {
         <img src={logoMain} alt={t('common.logoAlt')} width={164} height={38} />
       </div>
 
-      <div className="px-5 pt-14 pb-5 rim">
+      <div className="px-5 pt-14 pb-5">
         <h1 className="text-display font-bold text-ink tracking-tight mb-3">
           {t('auth.otp.title')}
         </h1>

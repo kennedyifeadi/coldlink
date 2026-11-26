@@ -219,7 +219,7 @@ const SettingsBody = ({ provider }: { provider: OwnProvider }) => {
 
   return (
     <>
-      <div className="px-5 pt-6 pb-5 rim">
+      <div className="px-5 pt-6 pb-5">
         <h1 className="text-headline-lg font-bold text-ink tracking-tight break-words">
           {provider.display_name}
         </h1>

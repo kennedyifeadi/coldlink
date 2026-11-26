@@ -17,7 +17,7 @@ interface NavItemProps {
   onClick: () => void;
 }
 
-// The active tab carries the green rim along its top edge as well as the colour.
+// The active tab is marked by a bar along its top edge as well as the colour.
 const NavItem = ({ icon: Icon, label, active, onClick }: NavItemProps) => (
   <button
     type="button"

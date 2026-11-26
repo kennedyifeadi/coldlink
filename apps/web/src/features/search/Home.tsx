@@ -45,7 +45,7 @@ const Home = () => {
         <img src={logoMain} alt={t('common.logoAlt')} width={164} height={38} />
       </div>
 
-      <div className="px-5 pt-14 pb-8 rim">
+      <div className="px-5 pt-14 pb-8">
         <h1 className="text-display font-bold text-ink tracking-tight mb-3">
           {t('search.home.title')}
         </h1>

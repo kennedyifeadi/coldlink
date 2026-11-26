@@ -14,7 +14,7 @@ const NotFound = () => {
         <img src={logoMain} alt={t('common.logoAlt')} width={138} height={32} />
       </div>
 
-      <div className="pt-16 mb-auto rim pb-6">
+      <div className="pt-16 mb-auto pb-6">
         <h1 className="text-headline font-bold text-ink mb-2">{t('notFound.title')}</h1>
         <p className="text-copy-muted text-body">{t('notFound.body')}</p>
       </div>

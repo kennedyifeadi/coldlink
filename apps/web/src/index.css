@@ -28,7 +28,7 @@
   --color-white: #ffffff;
   --color-black: #000000;
 
-  /* ColdLink green: the rim, fill bars, selection and the primary button. White text on it is 6:1. */
+  /* ColdLink green: fill bars, selection and the primary button. White text on it is 6:1. */
   --color-primary: #17723f;
   --color-primary-hover: #12603a;
   --color-primary-strong: #11603a;
@@ -106,11 +106,6 @@
   &::-webkit-scrollbar {
     display: none;
   }
-}
-
-/* The enamel rim: the green rule that closes a screen's heading. */
-@utility rim {
-  border-bottom: 3px solid var(--color-primary);
 }
 
 @layer base {

@@ -41,7 +41,7 @@ const Outcome = () => {
     <div className="flex flex-col min-h-screen bg-background">
       <TopNavBar title={t('provider.onboarding.navTitle')} />
 
-      <div className="px-5 pt-8 pb-5 rim">
+      <div className="px-5 pt-8 pb-5">
         <Icon
           size={32}
           className={`mb-3 ${live ? 'text-primary-strong' : 'text-accent-ink'}`}

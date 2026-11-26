@@ -134,7 +134,7 @@ const DashboardBody = ({ dashboard }: { dashboard: ProviderDashboard }) => {
 
   return (
     <>
-      <div className="flex flex-col px-5 pt-6 pb-3 rim">
+      <div className="flex flex-col px-5 pt-6 pb-3">
         <h1 className="text-headline-lg font-bold text-ink tracking-tight break-words">
           {dashboard.provider.display_name}
         </h1>

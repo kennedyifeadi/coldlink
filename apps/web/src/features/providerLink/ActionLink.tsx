@@ -51,7 +51,7 @@ interface MessageScreenProps {
 
 const MessageScreen = ({ icon: Icon, title, body, children }: MessageScreenProps) => (
   <Screen>
-    <div className="px-5 pt-12 pb-6 rim">
+    <div className="px-5 pt-12 pb-6">
       <Icon size={28} className="text-copy-muted mb-4" aria-hidden="true" />
       <h1 className="text-headline font-bold text-ink mb-2 break-words">{title}</h1>
       <p className="text-copy-muted text-body">{body}</p>

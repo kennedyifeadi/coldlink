@@ -53,7 +53,7 @@ const ConsentForm = ({ pending, code }: { pending: PendingSignIn; code: string }
         <img src={logoMain} alt={t('common.logoAlt')} width={164} height={38} />
       </div>
 
-      <div className="px-5 pt-12 pb-5 rim">
+      <div className="px-5 pt-12 pb-5">
         <h1 className="text-headline-lg font-bold text-ink tracking-tight mb-2">
           {t('auth.consent.title')}
         </h1>
