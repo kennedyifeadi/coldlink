@@ -146,6 +146,18 @@ async function retryRefund(
     return 'failed';
   }
 
+  // The amount Paystack made goes on the row first: the charge's status is worked out from it.
+  const otherAmount = amountKobo !== refund.amount_kobo;
+  if (otherAmount) {
+    await trx
+      .updateTable('payments')
+      .set({
+        amount_kobo: amountKobo,
+        paystack_payload: mergePayload({ requested_amount_kobo: refund.amount_kobo }),
+      })
+      .where('id', '=', refund.id)
+      .execute();
+  }
   await recordRefundSuccess(
     trx,
     {
@@ -155,15 +167,7 @@ async function retryRefund(
     },
     made,
   );
-  if (amountKobo !== refund.amount_kobo) {
-    await trx
-      .updateTable('payments')
-      .set({
-        amount_kobo: amountKobo,
-        paystack_payload: mergePayload({ requested_amount_kobo: refund.amount_kobo }),
-      })
-      .where('id', '=', refund.id)
-      .execute();
+  if (otherAmount) {
     logger.error(
       { ...log, amountKobo, requestedAmountKobo: refund.amount_kobo },
       'Refund needs attention',
