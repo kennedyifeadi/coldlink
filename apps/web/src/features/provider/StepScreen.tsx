@@ -2,6 +2,7 @@ import React, { type FormEvent, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import TopNavBar from '../../components/TopNavBar';
 import BottomActionBar from '../../components/ui/BottomActionBar';
+import PageHeader from '../../components/ui/PageHeader';
 import StepProgress from '../../components/ui/StepProgress';
 import { STEP_COUNT, stepNumber, type FormStep } from './onboardingFlow';
 
@@ -36,11 +37,7 @@ const StepScreen = ({
   };
 
   return (
-    <form
-      onSubmit={handleSubmit}
-      noValidate
-      className="flex flex-col h-full min-h-screen bg-background relative"
-    >
+    <form onSubmit={handleSubmit} noValidate className="flex flex-col min-h-screen bg-background">
       <TopNavBar title={t('provider.onboarding.navTitle')} showBack={showBack} />
       <StepProgress
         step={number}
@@ -52,15 +49,8 @@ const StepScreen = ({
         })}
       />
 
-      <div className="flex flex-col gap-8 px-6 pt-8 pb-36 flex-grow overflow-y-auto">
-        <div>
-          <h1 className="font-heading text-headline-lg font-bold text-ink mb-3 leading-tight tracking-tight">
-            {title}
-          </h1>
-          <p className="text-copy-muted text-lead leading-relaxed">{intro}</p>
-        </div>
-        {children}
-      </div>
+      <PageHeader title={title} intro={intro} />
+      <div className="flex flex-col gap-7 px-5 pt-6 pb-36">{children}</div>
 
       <BottomActionBar>{action}</BottomActionBar>
     </form>

@@ -40,9 +40,9 @@ const PhotosStep = () => {
         </PrimaryButton>
       }
     >
-      <div className="flex items-center gap-2 bg-primary-faint border border-primary-muted rounded-xl px-4 py-3">
-        <CheckCircle2 size={16} className="text-primary-strong shrink-0" aria-hidden="true" />
-        <span className="text-ink text-body font-medium">
+      <div className="flex items-center gap-2 text-primary-strong">
+        <CheckCircle2 size={18} className="shrink-0" aria-hidden="true" />
+        <span className="text-body font-semibold">
           {t('provider.photos.saved', { name: created.display_name })}
         </span>
       </div>

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { CalendarDays, CircleAlert, CircleCheck, Leaf, SearchX } from 'lucide-react';
+import { CalendarDays, Leaf, SearchX } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
@@ -8,6 +8,7 @@ import { isApiError } from '../../api/client';
 import { providerBookingQuery } from '../../api/providerBookings';
 import TopNavBar from '../../components/TopNavBar';
 import Card from '../../components/ui/Card';
+import Notice from '../../components/ui/Notice';
 import CardTitle from '../../components/ui/CardTitle';
 import SummaryRow from '../../components/ui/SummaryRow';
 import { formatDate, formatKobo, formatLagosTime } from '../../i18n/format';
@@ -26,10 +27,10 @@ const FactsCard = ({ booking }: { booking: Booking }) => {
   const { t } = useTranslation();
 
   return (
-    <Card className="p-6 mb-4">
-      <div className="flex flex-col gap-5">
+    <Card className="p-5 mb-4">
+      <div className="flex flex-col gap-4">
         <DetailRow icon={Leaf} label={t('provider.booking.produce')}>
-          <p className="text-copy-muted text-body">
+          <p className="text-ink text-body">
             {t('provider.card.produce', {
               produce: booking.crop.name,
               amount: formatAmount(booking.quantity, booking.capacity_unit, t),
@@ -37,7 +38,7 @@ const FactsCard = ({ booking }: { booking: Booking }) => {
           </p>
         </DetailRow>
         <DetailRow icon={CalendarDays} label={t('provider.booking.dates')}>
-          <p className="text-copy-muted text-body">
+          <p className="text-ink text-body">
             {t('provider.booking.datesValue', {
               start: formatDate(booking.start_date),
               end: formatDate(booking.end_date),
@@ -55,7 +56,7 @@ const MoneyCard = ({ booking }: { booking: Booking }) => {
   const { t } = useTranslation();
 
   return (
-    <Card className="p-6 mb-4">
+    <Card className="p-5 mb-4">
       <CardTitle>{t('provider.booking.moneyTitle')}</CardTitle>
       <div className="flex flex-col gap-3">
         <SummaryRow
@@ -68,7 +69,7 @@ const MoneyCard = ({ booking }: { booking: Booking }) => {
           value={formatKobo(booking.balance_due_kobo)}
         />
       </div>
-      <p className="text-copy-subtle text-label mt-4">{t('provider.booking.payoutHint')}</p>
+      <p className="text-copy-muted text-label mt-4">{t('provider.booking.payoutHint')}</p>
     </Card>
   );
 };
@@ -90,7 +91,7 @@ const TimesCard = ({ booking }: { booking: Booking }) => {
   if (rows.length === 0) return null;
 
   return (
-    <Card className="p-6 mb-4">
+    <Card className="p-5 mb-4">
       <CardTitle>{t('provider.booking.timesTitle')}</CardTitle>
       <div className="flex flex-col gap-3">
         {rows.map((row) => (
@@ -106,18 +107,16 @@ const OutcomeNotice = ({ outcome }: { outcome: ActionOutcome }) => {
 
   if (outcome.result === 'done') {
     return (
-      <div role="status" className="flex gap-3 bg-primary-faint rounded-2xl p-5 mb-4">
-        <CircleCheck size={22} className="text-primary-strong shrink-0 mt-0.5" aria-hidden="true" />
-        <p className="text-ink text-body leading-relaxed font-medium">
-          {t(`provider.booking.done.${outcome.action}`)}
-        </p>
+      <div className="mb-4">
+        <Notice tone="done">{t(`provider.booking.done.${outcome.action}`)}</Notice>
       </div>
     );
   }
   return (
-    <div role="alert" className="flex gap-3 bg-alert-faint rounded-2xl p-5 mb-4">
-      <CircleAlert size={22} className="text-alert-strong shrink-0 mt-0.5" aria-hidden="true" />
-      <p className="text-ink text-body leading-relaxed font-medium">{outcome.result.conflict}</p>
+    <div className="mb-4">
+      <Notice tone="error" role="alert">
+        {outcome.result.conflict}
+      </Notice>
     </div>
   );
 };
@@ -168,30 +167,34 @@ const ProviderBookingDetail = () => {
   const booking = query.data;
 
   return (
-    <div className="flex flex-col h-full min-h-screen bg-background relative pb-10">
+    <div className="flex flex-col min-h-screen bg-background pb-10">
       <TopNavBar title={navTitle} showBack={true} />
       {booking ? (
-        <div className="flex flex-col px-5 pt-6">
-          <div className="flex flex-col items-start gap-3 mb-6">
+        <>
+          <div className="flex flex-col items-start gap-2 px-5 pt-6 pb-5 rim">
             <StatusBadge status={booking.status} viewer="provider" />
-            <p className="flex flex-wrap gap-x-2 text-copy-muted text-label font-medium tracking-widest uppercase">
-              <span>{t('provider.booking.codeLabel')}</span>
-              <span className="whitespace-nowrap text-primary-strong">{booking.code}</span>
-            </p>
-            <h1 className="font-heading text-headline font-bold text-ink break-words">
+            <h1 className="text-headline-lg font-bold text-ink tracking-tight break-words mt-1">
               {t('provider.card.produce', {
                 produce: booking.crop.name,
                 amount: formatAmount(booking.quantity, booking.capacity_unit, t),
               })}
             </h1>
+            <p className="flex flex-wrap gap-x-2 text-copy-muted text-label font-medium">
+              <span>{t('provider.booking.codeLabel')}</span>
+              <span className="whitespace-nowrap text-ink font-semibold tracking-wider tabular-nums">
+                {booking.code}
+              </span>
+            </p>
           </div>
-          {outcome && <OutcomeNotice outcome={outcome} />}
-          <BookingActions key={booking.status} booking={booking} onOutcome={setOutcome} />
-          <FactsCard booking={booking} />
-          <MoneyCard booking={booking} />
-          <TimesCard booking={booking} />
-          <StatusHistory history={booking.status_history} viewer="provider" />
-        </div>
+          <div className="flex flex-col px-5 pt-5">
+            {outcome && <OutcomeNotice outcome={outcome} />}
+            <BookingActions key={booking.status} booking={booking} onOutcome={setOutcome} />
+            <FactsCard booking={booking} />
+            <MoneyCard booking={booking} />
+            <TimesCard booking={booking} />
+            <StatusHistory history={booking.status_history} viewer="provider" />
+          </div>
+        </>
       ) : (
         <div className="px-5 pt-6">
           <ListSkeleton label={t('common.loading')} rows={3} />

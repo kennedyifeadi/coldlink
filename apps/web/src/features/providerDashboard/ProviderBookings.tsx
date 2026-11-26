@@ -31,18 +31,18 @@ const GroupLinks = ({
   const { t } = useTranslation();
 
   return (
-    <nav aria-label={t('provider.bookings.groupsLabel')} className="mb-6">
-      <ul className="grid grid-cols-4 gap-1 rounded-xl bg-surface-muted p-1">
+    <nav aria-label={t('provider.bookings.groupsLabel')} className="border-b border-line">
+      <ul className="grid grid-cols-4">
         {providerBookingGroups.map((group) => (
           <li key={group}>
             <Link
               to={providerBookingsPath(providerId, group)}
               replace
               aria-current={group === active ? 'page' : undefined}
-              className={`flex items-center justify-center text-center min-h-12 px-1 rounded-lg text-label font-semibold leading-tight transition-colors focus-visible:outline-2 focus-visible:outline-primary-strong ${
+              className={`relative flex items-center justify-center text-center min-h-12 px-1 text-label font-semibold leading-tight transition-colors focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-primary after:absolute after:inset-x-2 after:bottom-0 after:h-[3px] after:rounded-t-full ${
                 group === active
-                  ? 'bg-surface text-ink shadow-card'
-                  : 'text-copy-muted hover:text-ink'
+                  ? 'text-primary-strong after:bg-primary'
+                  : 'text-copy-muted hover:text-ink after:bg-transparent'
               }`}
             >
               {t(`provider.groups.${group}`)}
@@ -77,19 +77,19 @@ const GroupList = ({ providerId, group }: { providerId: string; group: ProviderB
   const bookings = query.data?.pages.flatMap((page) => page.data);
 
   return (
-    <div className="flex flex-col h-full min-h-screen bg-background relative pb-10">
+    <div className="flex flex-col min-h-screen bg-background pb-10">
       <TopNavBar title={t('provider.bookings.navTitle')} showBack={true} />
-      <div className="flex flex-col px-5 pt-6">
-        <h1 className="font-heading text-headline font-bold text-ink mb-6">
+      <div className="px-5 pt-6 pb-2">
+        <h1 className="text-headline-lg font-bold text-ink tracking-tight">
           {t('provider.bookings.title')}
         </h1>
-        <GroupLinks providerId={providerId} active={group} />
+      </div>
+      <GroupLinks providerId={providerId} active={group} />
+      <div className="flex flex-col px-5 pt-5">
         {bookings === undefined ? (
           <ListSkeleton label={t('provider.bookings.loading')} />
         ) : bookings.length === 0 ? (
-          <p className="text-copy-muted text-lead text-center pt-6">
-            {t(`provider.empty.${group}`)}
-          </p>
+          <p className="text-copy-muted text-body pt-4">{t(`provider.empty.${group}`)}</p>
         ) : (
           <>
             <ul className="flex flex-col gap-3">

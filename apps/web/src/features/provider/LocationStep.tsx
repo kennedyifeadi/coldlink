@@ -39,18 +39,14 @@ const LocationStep = () => {
       title={t('provider.location.title')}
       intro={t('provider.location.intro')}
       onSubmit={() => continueWith(readLocation(form))}
-      action={
-        <PrimaryButton type="submit">
-          {t('common.continue')}
-        </PrimaryButton>
-      }
+      action={<PrimaryButton type="submit">{t('common.continue')}</PrimaryButton>}
     >
       <section aria-labelledby="pin-heading" className="flex flex-col gap-3">
         <div>
-          <h2 id="pin-heading" className="block text-label font-medium text-copy mb-1">
+          <h2 id="pin-heading" className="block text-label font-semibold text-ink mb-1">
             {t('provider.location.pinTitle')}
           </h2>
-          <p className="text-copy-muted text-body">{t('provider.location.pinHint')}</p>
+          <p className="text-copy-muted text-label">{t('provider.location.pinHint')}</p>
         </div>
         <Suspense fallback={<MapPlaceholder />}>
           {/* Exact, not rounded as a farmer's pin is: the facility's place is public (decision 89). */}
@@ -61,11 +57,9 @@ const LocationStep = () => {
           />
         </Suspense>
         {form.pin && (
-          <div className="flex items-center gap-2 bg-primary-faint border border-primary-muted rounded-xl px-4 py-3">
-            <CheckCircle2 size={16} className="text-primary-strong shrink-0" aria-hidden="true" />
-            <span className="text-ink text-body font-medium">
-              {t('provider.location.pinDropped')}
-            </span>
+          <div className="flex items-center gap-2 text-primary-strong">
+            <CheckCircle2 size={18} className="shrink-0" aria-hidden="true" />
+            <span className="text-body font-semibold">{t('provider.location.pinDropped')}</span>
           </div>
         )}
         {pinError && <ErrorMessage>{pinError}</ErrorMessage>}

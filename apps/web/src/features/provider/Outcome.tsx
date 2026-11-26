@@ -38,33 +38,31 @@ const Outcome = () => {
   };
 
   return (
-    <div className="flex flex-col h-full min-h-screen bg-background relative">
+    <div className="flex flex-col min-h-screen bg-background">
       <TopNavBar title={t('provider.onboarding.navTitle')} />
 
-      <div className="flex flex-col px-6 pt-10 pb-48 flex-grow">
-        <div
-          className={`w-20 h-20 rounded-full flex items-center justify-center mb-6 ${
-            live ? 'bg-primary-soft text-primary-strong' : 'bg-accent-faint text-accent-ink'
-          }`}
-        >
-          <Icon size={36} aria-hidden="true" />
-        </div>
-        <h1 className="font-heading text-headline-lg font-bold text-ink mb-3 leading-tight tracking-tight">
+      <div className="px-5 pt-8 pb-5 rim">
+        <Icon
+          size={32}
+          className={`mb-3 ${live ? 'text-primary-strong' : 'text-accent-ink'}`}
+          aria-hidden="true"
+        />
+        <h1 className="text-headline-lg font-bold text-ink tracking-tight mb-1">
           {t(`provider.outcome.${outcome}.title`)}
         </h1>
-        <p className="text-copy-muted text-lead leading-relaxed mb-8">
+        <p className="text-copy-muted text-body">
           {t(`provider.outcome.${outcome}.intro`, { name: provider.display_name })}
         </p>
+      </div>
 
+      <div className="flex flex-col px-5 pt-6 pb-48">
         <Card className="p-5 mb-6">
           <div className="flex flex-wrap items-center justify-between gap-3 mb-3">
-            <h2 className="font-heading font-semibold text-ink text-subtitle">
-              {provider.display_name}
-            </h2>
+            <h2 className="font-semibold text-ink text-subtitle">{provider.display_name}</h2>
             <VerificationBadge status={provider.verification_status} />
           </div>
-          <p className="text-copy-muted text-body">{provider.address_text}</p>
-          <p className="text-copy text-body mt-2">
+          <p className="text-copy-muted text-label">{provider.address_text}</p>
+          <p className="text-ink text-body mt-2">
             {t('provider.outcome.summary', {
               capacity: formatAmount(provider.capacity_total, provider.capacity_unit, t),
               price: formatKobo(provider.price_per_unit_per_day_kobo),
@@ -73,10 +71,10 @@ const Outcome = () => {
           </p>
         </Card>
 
-        <h2 className="font-heading font-semibold text-ink text-subtitle mb-3">
+        <h2 className="font-semibold text-ink text-subtitle mb-3">
           {t('provider.outcome.nextTitle')}
         </h2>
-        <ul className="flex flex-col gap-2 list-disc pl-5 text-copy text-body leading-relaxed">
+        <ul className="flex flex-col gap-2 list-disc pl-5 text-ink text-body marker:text-primary">
           {NEXT_STEPS[outcome].map((key) => (
             <li key={key}>{t(`provider.outcome.${key}`)}</li>
           ))}
@@ -84,7 +82,7 @@ const Outcome = () => {
       </div>
 
       <BottomActionBar>
-        <div className="flex flex-col gap-2">
+        <div className="flex flex-col gap-3">
           <PrimaryButton onClick={() => leave(PROVIDER_ONBOARDING_PATH)}>
             {t('provider.outcome.seeFacilities')}
           </PrimaryButton>

@@ -6,7 +6,7 @@ import { useQuery } from '@tanstack/react-query';
 import type { OwnProvider } from '@coldlink/shared';
 import TopNavBar from '../../components/TopNavBar';
 import BottomActionBar from '../../components/ui/BottomActionBar';
-import Card from '../../components/ui/Card';
+import PageHeader from '../../components/ui/PageHeader';
 import ErrorMessage from '../../components/ui/ErrorMessage';
 import PrimaryButton from '../../components/ui/PrimaryButton';
 import TextButton from '../../components/ui/TextButton';
@@ -14,7 +14,6 @@ import { describeApiError } from '../../api/describeError';
 import { ownProvidersQuery } from '../../api/providers';
 import { useSessionStore } from '../../session/sessionContext';
 import { providerDashboardPath } from '../../session/routes';
-import { facilityTypeIcons } from '../search/facilityTypeIcons';
 import {
   ONBOARDING_STEPS,
   firstUnfinishedStep,
@@ -31,48 +30,38 @@ const resumePath = (draft: OnboardingDraft) =>
 
 const FacilityCard = ({ provider }: { provider: OwnProvider }) => {
   const { t } = useTranslation();
-  const TypeIcon = facilityTypeIcons[provider.facility_type];
 
   return (
-    <Card className="p-5">
-      <Link
-        to={providerDashboardPath(provider.id)}
-        className="group flex items-start gap-4 rounded-lg focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-primary-strong"
-      >
-        <div className="w-12 h-12 rounded-full bg-primary-soft text-primary-strong flex items-center justify-center shrink-0">
-          <TypeIcon size={24} aria-hidden="true" />
-        </div>
-        <div className="flex flex-col gap-1 min-w-0 flex-grow">
-          <h2 className="font-heading font-semibold text-ink text-subtitle leading-snug">
-            {provider.display_name}
-          </h2>
-          <p className="text-copy-muted text-body">
-            {t(`search.facilityTypes.${provider.facility_type}`)}
-          </p>
-          <p className="flex items-start gap-1.5 text-copy text-body">
-            <MapPin size={16} aria-hidden="true" className="shrink-0 mt-1 text-copy-subtle" />
-            <span>
-              {provider.lga ? `${provider.address_text}, ${provider.lga}` : provider.address_text}
-            </span>
-          </p>
-          <div className="mt-2">
-            <VerificationBadge status={provider.verification_status} />
-          </div>
-        </div>
-        <ChevronRight
-          size={20}
-          className="text-copy-subtle shrink-0 mt-1 transition-transform group-hover:translate-x-0.5"
-          aria-hidden="true"
-        />
-      </Link>
-    </Card>
+    <Link
+      to={providerDashboardPath(provider.id)}
+      className="group flex items-start gap-4 px-5 py-5 transition-colors hover:bg-surface-muted focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-primary"
+    >
+      <div className="flex flex-col gap-1 min-w-0 flex-grow">
+        <VerificationBadge status={provider.verification_status} />
+        <h2 className="font-bold text-ink text-subtitle mt-1">{provider.display_name}</h2>
+        <p className="text-copy-muted text-label">
+          {t(`search.facilityTypes.${provider.facility_type}`)}
+        </p>
+        <p className="flex items-start gap-1.5 text-ink text-label">
+          <MapPin size={15} aria-hidden="true" className="shrink-0 mt-0.5 text-copy-subtle" />
+          <span>
+            {provider.lga ? `${provider.address_text}, ${provider.lga}` : provider.address_text}
+          </span>
+        </p>
+      </div>
+      <ChevronRight
+        size={20}
+        className="text-copy-subtle shrink-0 mt-1 transition-transform duration-150 group-hover:translate-x-0.5"
+        aria-hidden="true"
+      />
+    </Link>
   );
 };
 
 const FacilitiesSkeleton = () => (
-  <div aria-hidden="true" className="flex flex-col gap-4">
+  <div aria-hidden="true" className="flex flex-col gap-4 px-5 pt-5">
     {Array.from({ length: 2 }, (_, index) => (
-      <div key={index} className="h-36 rounded-2xl bg-surface-muted" />
+      <div key={index} className="h-32 rounded-xl bg-surface-muted" />
     ))}
   </div>
 );
@@ -99,19 +88,11 @@ const Facilities = () => {
   };
 
   return (
-    <div className="flex flex-col h-full min-h-screen bg-background relative">
+    <div className="flex flex-col min-h-screen bg-background">
       <TopNavBar title={t('provider.facilities.navTitle')} showBack={true} />
+      <PageHeader title={t('provider.facilities.title')} intro={t('provider.facilities.intro')} />
 
-      <div className="flex flex-col gap-6 px-6 pt-8 pb-32 flex-grow">
-        <div>
-          <h1 className="font-heading text-headline-lg font-bold text-ink mb-3 leading-tight tracking-tight">
-            {t('provider.facilities.title')}
-          </h1>
-          <p className="text-copy-muted text-lead leading-relaxed">
-            {t('provider.facilities.intro')}
-          </p>
-        </div>
-
+      <div className="flex flex-col pb-32">
         {(facilities.isPending || (facilities.isFetching && facilities.data?.length === 0)) && (
           <>
             <p role="status" className="sr-only">
@@ -122,7 +103,7 @@ const Facilities = () => {
         )}
 
         {facilities.isError && (
-          <div className="flex flex-col gap-3">
+          <div className="flex flex-col gap-3 px-5 pt-5">
             <ErrorMessage>{describeApiError(facilities.error, t)}</ErrorMessage>
             <TextButton onClick={() => void facilities.refetch()} disabled={facilities.isFetching}>
               {t('common.tryAgain')}
@@ -131,7 +112,7 @@ const Facilities = () => {
         )}
 
         {facilities.isSuccess && facilities.data.length > 0 && (
-          <ul className="flex flex-col gap-4">
+          <ul className="divide-y divide-line border-b border-line">
             {facilities.data.map((provider) => (
               <li key={provider.id}>
                 <FacilityCard provider={provider} />

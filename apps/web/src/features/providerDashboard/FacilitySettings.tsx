@@ -11,6 +11,7 @@ import Card from '../../components/ui/Card';
 import CardTitle from '../../components/ui/CardTitle';
 import ErrorMessage from '../../components/ui/ErrorMessage';
 import PrimaryButton from '../../components/ui/PrimaryButton';
+import SecondaryButton from '../../components/ui/SecondaryButton';
 import { useSessionStore } from '../../session/sessionContext';
 import { LoadFailed } from '../booking/BookingStates';
 import { apiFieldErrors } from '../provider/apiFieldErrors';
@@ -18,7 +19,6 @@ import { TextField } from '../provider/fields';
 import PhotoManager from '../provider/PhotoManager';
 import { usePhotoManager } from '../provider/usePhotoManager';
 import { formatAmount } from '../search/units';
-import { secondaryButton } from './BookingActions';
 import { FacilityNotFound, ListSkeleton } from './ProviderStates';
 import {
   isSettingsField,
@@ -57,31 +57,26 @@ const BookingsCard = ({ provider }: { provider: OwnProvider }) => {
   const StateIcon = accepting ? CheckCircle2 : CirclePause;
 
   return (
-    <Card className="p-6 mb-6">
+    <Card className="p-5 mb-6">
       <CardTitle>{t('provider.settings.bookingsTitle')}</CardTitle>
       <p
-        className={`inline-flex items-center gap-2 rounded-full px-3 py-1 text-body font-semibold mb-2 ${
-          accepting ? 'bg-primary-soft text-ink' : 'bg-accent-faint text-accent-ink'
+        className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-label font-semibold mb-2 ${
+          accepting ? 'bg-primary-soft text-primary-strong' : 'bg-accent-faint text-accent-ink'
         }`}
       >
         <StateIcon size={16} strokeWidth={2.5} aria-hidden="true" />
         {accepting ? t('provider.settings.accepting') : t('provider.settings.paused')}
       </p>
-      <p className="text-copy-muted text-body mb-5">
+      <p className="text-copy-muted text-body mb-4">
         {accepting ? t('provider.settings.acceptingHint') : t('provider.settings.pausedHint')}
       </p>
       <div className="flex flex-col gap-3">
         {toggle.isError && <ErrorMessage>{describeApiError(toggle.error, t)}</ErrorMessage>}
-        <button
-          type="button"
-          onClick={() => toggle.mutate(!accepting)}
-          disabled={toggle.isPending}
-          className={secondaryButton}
-        >
+        <SecondaryButton onClick={() => toggle.mutate(!accepting)} disabled={toggle.isPending}>
           {toggle.isPending
             ? t(accepting ? 'provider.settings.pausing' : 'provider.settings.resuming')
             : t(accepting ? 'provider.settings.pause' : 'provider.settings.resume')}
-        </button>
+        </SecondaryButton>
       </div>
     </Card>
   );
@@ -121,7 +116,7 @@ const NumberRow = ({ field, label, masked, value, onChange, error }: NumberRowPr
                   ? t('provider.settings.addWhatsappLabel')
                   : t('provider.settings.changeWhatsappLabel')
             }
-            className="min-h-12 px-2 text-primary-strong font-medium text-body underline shrink-0"
+            className="min-h-12 px-2 text-primary-strong font-semibold text-body underline underline-offset-2 shrink-0"
           >
             {masked === null ? t('provider.settings.add') : t('provider.settings.change')}
           </button>
@@ -145,7 +140,7 @@ const NumberRow = ({ field, label, masked, value, onChange, error }: NumberRowPr
           <button
             type="button"
             onClick={() => onChange(undefined)}
-            className="self-start min-h-12 text-copy-muted font-medium text-body underline"
+            className="self-start min-h-12 text-copy-muted font-medium text-body underline underline-offset-2"
           >
             {t('provider.settings.keepNumber')}
           </button>
@@ -223,98 +218,104 @@ const SettingsBody = ({ provider }: { provider: OwnProvider }) => {
       : undefined;
 
   return (
-    <div className="flex flex-col px-5 pt-6">
-      <h1 className="font-heading text-headline font-bold text-ink mb-6 break-words">
-        {provider.display_name}
-      </h1>
+    <>
+      <div className="px-5 pt-6 pb-5 rim">
+        <h1 className="text-headline-lg font-bold text-ink tracking-tight break-words">
+          {provider.display_name}
+        </h1>
+      </div>
+      <div className="flex flex-col px-5 pt-6">
+        <BookingsCard provider={provider} />
 
-      <BookingsCard provider={provider} />
-
-      <form noValidate onSubmit={handleSubmit} className="flex flex-col">
-        <Card className="p-6 mb-6">
-          <CardTitle>{t('provider.settings.spaceTitle')}</CardTitle>
-          <div className="flex flex-col gap-6">
-            <div className="flex flex-col gap-3">
-              <TextField
-                id="settings-capacity"
-                label={t('provider.capacity.capacityLabel')}
-                hint={t('provider.settings.unitNote', {
-                  unit: t(`provider.capacity.unitSuffix.${unit}`),
-                })}
-                inputMode="decimal"
-                suffix={t(`provider.capacity.unitSuffix.${unit}`)}
-                value={form.capacity}
-                onChange={(text) => change('capacity_total', { capacity: text })}
-                error={errorFor('capacity_total')}
-              />
-              {belowBooked && (
-                <p className="flex items-start gap-2 rounded-lg bg-accent-faint text-accent-ink px-3 py-2 text-body font-medium">
-                  <TriangleAlert size={18} aria-hidden="true" className="shrink-0 mt-0.5" />
-                  {t('provider.settings.belowBooked', { booked: formatAmount(booked, unit, t) })}
-                </p>
-              )}
-            </div>
-            <TextField
-              id="settings-price"
-              label={t('provider.capacity.priceLabelFor', {
-                unit: t(`provider.capacity.perUnit.${unit}`),
-              })}
-              hint={t('provider.settings.priceHint')}
-              inputMode="decimal"
-              suffix={t('provider.capacity.naira')}
-              value={form.price}
-              onChange={(text) => change('price_per_unit_per_day_kobo', { price: text })}
-              error={errorFor('price_per_unit_per_day_kobo')}
-            />
-          </div>
-        </Card>
-
-        <Card className="p-6 mb-6">
-          <CardTitle>{t('provider.settings.numbersTitle')}</CardTitle>
-          <div className="flex flex-col gap-5">
-            <NumberRow
-              field="phone"
-              label={t('provider.settings.smsLabel')}
-              masked={provider.phone_masked}
-              value={form.phone}
-              onChange={(phone) => change('phone', { phone })}
-              error={errorFor('phone')}
-            />
-            <NumberRow
-              field="whatsapp"
-              label={t('provider.settings.whatsappLabel')}
-              masked={provider.whatsapp_masked}
-              value={form.whatsapp}
-              onChange={(whatsapp) => change('whatsapp', { whatsapp })}
-              error={errorFor('whatsapp')}
-            />
-          </div>
-        </Card>
-
-        <div className="flex flex-col gap-3 mb-8">
-          {submitError && <ErrorMessage>{submitError}</ErrorMessage>}
-          {notice && (
-            <p role="status" className="flex items-center gap-2 text-ink text-body font-medium">
-              {notice === 'saved' && (
-                <CheckCircle2
-                  size={18}
-                  className="text-primary-strong shrink-0"
-                  aria-hidden="true"
+        <form noValidate onSubmit={handleSubmit} className="flex flex-col">
+          <Card className="p-5 mb-6">
+            <CardTitle>{t('provider.settings.spaceTitle')}</CardTitle>
+            <div className="flex flex-col gap-6">
+              <div className="flex flex-col gap-3">
+                <TextField
+                  id="settings-capacity"
+                  label={t('provider.capacity.capacityLabel')}
+                  hint={t('provider.settings.unitNote', {
+                    unit: t(`provider.capacity.unitSuffix.${unit}`),
+                  })}
+                  inputMode="decimal"
+                  suffix={t(`provider.capacity.unitSuffix.${unit}`)}
+                  value={form.capacity}
+                  onChange={(text) => change('capacity_total', { capacity: text })}
+                  error={errorFor('capacity_total')}
                 />
-              )}
-              {t(`provider.settings.${notice}`)}
-            </p>
-          )}
-          <PrimaryButton type="submit" disabled={save.isPending}>
-            {save.isPending ? t('provider.settings.saving') : t('provider.settings.save')}
-          </PrimaryButton>
-        </div>
-      </form>
+                {belowBooked && (
+                  <p className="flex items-start gap-2 rounded-lg bg-accent-faint text-accent-ink px-3 py-2 text-label font-medium">
+                    <TriangleAlert size={18} aria-hidden="true" className="shrink-0 mt-0.5" />
+                    {t('provider.settings.belowBooked', { booked: formatAmount(booked, unit, t) })}
+                  </p>
+                )}
+              </div>
+              <TextField
+                id="settings-price"
+                label={t('provider.capacity.priceLabelFor', {
+                  unit: t(`provider.capacity.perUnit.${unit}`),
+                })}
+                hint={t('provider.settings.priceHint')}
+                inputMode="decimal"
+                suffix={t('provider.capacity.naira')}
+                value={form.price}
+                onChange={(text) => change('price_per_unit_per_day_kobo', { price: text })}
+                error={errorFor('price_per_unit_per_day_kobo')}
+              />
+            </div>
+          </Card>
 
-      <Card className="p-6 mb-6">
-        <PhotoManager photos={photos} hint={t('provider.settings.photosHint')} />
-      </Card>
-    </div>
+          <Card className="p-5 mb-6">
+            <CardTitle>{t('provider.settings.numbersTitle')}</CardTitle>
+            <div className="flex flex-col gap-5">
+              <NumberRow
+                field="phone"
+                label={t('provider.settings.smsLabel')}
+                masked={provider.phone_masked}
+                value={form.phone}
+                onChange={(phone) => change('phone', { phone })}
+                error={errorFor('phone')}
+              />
+              <NumberRow
+                field="whatsapp"
+                label={t('provider.settings.whatsappLabel')}
+                masked={provider.whatsapp_masked}
+                value={form.whatsapp}
+                onChange={(whatsapp) => change('whatsapp', { whatsapp })}
+                error={errorFor('whatsapp')}
+              />
+            </div>
+          </Card>
+
+          <div className="flex flex-col gap-3 mb-8">
+            {submitError && <ErrorMessage>{submitError}</ErrorMessage>}
+            {notice && (
+              <p
+                role="status"
+                className="flex items-center gap-2 text-primary-strong text-body font-semibold"
+              >
+                {notice === 'saved' && (
+                  <CheckCircle2
+                    size={18}
+                    className="text-primary-strong shrink-0"
+                    aria-hidden="true"
+                  />
+                )}
+                {t(`provider.settings.${notice}`)}
+              </p>
+            )}
+            <PrimaryButton type="submit" disabled={save.isPending}>
+              {save.isPending ? t('provider.settings.saving') : t('provider.settings.save')}
+            </PrimaryButton>
+          </div>
+        </form>
+
+        <Card className="p-5 mb-6">
+          <PhotoManager photos={photos} hint={t('provider.settings.photosHint')} />
+        </Card>
+      </div>
+    </>
   );
 };
 
@@ -343,7 +344,7 @@ const FacilitySettings = () => {
   }
 
   return (
-    <div className="flex flex-col h-full min-h-screen bg-background relative pb-10">
+    <div className="flex flex-col min-h-screen bg-background pb-10">
       <TopNavBar title={navTitle} showBack={true} />
       {provider ? (
         <SettingsBody key={provider.id} provider={provider} />

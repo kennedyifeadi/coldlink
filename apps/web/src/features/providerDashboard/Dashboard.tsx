@@ -33,23 +33,23 @@ const OccupancyCard = ({ occupancy }: { occupancy: ProviderDashboard['occupancy'
   const share = occupancy.total > 0 ? Math.min(occupancy.used / occupancy.total, 1) : 0;
 
   return (
-    <Card className="p-6 mb-6">
-      <h2 className="text-copy-muted text-label font-medium mb-2">
+    <Card className="p-5 mb-8">
+      <h2 className="text-copy-muted text-label font-medium mb-1">
         {t('provider.dashboard.occupancyTitle', { date: formatDate(occupancy.date) })}
       </h2>
-      <p className="font-heading font-bold text-headline text-ink mb-4">
+      <p className="font-bold text-headline text-ink tabular-nums mb-3">
         {t('provider.dashboard.occupancyValue', {
           used: formatNumber(occupancy.used),
           total: formatAmount(occupancy.total, occupancy.capacity_unit, t),
         })}
       </p>
-      <div aria-hidden="true" className="h-3 w-full rounded-full bg-surface-sunken overflow-hidden">
+      <div aria-hidden="true" className="h-2 w-full rounded-full bg-surface-sunken overflow-hidden">
         <div
           className="h-full rounded-full bg-primary"
           style={{ width: `${Math.round(share * 100)}%` }}
         />
       </div>
-      <p className="text-copy-subtle text-label mt-3">{t('provider.dashboard.occupancyHint')}</p>
+      <p className="text-copy-muted text-label mt-3">{t('provider.dashboard.occupancyHint')}</p>
     </Card>
   );
 };
@@ -67,14 +67,14 @@ const BookingSection = ({ providerId, group, list }: BookingSectionProps) => {
   return (
     <section aria-labelledby={headingId} className="mb-8">
       <div className="flex items-baseline justify-between gap-3 mb-3">
-        <h2 id={headingId} className="font-heading font-semibold text-ink text-title">
+        <h2 id={headingId} className="font-bold text-ink text-title">
           {t(`provider.groups.${group}`)}{' '}
-          <span className="text-copy-muted font-sans text-lead">({formatNumber(list.count)})</span>
+          <span className="text-copy-muted font-medium">({formatNumber(list.count)})</span>
         </h2>
         {list.count > list.items.length && (
           <Link
             to={providerBookingsPath(providerId, group)}
-            className="inline-flex items-center min-h-12 text-primary-strong font-medium text-body"
+            className="inline-flex items-center min-h-12 text-primary-strong font-semibold text-body"
           >
             {t('provider.dashboard.seeAll', { total: formatNumber(list.count) })}
           </Link>
@@ -106,7 +106,7 @@ const EarningsCard = ({
   const { t } = useTranslation();
 
   return (
-    <Card className="p-6 mb-6">
+    <Card className="p-5 mb-6">
       <CardTitle>{t('provider.dashboard.earningsTitle')}</CardTitle>
       <div className="flex flex-col gap-3">
         <SummaryRow
@@ -116,10 +116,10 @@ const EarningsCard = ({
         />
         <SummaryRow label={t('provider.dashboard.paid')} value={formatKobo(earnings.paid_kobo)} />
       </div>
-      <p className="text-copy-subtle text-label mt-4">{t('provider.dashboard.earningsHint')}</p>
+      <p className="text-copy-muted text-label mt-4">{t('provider.dashboard.earningsHint')}</p>
       <Link
         to={providerEarningsPath(providerId)}
-        className="inline-flex items-center gap-1 min-h-12 mt-2 text-primary-strong font-medium text-body"
+        className="inline-flex items-center gap-1 min-h-12 mt-1 text-primary-strong font-semibold text-body"
       >
         {t('provider.dashboard.earningsLink')}
         <ChevronRight size={18} aria-hidden="true" />
@@ -133,30 +133,34 @@ const DashboardBody = ({ dashboard }: { dashboard: ProviderDashboard }) => {
   const providerId = dashboard.provider.id;
 
   return (
-    <div className="flex flex-col px-5 pt-6">
-      <h1 className="font-heading text-headline font-bold text-ink mb-2 break-words">
-        {dashboard.provider.display_name}
-      </h1>
-      <Link
-        to={providerSettingsPath(providerId)}
-        className="self-start inline-flex items-center gap-2 min-h-12 mb-4 text-primary-strong font-medium text-body"
-      >
-        <Settings size={18} aria-hidden="true" />
-        {t('provider.dashboard.settingsLink')}
-      </Link>
-      <OccupancyCard occupancy={dashboard.occupancy} />
-      <BookingSection providerId={providerId} group="requests" list={dashboard.requests} />
-      <BookingSection providerId={providerId} group="upcoming" list={dashboard.upcoming} />
-      <BookingSection providerId={providerId} group="in_storage" list={dashboard.in_storage} />
-      <EarningsCard providerId={providerId} earnings={dashboard.earnings} />
-      <Link
-        to={providerBookingsPath(providerId)}
-        className="flex items-center justify-center gap-2 w-full min-h-12 py-3 rounded-lg font-medium text-lead bg-surface border border-line-strong text-ink hover:bg-surface-muted transition-colors"
-      >
-        {t('provider.dashboard.allBookings')}
-        <ChevronRight size={20} aria-hidden="true" />
-      </Link>
-    </div>
+    <>
+      <div className="flex flex-col px-5 pt-6 pb-3 rim">
+        <h1 className="text-headline-lg font-bold text-ink tracking-tight break-words">
+          {dashboard.provider.display_name}
+        </h1>
+        <Link
+          to={providerSettingsPath(providerId)}
+          className="self-start inline-flex items-center gap-2 min-h-12 text-primary-strong font-semibold text-body"
+        >
+          <Settings size={18} aria-hidden="true" />
+          {t('provider.dashboard.settingsLink')}
+        </Link>
+      </div>
+      <div className="flex flex-col px-5 pt-6">
+        <OccupancyCard occupancy={dashboard.occupancy} />
+        <BookingSection providerId={providerId} group="requests" list={dashboard.requests} />
+        <BookingSection providerId={providerId} group="upcoming" list={dashboard.upcoming} />
+        <BookingSection providerId={providerId} group="in_storage" list={dashboard.in_storage} />
+        <EarningsCard providerId={providerId} earnings={dashboard.earnings} />
+        <Link
+          to={providerBookingsPath(providerId)}
+          className="flex items-center justify-center gap-2 w-full min-h-12 px-5 rounded-full font-semibold text-body border border-line-strong text-ink hover:bg-surface-muted transition-colors"
+        >
+          {t('provider.dashboard.allBookings')}
+          <ChevronRight size={18} aria-hidden="true" />
+        </Link>
+      </div>
+    </>
   );
 };
 
@@ -187,7 +191,7 @@ const Dashboard = () => {
   }
 
   return (
-    <div className="flex flex-col h-full min-h-screen bg-background relative pb-10">
+    <div className="flex flex-col min-h-screen bg-background pb-10">
       <TopNavBar title={navTitle} showBack={true} />
       {query.data ? (
         <DashboardBody dashboard={query.data} />
