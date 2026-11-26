@@ -272,7 +272,7 @@ const Location = () => {
       </div>
 
       <BottomActionBar>
-        <PrimaryButton onClick={handleContinue} disabled={!chosen} withArrow>
+        <PrimaryButton onClick={handleContinue} disabled={!chosen}>
           {t('common.continue')}
         </PrimaryButton>
       </BottomActionBar>

@@ -40,7 +40,7 @@ const LocationStep = () => {
       intro={t('provider.location.intro')}
       onSubmit={() => continueWith(readLocation(form))}
       action={
-        <PrimaryButton type="submit" withArrow>
+        <PrimaryButton type="submit">
           {t('common.continue')}
         </PrimaryButton>
       }

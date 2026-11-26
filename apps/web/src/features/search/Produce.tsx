@@ -154,7 +154,7 @@ const Produce = () => {
       </div>
 
       <BottomActionBar>
-        <PrimaryButton onClick={handleContinue} disabled={!selected} withArrow>
+        <PrimaryButton onClick={handleContinue} disabled={!selected}>
           {t('common.continue')}
         </PrimaryButton>
       </BottomActionBar>

@@ -173,7 +173,6 @@ const OtpEntryForm = ({ pending }: { pending: PendingSignIn }) => {
         <PrimaryButton
           type="submit"
           disabled={code.length < CODE_LENGTH || verify.isPending}
-          withArrow
         >
           {verify.isPending ? t('auth.otp.checking') : t('common.continue')}
         </PrimaryButton>

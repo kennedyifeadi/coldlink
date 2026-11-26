@@ -109,7 +109,6 @@ const PayButton = ({ terms, attempt, onPay }: PayButtonProps) => {
       <PrimaryButton
         onClick={onPay}
         disabled={attempt.redirecting}
-        withArrow={!attempt.redirecting}
       >
         {attempt.redirecting
           ? t('booking.payment.opening')

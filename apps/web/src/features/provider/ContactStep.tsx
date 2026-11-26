@@ -26,7 +26,7 @@ const ContactStep = () => {
       intro={t('provider.contact.intro')}
       onSubmit={() => continueWith(readContact(form))}
       action={
-        <PrimaryButton type="submit" withArrow>
+        <PrimaryButton type="submit">
           {t('common.continue')}
         </PrimaryButton>
       }

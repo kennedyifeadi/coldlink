@@ -191,7 +191,7 @@ const Amount = () => {
       </div>
 
       <BottomActionBar>
-        <PrimaryButton type="submit" disabled={quantity.trim() === ''} withArrow>
+        <PrimaryButton type="submit" disabled={quantity.trim() === ''}>
           {t('search.amount.submit')}
         </PrimaryButton>
       </BottomActionBar>

@@ -115,7 +115,6 @@ const Onboarding = () => {
         <PrimaryButton
           type="submit"
           disabled={phoneNumber.trim() === '' || sendCode.isPending}
-          withArrow
         >
           {sendCode.isPending ? t('auth.onboarding.sending') : t('common.continue')}
         </PrimaryButton>

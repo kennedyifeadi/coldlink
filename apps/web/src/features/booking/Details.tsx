@@ -279,7 +279,6 @@ const Details = () => {
                   bookingStepPath('review', booking.route.providerId, booking.route.intent),
                 )
               }
-              withArrow
             >
               {t('booking.details.continue')}
             </PrimaryButton>

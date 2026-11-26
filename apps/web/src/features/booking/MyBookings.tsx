@@ -96,7 +96,7 @@ const NoBookings = () => {
       <p className="text-copy-muted text-lead leading-relaxed max-w-sm mb-10">
         {t('booking.myBookings.emptyBody')}
       </p>
-      <PrimaryButton onClick={() => void navigate(SEARCH_STEPS.place)} withArrow>
+      <PrimaryButton onClick={() => void navigate(SEARCH_STEPS.place)}>
         {t('booking.myBookings.findStorage')}
       </PrimaryButton>
     </div>

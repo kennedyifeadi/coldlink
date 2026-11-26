@@ -106,7 +106,6 @@ const Review = () => {
                         bookingStepPath('payment', booking.route.providerId, booking.route.intent),
                       )
                     }
-                    withArrow
                   >
                     {t('booking.payAmount', {
                       amount: formatKobo(booking.quote.total_charged_online_kobo),

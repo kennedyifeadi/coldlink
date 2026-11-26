@@ -143,7 +143,7 @@ const Facilities = () => {
 
       {facilities.isSuccess && facilities.data.length > 0 && (
         <BottomActionBar>
-          <PrimaryButton onClick={listAnother} withArrow>
+          <PrimaryButton onClick={listAnother}>
             {t('provider.facilities.listAnother')}
           </PrimaryButton>
         </BottomActionBar>

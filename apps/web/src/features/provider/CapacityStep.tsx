@@ -28,7 +28,7 @@ const CapacityStep = () => {
       intro={t('provider.capacity.intro')}
       onSubmit={() => continueWith(readCapacity(form))}
       action={
-        <PrimaryButton type="submit" withArrow>
+        <PrimaryButton type="submit">
           {t('common.continue')}
         </PrimaryButton>
       }

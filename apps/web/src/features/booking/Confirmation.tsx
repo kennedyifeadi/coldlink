@@ -174,7 +174,7 @@ const Confirmation = () => {
           {isPaidAndStanding(booking.status) && <PaymentDetails booking={booking} />}
 
           <div className="flex flex-col gap-4 mt-auto">
-            <PrimaryButton onClick={() => void navigate(MY_BOOKINGS_PATH)} withArrow>
+            <PrimaryButton onClick={() => void navigate(MY_BOOKINGS_PATH)}>
               {t('booking.confirmation.viewBookings')}
             </PrimaryButton>
             <a

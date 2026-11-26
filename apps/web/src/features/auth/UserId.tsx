@@ -58,7 +58,7 @@ const UserId = () => {
   return (
     <div className="flex flex-col h-full min-h-screen bg-background relative pb-20">
       {/* Top App Bar */}
-      <TopNavBar title={t('auth.userId.navTitle')} showProfile={true} />
+      <TopNavBar title={t('auth.userId.navTitle')} />
 
       <div className="flex flex-col px-6 pt-12 items-center text-center flex-grow">
         {/* Success Icon */}
@@ -108,7 +108,7 @@ const UserId = () => {
             {t('auth.userId.findStorage')}
           </PrimaryButton>
         ) : (
-          <PrimaryButton onClick={() => void navigate(returnTo, { replace: true })} withArrow>
+          <PrimaryButton onClick={() => void navigate(returnTo, { replace: true })}>
             {t('auth.userId.continue')}
           </PrimaryButton>
         )}

@@ -58,7 +58,7 @@ const Home = () => {
           </div>
           <p className="text-copy text-body leading-relaxed">{t('search.home.searchHint')}</p>
         </div>
-        <PrimaryButton onClick={() => void navigate(SEARCH_STEPS.place)} withArrow>
+        <PrimaryButton onClick={() => void navigate(SEARCH_STEPS.place)}>
           {t('search.home.findStorage')}
         </PrimaryButton>
       </Card>
