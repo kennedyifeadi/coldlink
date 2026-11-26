@@ -69,7 +69,7 @@ describe('GET /api/v1/config/public', () => {
     );
     expect(Object.keys(response.body as object).toSorted()).toEqual(publicKeys.toSorted());
     const privateKeys = appConfigKeys.filter((key) => !publicKeys.includes(key));
-    expect(privateKeys).toHaveLength(11);
+    expect(privateKeys).toHaveLength(12);
     for (const key of [...privateKeys, 'new_internal_key']) {
       expect(response.body).not.toHaveProperty(key);
     }
