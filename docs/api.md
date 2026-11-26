@@ -72,15 +72,17 @@ A provider is a storage facility (PRD 5.3, 7.2; decisions 62 to 66).
 - **Send** the facility's `provider_id`, `quantity` in the facility's `capacity_unit` (whole crates), `days`, and optionally `start_date` (today in Lagos by default, never earlier).
 - **What can be quoted:** the facilities search would show that are taking bookings. Any other id is a 404. A `capacity_unit` other than the facility's, or fewer `days` than its `min_storage_days`, is a 400 on that field.
 - **Capacity:** if less than `quantity` is free on any day of the period, the answer is 409 `conflict` with `details.available_quantity`.
-- **Prices:** `storage_subtotal_kobo` is split into `deposit_kobo` (paid online) and `balance_due_kobo` (paid at the facility). `total_charged_online_kobo` is the deposit plus `service_fee_kobo` plus `delivery_fee_kobo`, which is 0 until delivery can be added to a booking.
+- **Prices:** `storage_subtotal_kobo` is split into `deposit_kobo` (paid online) and `balance_due_kobo` (paid at the facility). `total_charged_online_kobo` is the deposit plus `service_fee_kobo` plus `delivery_fee_kobo`, the fee of the inbound delivery asked for, or 0.
+- **An inbound delivery** can be priced with the booking (decision 146): send `delivery: { location, load_quantity, load_unit }`, the farmer's point and the load. The answer's `delivery` is its quote, as `POST /deliveries/quote` gives it (below), and is null without one.
 
 The farmer's own bookings (PRD 5.5, 6.3, 6.6, 6.7, 7.4, 7.8; decisions 82 to 86, 126 to 128) need a signed-in user with the `farmer` role; any other role gets 403.
 
 - **`POST /bookings`** takes the quote's body plus `crop_id`, and answers with the same 400s, 404 and 409 as the quote. The facility must store the crop's category (otherwise 400 on `crop_id`). On success it is 201 with the booking in `payment_pending`, holding the space until `payment_expires_at`; pay before then, or the booking expires and the space is freed. Two requests for the last space are handled one after the other, so only one gets it.
 - **Prices are fixed when booking:** every price, rate and fee is copied onto the booking, so a later change to the facility's price or the platform's rates never changes it.
+- **`delivery`** (optional) asks for an inbound delivery with the booking (PRD 7.7; decisions 140 to 142): `address_text` and `location` (where the load is picked up), `contact_phone` (a Nigerian mobile number, as typed) and an optional `contact_name` for the person there, `load_description`, `load_quantity` and `load_unit` (`crates`, `kg` or `sqm`; whole crates), and `scheduled_for`, a day from today to `start_date` on the Lagos calendar (otherwise 400 on `delivery.scheduled_for`). The fee is worked out by the API, never taken from the body, and is the booking's `delivery_fee_kobo`, added to `total_charged_online_kobo`, which is what Paystack charges. The delivery is created `requested` and becomes live once the booking is paid.
 - **`GET /bookings`** lists the farmer's bookings, newest first, with what a list needs: code, status, dates, quantity, facility name and LGA, crop and the amounts. **`GET /bookings/:id`** gives one in full. Another farmer's booking is the same 404 as an unknown id.
 - **The full booking** (from `GET /bookings/:id`, `POST /bookings` and the cancellation) also has `status_history`, each status the booking has entered and when, oldest first, never who moved it; `provider.phone`, the facility's phone in full once it has accepted (`confirmed`, `in_storage` or `completed`) and null before or otherwise; and `cancellation`, what cancelling now would do: `{ allowed: false }`, or `{ allowed: true, refund_kobo, deposit_refund_ends_at }` with the refund the cancellation would make at that moment and, once confirmed, the last moment it still refunds the deposit.
-- **`POST /bookings/:id/cancel`**, with an optional `reason` (the body may be left out), cancels a booking awaiting the provider (`pending_provider`) or confirmed. The response adds `refund_kobo`, what the policy refunds of the online payment: all of it before the provider accepts; after that, the deposit (not the service fee) if it is at least `farmer_free_cancel_hours` before 00:00 in Lagos on `start_date`; nothing later. Any other status is 409 `conflict`, including `payment_pending`: an unpaid booking is not cancelled, it expires. The refund itself is made separately.
+- **`POST /bookings/:id/cancel`**, with an optional `reason` (the body may be left out), cancels a booking awaiting the provider (`pending_provider`) or confirmed. The response adds `refund_kobo`, what the policy refunds of the online payment: all of it before the provider accepts; after that, the deposit (not the service fee) if it is at least `farmer_free_cancel_hours` before 00:00 in Lagos on `start_date`; nothing later. Any other status is 409 `conflict`, including `payment_pending`: an unpaid booking is not cancelled, it expires. `refund_kobo` and the preview's `refund_kobo` also count the fee of each paid delivery the cancellation cancels, which is refunded in full (decision 144). The refund itself is made separately.
 - **The full booking** also has `rating`: null, or the farmer's `{ stars, comment, created_at }` once they have rated it. A booking can be rated when it is `completed` and its `rating` is null (`canRateBooking` in `packages/shared`).
 - **`POST /bookings/:id/rating`**, with `stars` (a whole number from 1 to 5) and an optional `comment` (trimmed, at most 500 characters; a blank one is stored as null), rates the facility for a `completed` booking, once. It answers 201 with the full booking, `rating` included, and the facility's `avg_rating` and `rating_count` are recomputed from all its ratings. A booking that is not `completed` is 409 `conflict` with `details.status`; one already rated is 409, including when two ratings arrive at once. Another farmer's booking is the same 404 as an unknown id. Ratings cannot be changed or deleted.
 - The farmer's view never has the commission, its rate or the provider's payout.
@@ -99,6 +101,21 @@ The provider's reads (PRD 7.2, 9.5; decisions 117 to 120) are for the facility's
 - **`GET /providers/:id/bookings/:bookingId`** (`providerBookingDetailSchema`): the booking with `status_history`, as for the farmer's full booking. A booking of another facility, or one this facility was never asked about, is 404.
 - **`GET /providers/:id/payouts?status=`** (`providerPayoutsResponseSchema`): the facility's payouts, newest `created_at` (check-in) first, ties by id, `owed` or `paid` only when `status` is given. Each has `amount_kobo`, `status`, `created_at`, `paid_at` and `reference` (null while owed) and the booking's id, code, crop and dates; never who recorded the payment, and nothing about the farmer. `earnings` is the sums of every payout of the facility, whatever the filter, as on the dashboard. Paginated with `limit` and `cursor` as the bookings list is.
 
+## Deliveries
+
+A farmer can have produce carried to the facility (inbound) or back from it (outbound) by a partner (PRD 7.7; decisions 138 to 146). A request names the farmer's end of the trip: where the load is picked up for an inbound delivery, and where it is dropped off for an outbound one; the facility is the other end.
+
+- **Prices:** the distance is the straight line between the two points × `road_distance_factor`, to 0.1 km (`distance_km`). The fee is `max(delivery_min_fee_kobo, delivery_base_fee_kobo + delivery_per_km_kobo × distance_km)`, the per-km part rounded half up to the kobo. The vehicle (`bike` below `delivery_vehicle_bands`' threshold for the load's unit, `van` at or above it) is chosen by the load. The farmer is never shown the partner's payout or ColdLink's margin.
+- **When it can be scheduled** (`scheduled_for`, a date on the Lagos calendar): inbound from today to the booking's `start_date`; outbound from today, or `start_date` if later, to `end_date`, the day the produce must be collected, both days included. A day outside the window is 400 on `scheduled_for`; a window that has closed is 409.
+- **`POST /deliveries/quote`** prices a delivery and writes nothing. It is open as `POST /bookings/quote` is, with the same rate limit. Send `direction`, `location`, `load_quantity` and `load_unit`, and either `booking_id` for one of the signed-in farmer's bookings (anyone else's, or no sign-in, is the same 404 as an unknown id) or, before booking, `provider_id` with an optional `start_date` (inbound only). It answers `direction`, `distance_km`, `vehicle_type`, `fee_kobo`, and `earliest_date` and `latest_date`, the window. A booking that does not take that delivery now is 409.
+
+The farmer's own deliveries need a signed-in user with the `farmer` role (403 otherwise). Another farmer's delivery or booking is the same 404 as an unknown id. Every answer sends `Cache-Control: no-store`, and the routes are rate limited per IP.
+
+- **`POST /deliveries`** asks for a delivery after booking: `booking_id`, `direction` and the delivery's details as for `POST /bookings`. An inbound delivery needs a `confirmed` booking, an outbound one a `confirmed` or `in_storage` booking (409 otherwise). It answers 201 with the delivery, `requested` and unpaid (`paid: false`); pay it with `POST /payments/initialize` and `{ delivery_request_id }`. A booking has at most one paid delivery in each direction that is neither cancelled nor failed: a second is 409 with `details.delivery_request_id`. An unpaid request in the same direction is replaced, that is cancelled, by the new one. Unpaid requests do not expire on a timer: one can no longer be paid once its day or its booking no longer allows it.
+- **`GET /deliveries/:id`** gives the farmer's view (`farmerDeliverySchema`): the status, `paid`, both ends with their points, the masked contact number (`contact_phone_masked`), the load, `distance_km`, `vehicle_type`, `fee_kobo`, `scheduled_for`, the 4-digit `handover_code`, which the farmer passes to whoever receives the load, the partner's times, and `cancellation`: `{ allowed: false }` or `{ allowed: true, refund_kobo }`.
+- **`POST /deliveries/:id/cancel`** cancels a delivery that has not been picked up (`requested`, `assigned` or `accepted`; 409 otherwise). A delivery asked for with a booking that is still awaiting payment cannot be cancelled on its own (409): it goes with the booking. The answer adds `refund_kobo`: the whole fee if it was paid, refunded against the delivery's own charge, or as a part refund of the booking's charge if it was paid with the booking; 0 if it was not paid. Admins are alerted of every paid delivery cancelled.
+- **When the booking ends** (rejected, expired, cancelled or a no-show), its deliveries not yet delivered are cancelled with it, and each paid one is refunded its fee once, on top of whatever the booking's own refund is.
+
 ## Action links
 
 The provider's `booking_received` SMS carries a link that answers a booking without signing in (PRD 5.13, 7.6; decisions 98, 101, 104). The token in it is single use and lasts 12 hours. One link offers both accept and reject. The link is `WEB_APP_URL` + `/a/<token>` (`providerActionPath` in `packages/shared`), a page of the web app that calls the two routes below with the token.
@@ -112,12 +129,12 @@ The provider's `booking_received` SMS carries a link that answers a booking with
 
 A farmer pays a booking's `total_charged_online_kobo` through Paystack checkout (PRD 6.4, 7.5; decisions 90 to 96). The API holds the secret key; the browser only ever sees Paystack's checkout page.
 
-- **`POST /payments/initialize`** (farmer only) takes `{ booking_id }` for the farmer's own booking and answers `{ authorization_url, reference }`. Send the farmer to `authorization_url`. The amount is the booking's, never the client's, and checkout offers the channels in `app_config.paystack_channels`. The booking must be `payment_pending` with its hold (`payment_expires_at`) still running, otherwise 409 `conflict`; another farmer's booking is the same 404 as an unknown one. Calling it again while the payment is open returns the same page and reference.
-- **After checkout** Paystack sends the farmer to the web app's `/payment/return` with `?reference=`. **`GET /payments/:reference/verify`** (farmer only, own payment, 404 otherwise) asks Paystack for the charge and, if it is paid, confirms it as the webhook would. It answers `{ reference, payment_status, booking_id, booking_status }`: `success` and `pending_provider` once confirmed; `initiated` and `payment_pending` while Paystack does not report it paid; `refunded` if it came too late (below). A charge whose amount or currency is not the booking's is 409. In development this is the only way a payment is confirmed, since Paystack cannot reach localhost.
+- **`POST /payments/initialize`** (farmer only) takes `{ booking_id }` for the farmer's own booking, or `{ delivery_request_id }` for a delivery they asked for after booking, and answers `{ authorization_url, reference }`. Send the farmer to `authorization_url`. The amount is the booking's, never the client's, and checkout offers the channels in `app_config.paystack_channels`. The booking must be `payment_pending` with its hold (`payment_expires_at`) still running, otherwise 409 `conflict`; another farmer's booking is the same 404 as an unknown one. Calling it again while the payment is open returns the same page and reference. A delivery is charged its `fee_kobo`, and must be `requested`, unpaid, and still payable: its booking still takes that delivery and its day is still in the window (409 otherwise; decision 143).
+- **After checkout** Paystack sends the farmer to the web app's `/payment/return` with `?reference=`. **`GET /payments/:reference/verify`** (farmer only, own payment, 404 otherwise) asks Paystack for the charge and, if it is paid, confirms it as the webhook would. It answers `{ reference, payment_status, booking_id, booking_status, delivery_request_id }`, the last null for a booking's own charge: `success` and `pending_provider` once confirmed; `initiated` and `payment_pending` while Paystack does not report it paid; `refunded` if it came too late (below). A charge whose amount or currency is not the booking's is 409. In development this is the only way a payment is confirmed, since Paystack cannot reach localhost.
 - **`POST /webhooks/paystack`** is Paystack's. It needs `x-paystack-signature`, the HMAC-SHA512 of the raw body with the secret key; a missing or wrong one is 401. Any signed event is answered 200, including a replay, which changes nothing; only `charge.success` is acted on.
-- **When a payment is confirmed** the booking moves to `pending_provider`, and the provider has `provider_response_minutes` from then to answer (`provider_response_due_at`).
-- **A late payment** is refunded in full and the booking is left as it is: when the booking is no longer `payment_pending`, or its hold lapsed and its space has since been booked. If the hold lapsed but the space is still free, the payment is taken as usual.
-- **Refunds** are made automatically after a rejection, a provider who does not answer in time, and a cancellation: the policy's `refund_kobo` for the farmer's own (no refund when it is 0), everything paid online for anyone else's. A refund Paystack refuses is recorded to be retried; the booking's change stands.
+- **When a payment is confirmed** the booking moves to `pending_provider`, and the provider has `provider_response_minutes` from then to answer (`provider_response_due_at`); a delivery asked for with the booking is paid with it. A delivery's own charge changes no booking: the delivery becomes paid, and live.
+- **A late payment** is refunded in full and the booking is left as it is: when the booking is no longer `payment_pending`, or its hold lapsed and its space has since been booked. If the hold lapsed but the space is still free, the payment is taken as usual. A delivery's charge is late, and refunded in full, when the delivery was cancelled meanwhile (with its booking, say) or can no longer be paid for.
+- **Refunds** are made automatically after a rejection, a provider who does not answer in time, and a cancellation: the policy's `refund_kobo` for the farmer's own (no refund when it is 0), everything paid online for anyone else's. A delivery fee paid with the booking is not part of that refund: each delivery cancelled refunds its own fee, once, so a charge can carry two refunds that add up to it. A refund Paystack refuses is recorded to be retried; the booking's change stands.
 
 ## OpenAPI
 
@@ -1447,13 +1464,166 @@ paths:
           $ref: '#/components/responses/RateLimited'
         '500':
           $ref: '#/components/responses/Internal'
+  /deliveries/quote:
+    post:
+      operationId: quoteDelivery
+      summary: Price a delivery
+      description: >-
+        Open to everyone; writes nothing. A quote for a booking needs that booking's farmer to be
+        signed in; anyone else gets the 404 an unknown booking gets. A quote for a facility is
+        inbound only. Rate limited per IP.
+      tags: [Deliveries]
+      security:
+        - {}
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DeliveryQuoteRequest'
+            example:
+              direction: inbound
+              provider_id: 0b8f6a3e-2d4c-4b1a-9e7f-3c5d2a1b0e9f
+              start_date: '2026-12-01'
+              location: { lat: 7.5, lng: 3.9 }
+              load_quantity: 5
+              load_unit: crates
+      responses:
+        '200':
+          description: The fee, vehicle and window.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeliveryQuote'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/Internal'
+  /deliveries:
+    post:
+      operationId: createDelivery
+      summary: Ask for a delivery for one of the signed-in farmer's bookings
+      description: >-
+        Farmers only. Inbound for a confirmed booking, outbound for a confirmed or in_storage one.
+        Created requested and unpaid; pay it with POST /payments/initialize. An unpaid request in
+        the same direction is replaced; a paid one is a 409.
+      tags: [Deliveries]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DeliveryCreateRequest'
+      responses:
+        '201':
+          description: The delivery, in the farmer's view.
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/NoStore'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FarmerDelivery'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/Internal'
+  /deliveries/{id}:
+    parameters:
+      - $ref: '#/components/parameters/DeliveryId'
+    get:
+      operationId: getDelivery
+      summary: One of the signed-in farmer's deliveries
+      description: >-
+        Farmers only. Another farmer's delivery is the same 404 as an unknown id. Has the handover
+        code; never the partner's payout or ColdLink's margin.
+      tags: [Deliveries]
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: The delivery, in the farmer's view.
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/NoStore'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FarmerDelivery'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/Internal'
+  /deliveries/{id}/cancel:
+    parameters:
+      - $ref: '#/components/parameters/DeliveryId'
+    post:
+      operationId: cancelDelivery
+      summary: Cancel one of the signed-in farmer's deliveries
+      description: >-
+        Farmers only, before pickup. A paid fee is refunded in full, and admins are alerted. A
+        delivery asked for with a booking still awaiting payment goes with the booking (409).
+      tags: [Deliveries]
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: The cancelled delivery and what it refunds.
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/NoStore'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CancelledDelivery'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/Internal'
   /payments/initialize:
     post:
       operationId: initializePayment
-      summary: Start paying for one of the signed-in farmer's bookings
+      summary: Start paying for one of the signed-in farmer's bookings or deliveries
       description: >-
-        For a payment_pending booking whose hold is still running. The amount is the booking's
-        total_charged_online_kobo. Calling again while the payment is open returns the same page.
+        For a payment_pending booking whose hold is still running, charged its
+        total_charged_online_kobo, or for a delivery asked for after booking that is still
+        requested, unpaid and payable, charged its fee_kobo. Calling again while the payment is
+        open returns the same page.
       tags: [Payments]
       security:
         - bearerAuth: []
@@ -1608,6 +1778,13 @@ components:
         type: string
         format: uuid
     ProviderId:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    DeliveryId:
       name: id
       in: path
       required: true
@@ -2180,6 +2357,8 @@ components:
           type: string
           format: date
           description: Defaults to today in Africa/Lagos; earlier dates are refused.
+        delivery:
+          $ref: '#/components/schemas/DeliveryLoad'
     BookingQuote:
       type: object
       additionalProperties: false
@@ -2198,6 +2377,7 @@ components:
         - service_fee_kobo
         - delivery_fee_kobo
         - total_charged_online_kobo
+        - delivery
       properties:
         provider_id:
           type: string
@@ -2235,10 +2415,15 @@ components:
           type: integer
         delivery_fee_kobo:
           type: integer
-          description: Always 0 until delivery can be added to a booking.
+          description: The inbound delivery's fee, or 0 without one.
         total_charged_online_kobo:
           type: integer
           description: Deposit plus service fee plus delivery fee.
+        delivery:
+          description: The inbound delivery's quote, or null without one.
+          oneOf:
+            - $ref: '#/components/schemas/DeliveryQuote'
+            - type: 'null'
     BookingCreateRequest:
       type: object
       description: The quote's body plus the crop.
@@ -2259,6 +2444,10 @@ components:
           $ref: '#/components/schemas/BookingQuoteRequest/properties/days'
         start_date:
           $ref: '#/components/schemas/BookingQuoteRequest/properties/start_date'
+        delivery:
+          allOf:
+            - $ref: '#/components/schemas/DeliveryDetails'
+          unevaluatedProperties: false
     CancelBookingRequest:
       type: object
       additionalProperties: false
@@ -2786,13 +2975,21 @@ components:
           type: string
           enum: [confirmed, rejected]
     InitializePaymentRequest:
-      type: object
-      required: [booking_id]
-      additionalProperties: false
-      properties:
-        booking_id:
-          type: string
-          format: uuid
+      oneOf:
+        - type: object
+          required: [booking_id]
+          additionalProperties: false
+          properties:
+            booking_id:
+              type: string
+              format: uuid
+        - type: object
+          required: [delivery_request_id]
+          additionalProperties: false
+          properties:
+            delivery_request_id:
+              type: string
+              format: uuid
     InitializedPayment:
       type: object
       required: [authorization_url, reference]
@@ -2807,7 +3004,7 @@ components:
           pattern: '^CLP-[0-9a-f]{20}$'
     PaymentVerification:
       type: object
-      required: [reference, payment_status, booking_id, booking_status]
+      required: [reference, payment_status, booking_id, booking_status, delivery_request_id]
       additionalProperties: false
       properties:
         reference:
@@ -2832,6 +3029,257 @@ components:
             - cancelled
             - no_show
             - completed
+        delivery_request_id:
+          type: [string, 'null']
+          format: uuid
+          description: The delivery a delivery charge pays for; null for a booking's own charge.
+    DeliveryLocation:
+      type: object
+      required: [lat, lng]
+      additionalProperties: false
+      properties:
+        lat:
+          type: number
+          minimum: -90
+          maximum: 90
+        lng:
+          type: number
+          minimum: -180
+          maximum: 180
+    DeliveryLoad:
+      type: object
+      description: The farmer's point and the load, as a quote needs them.
+      required: [location, load_quantity, load_unit]
+      additionalProperties: false
+      properties:
+        location:
+          $ref: '#/components/schemas/DeliveryLocation'
+        load_quantity:
+          type: number
+          exclusiveMinimum: 0
+          description: At most 3 decimal places; a whole number of crates.
+        load_unit:
+          type: string
+          enum: [sqm, crates, kg]
+    DeliveryQuoteRequest:
+      type: object
+      description: Either booking_id, or provider_id (inbound only) with an optional start_date.
+      required: [direction, location, load_quantity, load_unit]
+      additionalProperties: false
+      properties:
+        direction:
+          type: string
+          enum: [inbound, outbound]
+        booking_id:
+          type: string
+          format: uuid
+        provider_id:
+          type: string
+          format: uuid
+        start_date:
+          type: string
+          format: date
+          description: With provider_id; defaults to today in Africa/Lagos.
+        location:
+          $ref: '#/components/schemas/DeliveryLocation'
+        load_quantity:
+          $ref: '#/components/schemas/DeliveryLoad/properties/load_quantity'
+        load_unit:
+          $ref: '#/components/schemas/DeliveryLoad/properties/load_unit'
+    DeliveryQuote:
+      type: object
+      required: [direction, distance_km, vehicle_type, fee_kobo, earliest_date, latest_date]
+      additionalProperties: false
+      properties:
+        direction:
+          type: string
+          enum: [inbound, outbound]
+        distance_km:
+          type: number
+          description: Straight-line distance x road_distance_factor, to 0.1 km.
+        vehicle_type:
+          type: string
+          enum: [bike, tricycle, van, truck]
+        fee_kobo:
+          type: integer
+          description: max(min fee, base fee + per-km fee x distance_km), rounded half up.
+        earliest_date:
+          type: string
+          format: date
+          description: The first day scheduled_for may be, in Lagos.
+        latest_date:
+          type: string
+          format: date
+          description: The last day scheduled_for may be, in Lagos.
+    DeliveryDetails:
+      type: object
+      description: A delivery as the farmer asks for it. The fee is worked out by the API.
+      required:
+        - address_text
+        - location
+        - contact_phone
+        - load_description
+        - load_quantity
+        - load_unit
+        - scheduled_for
+      properties:
+        address_text:
+          type: string
+          minLength: 1
+          maxLength: 300
+          description: The farmer's end, pickup for inbound and drop-off for outbound.
+        location:
+          $ref: '#/components/schemas/DeliveryLocation'
+        contact_phone:
+          type: string
+          description: A Nigerian mobile number as typed; stored as +234 and ten digits.
+        contact_name:
+          type: string
+          minLength: 1
+          maxLength: 100
+        load_description:
+          type: string
+          minLength: 1
+          maxLength: 300
+        load_quantity:
+          $ref: '#/components/schemas/DeliveryLoad/properties/load_quantity'
+        load_unit:
+          $ref: '#/components/schemas/DeliveryLoad/properties/load_unit'
+        scheduled_for:
+          type: string
+          format: date
+          description: A day inside the booking's delivery window, in Lagos.
+    DeliveryCreateRequest:
+      allOf:
+        - type: object
+          required: [booking_id, direction]
+          properties:
+            booking_id:
+              type: string
+              format: uuid
+            direction:
+              type: string
+              enum: [inbound, outbound]
+        - $ref: '#/components/schemas/DeliveryDetails'
+      unevaluatedProperties: false
+    FarmerDelivery:
+      type: object
+      description: >-
+        The farmer's view of a delivery. Never the partner's payout or ColdLink's margin. As sent
+        by GET /deliveries/{id}, it has no other properties.
+      required:
+        - id
+        - booking_id
+        - direction
+        - status
+        - paid
+        - pickup_text
+        - pickup_location
+        - dropoff_text
+        - dropoff_location
+        - contact_name
+        - contact_phone_masked
+        - load_description
+        - load_quantity
+        - load_unit
+        - distance_km
+        - vehicle_type
+        - fee_kobo
+        - scheduled_for
+        - handover_code
+        - assigned_at
+        - picked_up_at
+        - delivered_at
+        - created_at
+        - cancellation
+      properties:
+        id:
+          type: string
+          format: uuid
+        booking_id:
+          type: string
+          format: uuid
+        direction:
+          type: string
+          enum: [inbound, outbound]
+        status:
+          type: string
+          enum: [requested, assigned, accepted, picked_up, delivered, cancelled, failed]
+        paid:
+          type: boolean
+          description: True once the fee is paid, with the booking or through its own charge.
+        pickup_text:
+          type: string
+        pickup_location:
+          $ref: '#/components/schemas/DeliveryLocation'
+        dropoff_text:
+          type: string
+        dropoff_location:
+          $ref: '#/components/schemas/DeliveryLocation'
+        contact_name:
+          type: [string, 'null']
+        contact_phone_masked:
+          type: string
+          example: '+234803***4567'
+        load_description:
+          type: string
+        load_quantity:
+          type: number
+        load_unit:
+          type: string
+          enum: [sqm, crates, kg]
+        distance_km:
+          type: number
+        vehicle_type:
+          type: string
+          enum: [bike, tricycle, van, truck]
+        fee_kobo:
+          type: integer
+        scheduled_for:
+          type: string
+          format: date
+        handover_code:
+          type: string
+          pattern: '^[0-9]{4}$'
+          description: Given to whoever receives the load, who tells it to the driver.
+        assigned_at:
+          type: [string, 'null']
+          format: date-time
+        picked_up_at:
+          type: [string, 'null']
+          format: date-time
+        delivered_at:
+          type: [string, 'null']
+          format: date-time
+        created_at:
+          type: string
+          format: date-time
+        cancellation:
+          oneOf:
+            - type: object
+              required: [allowed]
+              additionalProperties: false
+              properties:
+                allowed:
+                  const: false
+            - type: object
+              required: [allowed, refund_kobo]
+              additionalProperties: false
+              properties:
+                allowed:
+                  const: true
+                refund_kobo:
+                  type: integer
+    CancelledDelivery:
+      allOf:
+        - $ref: '#/components/schemas/FarmerDelivery'
+        - type: object
+          required: [refund_kobo]
+          properties:
+            refund_kobo:
+              type: integer
+              description: The whole fee if it was paid, otherwise 0.
+      unevaluatedProperties: false
     ErrorCode:
       type: string
       enum:
