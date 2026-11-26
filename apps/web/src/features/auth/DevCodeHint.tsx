@@ -9,14 +9,14 @@ interface DevCodeHintProps {
 // translated, since no real farmer ever sees it.
 /* eslint-disable i18next/no-literal-string */
 const DevCodeHint = ({ code, onUse }: DevCodeHintProps) => (
-  <div className="flex items-center justify-between gap-3 mb-6 px-4 py-3 rounded-lg border border-dashed border-line-strong bg-surface-muted text-label text-copy-muted">
+  <div className="flex items-center justify-between gap-3 mb-6 px-4 py-3 rounded-xl border border-dashed border-line-strong bg-surface-muted text-label text-copy-muted">
     <span>
       Dev code: <span className="font-bold text-copy tabular-nums">{code}</span>
     </span>
     <button
       type="button"
       onClick={() => onUse(code)}
-      className="font-medium text-primary-strong underline"
+      className="min-h-11 font-semibold text-primary-strong underline underline-offset-2"
     >
       Fill in
     </button>

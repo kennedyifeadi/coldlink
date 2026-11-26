@@ -1,5 +1,5 @@
 import React, { startTransition, useState, type FormEvent } from 'react';
-import { CalendarCheck, Phone, ShieldCheck, type LucideIcon } from 'lucide-react';
+import { CalendarCheck, Check, Phone, ShieldCheck, type LucideIcon } from 'lucide-react';
 import { Link, Navigate, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useMutation } from '@tanstack/react-query';
@@ -48,37 +48,38 @@ const ConsentForm = ({ pending, code }: { pending: PendingSignIn; code: string }
     });
 
   return (
-    <div className="flex flex-col h-full min-h-screen bg-background p-6 relative">
-      <div className="flex items-center mt-8 mb-12">
-        <img src={logoMain} alt={t('common.logoAlt')} width={190} height={44} />
+    <div className="flex flex-col min-h-screen bg-background">
+      <div className="px-5 pt-6">
+        <img src={logoMain} alt={t('common.logoAlt')} width={164} height={38} />
       </div>
 
-      <div className="mb-auto">
-        <h1 className="font-heading text-display font-bold text-ink tracking-tight leading-tight mb-4">
+      <div className="px-5 pt-12 pb-5 rim">
+        <h1 className="text-headline-lg font-bold text-ink tracking-tight mb-2">
           {t('auth.consent.title')}
         </h1>
-        <p className="text-copy-muted text-lead leading-relaxed mb-6">{t('auth.consent.intro')}</p>
+        <p className="text-copy-muted text-body">{t('auth.consent.intro')}</p>
+      </div>
 
-        <ul className="flex flex-col gap-4 mb-6">
+      <div className="px-5 pt-6">
+        <ul className="flex flex-col gap-4 mb-4">
           {points.map(({ key, Icon }) => (
             <li key={key} className="flex items-start gap-3">
-              <span className="w-10 h-10 rounded-full bg-primary-soft flex items-center justify-center text-primary-strong shrink-0">
-                <Icon size={20} aria-hidden="true" />
-              </span>
-              <span className="text-body text-copy leading-relaxed pt-2">
-                {t(`auth.consent.points.${key}`)}
-              </span>
+              <Icon size={20} className="text-primary-strong shrink-0 mt-0.5" aria-hidden="true" />
+              <span className="text-body text-ink">{t(`auth.consent.points.${key}`)}</span>
             </li>
           ))}
         </ul>
 
-        <Link to="/privacy" className="text-primary-strong font-medium text-lead underline">
+        <Link
+          to="/privacy"
+          className="inline-flex items-center min-h-11 text-primary-strong font-semibold text-body underline underline-offset-2"
+        >
           {t('auth.consent.readNotice')}
         </Link>
       </div>
 
-      <form onSubmit={handleSubmit} className="w-full mt-10 pb-8">
-        <label className="relative flex items-start gap-3 mb-6 cursor-pointer">
+      <form onSubmit={handleSubmit} className="w-full px-5 mt-auto pt-8 pb-8">
+        <label className="relative flex items-start gap-3 mb-6 cursor-pointer min-h-11">
           <input
             type="checkbox"
             checked={agreed}
@@ -87,17 +88,17 @@ const ConsentForm = ({ pending, code }: { pending: PendingSignIn; code: string }
           />
           <span
             aria-hidden="true"
-            className={`w-6 h-6 mt-0.5 rounded border flex items-center justify-center shrink-0 transition-colors peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-primary-strong ${
-              agreed ? 'bg-primary border-primary-strong' : 'border-line-strong bg-surface'
+            className={`w-6 h-6 mt-0.5 rounded-md border-2 flex items-center justify-center shrink-0 transition-colors peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-primary ${
+              agreed ? 'bg-primary border-primary text-white' : 'border-line-strong bg-surface'
             }`}
           >
-            {agreed && <span className="w-3 h-3 bg-ink rounded-sm"></span>}
+            {agreed && <Check size={16} strokeWidth={3} />}
           </span>
-          <span className="text-body text-copy">{t('auth.consent.agree')}</span>
+          <span className="text-body text-ink">{t('auth.consent.agree')}</span>
         </label>
 
         {verify.isError && (
-          <div className="mb-6">
+          <div className="mb-4">
             <ErrorMessage>{describeApiError(verify.error, t)}</ErrorMessage>
           </div>
         )}
@@ -107,7 +108,7 @@ const ConsentForm = ({ pending, code }: { pending: PendingSignIn; code: string }
         </PrimaryButton>
 
         {isApiError(verify.error, 'otp_invalid') && (
-          <div className="mt-4">
+          <div className="mt-3">
             <TextButton onClick={getNewCode}>{t('auth.consent.getNewCode')}</TextButton>
           </div>
         )}

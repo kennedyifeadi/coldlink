@@ -15,19 +15,13 @@ const SessionUnavailable = ({ error }: { error: unknown }) => {
   const store = useSessionStore();
 
   return (
-    <div className="flex flex-col h-full min-h-screen bg-background px-6 pb-8">
-      <div className="flex flex-col items-center text-center pt-24 mb-auto">
-        <div className="w-20 h-20 mb-8 bg-surface-muted rounded-full flex items-center justify-center text-primary-strong">
-          <WifiOff size={32} aria-hidden="true" />
-        </div>
-        <h1 className="font-heading text-headline font-bold text-ink mb-3">
-          {t('session.unavailable.title')}
-        </h1>
-        <p className="text-copy-muted text-lead leading-relaxed max-w-sm">
-          {describeApiError(error, t)}
-        </p>
+    <div className="flex flex-col min-h-screen bg-background pb-8">
+      <div className="px-5 pt-24 pb-6 rim mb-auto">
+        <WifiOff size={28} className="text-copy-muted mb-4" aria-hidden="true" />
+        <h1 className="text-headline font-bold text-ink mb-2">{t('session.unavailable.title')}</h1>
+        <p className="text-copy-muted text-body">{describeApiError(error, t)}</p>
       </div>
-      <div className="mt-12">
+      <div className="mt-12 px-5">
         <PrimaryButton onClick={store.retryRestore}>{t('common.tryAgain')}</PrimaryButton>
       </div>
     </div>
