@@ -39,6 +39,7 @@ async function claimFailedRefund(trx: Transaction<DB>, skip: readonly string[]) 
     .select([
       'id',
       'booking_id',
+      'delivery_request_id',
       'provider_ref',
       'amount_kobo',
       sql<string>`paystack_payload ->> 'charge_reference'`.as('charge_reference'),
@@ -67,8 +68,20 @@ function chargeOf(trx: Transaction<DB>, refund: FailedRefund) {
       sql<string | null>`paystack_payload -> 'charge' ->> 'id'`.as('transaction_id'),
     ])
     .where('provider_ref', '=', refund.charge_reference)
-    .where('purpose', '=', 'booking_deposit')
+    .where('purpose', 'in', ['booking_deposit', 'delivery_fee'])
     .executeTakeFirstOrThrow();
+}
+
+/** The Paystack refunds other rows already record for the charge, which this one cannot be. */
+async function recordedRefundIds(trx: Transaction<DB>, refund: FailedRefund): Promise<Set<string>> {
+  const rows = await trx
+    .selectFrom('payments')
+    .select(sql<string | null>`paystack_payload ->> 'paystack_refund_id'`.as('refund_id'))
+    .where('purpose', '=', 'refund')
+    .where('id', '!=', refund.id)
+    .where(sql<string>`paystack_payload ->> 'charge_reference'`, '=', refund.charge_reference)
+    .execute();
+  return new Set(rows.flatMap((row) => (row.refund_id === null ? [] : [row.refund_id])));
 }
 
 /**
@@ -84,7 +97,11 @@ async function retryRefund(
   trx: Transaction<DB>,
   refund: FailedRefund,
 ): Promise<RefundRetryOutcome> {
-  const log = { bookingId: refund.booking_id, reference: maskReference(refund.provider_ref) };
+  const log = {
+    bookingId: refund.booking_id,
+    deliveryRequestId: refund.delivery_request_id,
+    reference: maskReference(refund.provider_ref),
+  };
 
   let charge: Awaited<ReturnType<typeof chargeOf>>;
   let made: GatewayRefund;
@@ -95,12 +112,14 @@ async function retryRefund(
     if (charge.transaction_id === null) {
       throw new Error('The charge has no Paystack id to look its refunds up by');
     }
+    // A charge can carry a delivery's refund as well as its booking's (decision 144).
+    const recorded = await recordedRefundIds(trx, refund);
     const standing = (
       await gateway.listRefunds({
         chargeReference: refund.charge_reference,
         transactionId: charge.transaction_id,
       })
-    ).filter((candidate) => candidate.status !== 'failed');
+    ).filter((candidate) => candidate.status !== 'failed' && !recorded.has(candidate.refundId));
     const existing =
       standing.find((candidate) => candidate.amountKobo === amountKobo) ?? standing[0];
     if (existing === undefined) {
@@ -129,7 +148,11 @@ async function retryRefund(
 
   await recordRefundSuccess(
     trx,
-    { id: refund.id, amountKobo, charge: { id: charge.id, amountKobo: charge.amount_kobo } },
+    {
+      id: refund.id,
+      amountKobo,
+      charge: { id: charge.id, reference: refund.charge_reference, amountKobo: charge.amount_kobo },
+    },
     made,
   );
   if (amountKobo !== refund.amount_kobo) {

@@ -47,7 +47,7 @@ const terms = { now: new Date('2026-11-10T08:00:00Z'), freeCancelHours: 24 };
 
 describe('farmerCancellationPreview', () => {
   it('refunds everything before acceptance, with no deposit deadline', () => {
-    expect(farmerCancellationPreview({ ...row, status: 'pending_provider' }, terms)).toEqual({
+    expect(farmerCancellationPreview({ ...row, status: 'pending_provider' }, 0, terms)).toEqual({
       allowed: true,
       refund_kobo: 1_520_000,
       deposit_refund_ends_at: null,
@@ -55,7 +55,7 @@ describe('farmerCancellationPreview', () => {
   });
 
   it('refunds the deposit of a confirmed booking until the free window ends', () => {
-    expect(farmerCancellationPreview(row, terms)).toEqual({
+    expect(farmerCancellationPreview(row, 0, terms)).toEqual({
       allowed: true,
       refund_kobo: 1_500_000,
       deposit_refund_ends_at: '2026-11-10T23:00:00.000Z',
@@ -64,17 +64,35 @@ describe('farmerCancellationPreview', () => {
 
   it('refunds nothing once the free window has ended, and says when it did', () => {
     const late = { ...terms, now: new Date('2026-11-10T23:00:00.001Z') };
-    expect(farmerCancellationPreview(row, late)).toEqual({
+    expect(farmerCancellationPreview(row, 0, late)).toEqual({
       allowed: true,
       refund_kobo: 0,
       deposit_refund_ends_at: '2026-11-10T23:00:00.000Z',
     });
   });
 
+  it("adds the fees of the paid deliveries it would cancel, leaving them out of the booking's part", () => {
+    const withDelivery = {
+      ...row,
+      delivery_fee_kobo: 223_000,
+      total_charged_online_kobo: 1_743_000,
+    };
+    expect(
+      farmerCancellationPreview({ ...withDelivery, status: 'pending_provider' }, 223_000, terms),
+    ).toMatchObject({ refund_kobo: 1_743_000 });
+    expect(farmerCancellationPreview(withDelivery, 223_000, terms)).toMatchObject({
+      refund_kobo: 1_723_000,
+    });
+    const late = { ...terms, now: new Date('2026-11-10T23:00:00.001Z') };
+    expect(farmerCancellationPreview(withDelivery, 223_000, late)).toMatchObject({
+      refund_kobo: 223_000,
+    });
+  });
+
   it.each(bookingStatuses.filter((status) => !isFarmerCancellable(status)))(
     'does not allow cancelling a booking that is %s',
     (status) => {
-      expect(farmerCancellationPreview({ ...row, status }, terms)).toEqual({ allowed: false });
+      expect(farmerCancellationPreview({ ...row, status }, 0, terms)).toEqual({ allowed: false });
     },
   );
 });
@@ -88,7 +106,7 @@ describe('toFarmerBooking', () => {
 
   it('gives each status change as a status and a time only', () => {
     const booking = farmerBookingSchema.parse(
-      toFarmerBooking({ booking: row, history, rating: undefined }, terms),
+      toFarmerBooking({ booking: row, history, rating: undefined, deliveryRefundKobo: 0 }, terms),
     );
     expect(booking.status_history).toEqual([
       { status: 'payment_pending', at: '2026-11-10T08:00:00.000Z' },
@@ -98,9 +116,17 @@ describe('toFarmerBooking', () => {
   });
 
   it('passes on the facility phone the query read, or null', () => {
-    const shown = toFarmerBooking({ booking: row, history, rating: undefined }, terms);
+    const shown = toFarmerBooking(
+      { booking: row, history, rating: undefined, deliveryRefundKobo: 0 },
+      terms,
+    );
     const hidden = toFarmerBooking(
-      { booking: { ...row, provider_phone: null }, history, rating: undefined },
+      {
+        booking: { ...row, provider_phone: null },
+        history,
+        rating: undefined,
+        deliveryRefundKobo: 0,
+      },
       terms,
     );
     expect(shown.provider.phone).toBe('+2348006000001');
@@ -108,14 +134,20 @@ describe('toFarmerBooking', () => {
   });
 
   it('has a null rating until the farmer rates it', () => {
-    const booking = toFarmerBooking({ booking: row, history, rating: undefined }, terms);
+    const booking = toFarmerBooking(
+      { booking: row, history, rating: undefined, deliveryRefundKobo: 0 },
+      terms,
+    );
     expect(booking.rating).toBeNull();
   });
 
   it("gives the farmer's rating as its stars, comment and time", () => {
     const rating = { stars: 4, comment: null, created_at: new Date('2026-11-23T10:00:00Z') };
     const booking = farmerBookingSchema.parse(
-      toFarmerBooking({ booking: { ...row, status: 'completed' }, history, rating }, terms),
+      toFarmerBooking(
+        { booking: { ...row, status: 'completed' }, history, rating, deliveryRefundKobo: 0 },
+        terms,
+      ),
     );
     expect(booking.rating).toEqual({
       stars: 4,

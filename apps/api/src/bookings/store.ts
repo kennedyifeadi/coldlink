@@ -2,6 +2,7 @@ import type { AppConfig, BookingStatus, CapacityUnit, PricingBreakdown } from '@
 import { sql, type InferResult, type QueryCreator } from 'kysely';
 import type { Database } from '../db/client.js';
 import type { DB } from '../db/schema.js';
+import { unfinishedPaidDeliveryFees } from '../deliveries/store.js';
 import type { StoragePeriod } from '../storagePeriod.js';
 import { generateBookingCode } from './code.js';
 import { findBookingRating, type BookingRatingRow } from './ratings.js';
@@ -176,6 +177,8 @@ export interface FarmerBookingDetail {
   booking: FarmerBookingRow;
   history: BookingStatusChangeRow[];
   rating: BookingRatingRow | undefined;
+  /** The fees of the paid deliveries cancelling the booking would cancel and refund. */
+  deliveryRefundKobo: number;
 }
 
 /** The farmer's booking with its history and rating, or undefined as findFarmerBooking is. */
@@ -190,6 +193,7 @@ export async function findFarmerBookingDetail(
     booking,
     history: await listBookingStatusHistory(db, bookingId),
     rating: await findBookingRating(db, bookingId),
+    deliveryRefundKobo: await unfinishedPaidDeliveryFees(db, bookingId),
   };
 }
 
@@ -219,7 +223,13 @@ export function listFarmerBookings(db: Database, farmerId: string): Promise<Farm
 export function lockFarmerBooking(db: Database, farmerId: string, bookingId: string) {
   return db
     .selectFrom('bookings')
-    .select(['status', 'start_date', 'deposit_kobo', 'total_charged_online_kobo'])
+    .select([
+      'status',
+      'start_date',
+      'deposit_kobo',
+      'total_charged_online_kobo',
+      'delivery_fee_kobo',
+    ])
     .where('id', '=', bookingId)
     .where('farmer_id', '=', farmerId)
     .forUpdate()

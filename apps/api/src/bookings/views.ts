@@ -60,19 +60,25 @@ export interface CancellationTerms {
 
 type CancellableFields = Pick<
   FarmerBookingRow,
-  'status' | 'start_date' | 'deposit_kobo' | 'total_charged_online_kobo'
+  'status' | 'start_date' | 'deposit_kobo' | 'total_charged_online_kobo' | 'delivery_fee_kobo'
 >;
 
-/** What a farmer's cancellation refunds at `now` (PRD 6.6); the cancel route refunds this. */
+/**
+ * What a farmer's cancellation refunds at `now` (PRD 6.6), which the cancel route refunds: the
+ * policy's share of the booking, plus `deliveryRefundKobo`, the fees of the paid deliveries the
+ * cancellation also cancels (decision 144).
+ */
 export function farmerCancellationPreview(
   row: CancellableFields,
+  deliveryRefundKobo: number,
   { now, freeCancelHours }: CancellationTerms,
 ): FarmerCancellationPreview {
   const status = bookingStatusSchema.parse(row.status);
   if (!isFarmerCancellable(status)) return { allowed: false };
   return {
     allowed: true,
-    refund_kobo: farmerCancellationRefundKobo({ ...row, status }, now, freeCancelHours),
+    refund_kobo:
+      farmerCancellationRefundKobo({ ...row, status }, now, freeCancelHours) + deliveryRefundKobo,
     deposit_refund_ends_at:
       status === 'confirmed'
         ? depositRefundEndsAt(row.start_date, freeCancelHours).toISOString()
@@ -85,7 +91,7 @@ function toBookingRating(row: BookingRatingRow): BookingRating {
 }
 
 export function toFarmerBooking(
-  { booking: row, history, rating }: FarmerBookingDetail,
+  { booking: row, history, rating, deliveryRefundKobo }: FarmerBookingDetail,
   terms: CancellationTerms,
 ): FarmerBooking {
   const summary = toFarmerBookingSummary(row);
@@ -109,7 +115,7 @@ export function toFarmerBooking(
     cancelled_by: row.cancelled_by === null ? null : cancelledBySchema.parse(row.cancelled_by),
     cancel_reason: row.cancel_reason,
     status_history: toStatusHistory(history),
-    cancellation: farmerCancellationPreview(row, terms),
+    cancellation: farmerCancellationPreview(row, deliveryRefundKobo, terms),
     rating: rating === undefined ? null : toBookingRating(rating),
   };
 }
