@@ -5,6 +5,7 @@ export * from './bookingQuote.js';
 export * from './bookings.js';
 export * from './bookingStateMachine.js';
 export * from './dates.js';
+export * from './deliveries.js';
 export * from './deliveryPricing.js';
 export * from './enums.js';
 export * from './errors.js';

@@ -1,4 +1,5 @@
 import * as z from 'zod';
+import { deliveryLoadSchema, deliveryQuoteSchema } from './deliveries.js';
 import { capacityUnitSchema } from './enums.js';
 import { koboSchema } from './money.js';
 import { pricingInputSchema } from './pricing.js';
@@ -16,6 +17,8 @@ export const bookingQuoteBodySchema = z
     days: pricingInputSchema.shape.duration_days.max(MAX_SEARCH_DAYS),
     /** Today in Africa/Lagos when left out. */
     start_date: z.iso.date().optional(),
+    /** An inbound delivery to price with the booking (decision 146). */
+    delivery: deliveryLoadSchema.optional(),
   })
   .refine((body) => body.capacity_unit !== 'crates' || Number.isInteger(body.quantity), {
     path: ['quantity'],
@@ -45,9 +48,11 @@ export const bookingQuoteSchema = z.strictObject({
   /** The rest of the subtotal, paid at the facility. */
   balance_due_kobo: amountSchema,
   service_fee_kobo: amountSchema,
-  /** Always 0 until delivery can be requested with a booking. */
+  /** The inbound delivery's fee, or 0 without one. */
   delivery_fee_kobo: amountSchema,
   /** Deposit plus service fee plus delivery fee: what the farmer pays now. */
   total_charged_online_kobo: amountSchema,
+  /** The inbound delivery asked for, or null. */
+  delivery: deliveryQuoteSchema.nullable(),
 });
 export type BookingQuote = z.infer<typeof bookingQuoteSchema>;
