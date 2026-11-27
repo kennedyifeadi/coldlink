@@ -13,6 +13,7 @@ const statusByCode: Record<ErrorCode, number> = {
   otp_invalid: 400,
   consent_required: 400,
   account_disabled: 403,
+  handover_code_invalid: 400,
 };
 
 export class AppError extends Error {
