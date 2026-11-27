@@ -10,8 +10,8 @@ The API contract, written as an OpenAPI 3.1 document in the YAML block below. Ea
 - **Lists:** a list response is `{ data: [...] }`, so a cursor can sit next to `data` later without changing the shape.
 - **Pagination:** paginated lists take `limit` and `cursor` (PRD 8). The reference lists (`/crops`, `/crop-categories`) are not paginated: they are small, admin-managed reference data (22 crops, 7 categories) that a client loads whole. `GET /providers/mine` and `GET /bookings` are not paginated yet either (decisions 62, 85). `GET /providers/:id/bookings` and `GET /providers/:id/payouts` are: `limit` (1 to 50, default 20) and `cursor`, the `next_cursor` of the page before, which is null on the last page.
 - **Caching:** the public reference endpoints send `Cache-Control: public` with a short `max-age` (5 minutes for crops and categories, 60 seconds for config). Responses for the signed-in user (`/me`, the owner's provider views, the farmer's bookings, the provider's booking actions) and the action link routes send `no-store`. Other responses, and every error, send none.
-- **Rate limits:** limited routes send `RateLimit` and `RateLimit-Policy` headers, and `Retry-After` with a 429. The reference endpoints are not limited yet: they are cheap, cacheable reads. The auth routes are limited per IP (decision 56); `POST /auth/otp/request` is also limited per phone number, and its 429 adds `details.retry_after_seconds`. `POST /search` and `POST /bookings/quote` are each limited to 300 requests per IP per 15 minutes (decisions 74, 75). `GET` and `POST /actions/:token` share a limit of 60 requests per IP per 15 minutes (decision 101).
-- **Response schemas:** the Zod schemas for request and response bodies live in `packages/shared` (`cropCategoriesResponseSchema`, `cropsResponseSchema`, `publicConfigSchema`, `otpRequestBodySchema`, `otpRequestResponseSchema`, `otpVerifyBodySchema`, `sessionResponseSchema`, `userProfileSchema`, `updateProfileBodySchema`, `createProviderBodySchema`, `updateProviderBodySchema`, `publicProviderSchema`, `ownProviderSchema`, `ownProvidersResponseSchema`, `searchBodySchema`, `searchResponseSchema`, `bookingQuoteBodySchema`, `bookingQuoteSchema`, `createBookingBodySchema`, `farmerBookingSchema`, `farmerBookingsResponseSchema`, `cancelBookingBodySchema`, `cancelledBookingSchema`, `rateBookingBodySchema`, `bookingRatingSchema`, `initializePaymentBodySchema`, `initializedPaymentSchema`, `paymentVerificationSchema`, `rejectBookingBodySchema`, `providerBookingSchema`, `providerBookingRequestSchema`, `providerLinkActionBodySchema`, `providerLinkActionResultSchema`), for the web app to validate forms and parse responses with.
+- **Rate limits:** limited routes send `RateLimit` and `RateLimit-Policy` headers, and `Retry-After` with a 429. The reference endpoints are not limited yet: they are cheap, cacheable reads. The auth routes are limited per IP (decision 56); `POST /auth/otp/request` is also limited per phone number, and its 429 adds `details.retry_after_seconds`. `POST /search` and `POST /bookings/quote` are each limited to 300 requests per IP per 15 minutes (decisions 74, 75). `GET` and `POST /actions/:token` share a limit of 60 requests per IP per 15 minutes (decision 101), as `GET` and `POST /delivery-actions/:token` do (decision 154).
+- **Response schemas:** the Zod schemas for request and response bodies live in `packages/shared` (`cropCategoriesResponseSchema`, `cropsResponseSchema`, `publicConfigSchema`, `otpRequestBodySchema`, `otpRequestResponseSchema`, `otpVerifyBodySchema`, `sessionResponseSchema`, `userProfileSchema`, `updateProfileBodySchema`, `createProviderBodySchema`, `updateProviderBodySchema`, `publicProviderSchema`, `ownProviderSchema`, `ownProvidersResponseSchema`, `searchBodySchema`, `searchResponseSchema`, `bookingQuoteBodySchema`, `bookingQuoteSchema`, `createBookingBodySchema`, `farmerBookingSchema`, `farmerBookingsResponseSchema`, `cancelBookingBodySchema`, `cancelledBookingSchema`, `rateBookingBodySchema`, `bookingRatingSchema`, `initializePaymentBodySchema`, `initializedPaymentSchema`, `paymentVerificationSchema`, `rejectBookingBodySchema`, `providerBookingSchema`, `providerBookingRequestSchema`, `providerLinkActionBodySchema`, `providerLinkActionResultSchema`, `assignDeliveryBodySchema`, `adminDeliverySchema`, `partnerDeliveryLinkSchema`, `partnerDeliveryActionBodySchema`, `partnerDeliveryActionResultSchema`), for the web app to validate forms and parse responses with.
 - **Phone numbers:** send them as people type them: `08031234567`, `8031234567`, `2348031234567` or `+2348031234567`, with or without spaces or hyphens. The API stores `+234` and ten digits, and accepts only mobile numbers (70x, 80x, 81x, 90x, 91x). `normalisePhone` and `phoneSchema` in `packages/shared` do the same in the browser. Responses never contain a full phone number but one: a farmer's booking that its facility has accepted has the facility's phone, so the farmer can call it. A profile has `phone_masked` (`+234803***4567`).
 
 ## Authentication
@@ -41,6 +41,7 @@ Sign-in is by phone and a 6-digit code sent by SMS (PRD 7.1; decisions 54 to 61)
 | `otp_invalid` | 400 | The code is wrong, expired, used, out of attempts, or there is none. Always the same message, so the cases cannot be told apart. |
 | `consent_required` | 400 | The code was right, but creating the account (or using an account with no consent on record) needs `consent: true`. Send it again with consent and the same code. |
 | `account_disabled` | 403 | The code was right, but the account has been deactivated. Refresh returns it too. |
+| `handover_code_invalid` | 400 | The handover code entered on a delivery partner's update link is wrong. `details.handover_attempts_left` says how many tries the link still takes; at 0 it takes no more (decision 150). |
 | `internal` | 500 | An unexpected error. The message is always generic; details are only in the server log, under the request ID. |
 
 ## Providers
@@ -113,7 +114,7 @@ The farmer's own deliveries need a signed-in user with the `farmer` role (403 ot
 
 - **`POST /deliveries`** asks for a delivery after booking: `booking_id`, `direction` and the delivery's details as for `POST /bookings`. An inbound delivery needs a `confirmed` booking, an outbound one a `confirmed` or `in_storage` booking (409 otherwise). It answers 201 with the delivery, `requested` and unpaid (`paid: false`); pay it with `POST /payments/initialize` and `{ delivery_request_id }`. A booking has at most one paid delivery in each direction that is neither cancelled nor failed: a second is 409 with `details.delivery_request_id`. An unpaid request in the same direction is replaced, that is cancelled, by the new one. Unpaid requests do not expire on a timer: one can no longer be paid once its day or its booking no longer allows it.
 - **`GET /deliveries/:id`** gives the farmer's view (`farmerDeliverySchema`): the status, `paid`, both ends with their points, the masked contact number (`contact_phone_masked`), the load, `distance_km`, `vehicle_type`, `fee_kobo`, `scheduled_for`, the 4-digit `handover_code`, which the farmer passes to whoever receives the load, the partner's times, and `cancellation`: `{ allowed: false }` or `{ allowed: true, refund_kobo }`.
-- **`POST /deliveries/:id/cancel`** cancels a delivery that has not been picked up (`requested`, `assigned` or `accepted`; 409 otherwise). A delivery asked for with a booking that is still awaiting payment cannot be cancelled on its own (409): it goes with the booking. The answer adds `refund_kobo`: the whole fee if it was paid, refunded against the delivery's own charge, or as a part refund of the booking's charge if it was paid with the booking; 0 if it was not paid. Admins are alerted of every paid delivery cancelled.
+- **`POST /deliveries/:id/cancel`** cancels a delivery that has not been picked up (`requested`, `assigned` or `accepted`; 409 otherwise). A delivery asked for with a booking that is still awaiting payment cannot be cancelled on its own (409): it goes with the booking. The answer adds `refund_kobo`: the whole fee if it was paid, refunded against the delivery's own charge, or as a part refund of the booking's charge if it was paid with the booking; 0 if it was not paid. Admins are alerted of every paid delivery cancelled, and a partner who had the job is texted that it is off.
 - **When the booking ends** (rejected, expired, cancelled or a no-show), its deliveries not yet delivered are cancelled with it, and each paid one is refunded its fee once, on top of whatever the booking's own refund is.
 
 ## Action links
@@ -124,6 +125,16 @@ The provider's `booking_received` SMS carries a link that answers a booking with
 - **`POST /actions/:token`** with `{ "action": "accept" }` or `{ "action": "reject" }` answers the booking as the facility's owner and uses the link. It answers `{ status }`, `confirmed` or `rejected`. The same 409s as `POST /bookings/:id/accept` apply, and leave the link usable: a booking already answered from the dashboard, or past its deadline.
 - **A link that is unknown, used or expired** is always the same 404, "This link has expired or has already been used", for both routes.
 - The token is never written to the request log.
+
+## Delivery partner links
+
+An admin assigns a paid delivery to a partner, who answers and updates it through SMS links without signing in (PRD 7.7 steps 4 and 5; decisions 147 to 155).
+
+- **`POST /admin/deliveries/:id/assign`** (`admin` role, 403 otherwise) with `{ "partner_id" }` assigns a delivery that is paid, `requested` and neither cancelled nor failed, or reassigns one still `assigned`, and answers the admin view (`adminDeliverySchema`). The partner must be active and have the delivery's `vehicle_type` (400 on `partner_id` otherwise). A partner whose coverage LGAs leave out the facility's is still assigned, with `partner.covers_facility_lga: false`. Any other status, or an unpaid delivery, is 409. A reassignment ends the old partner's link and texts them that the job is off. The partner gets `delivery_job` with an accept link, `WEB_APP_URL` + `/d/<token>` (`deliveryActionPath`), valid to the end of the delivery's day in Lagos and for at least 12 hours.
+- **`GET /delivery-actions/:token`** answers `{ link, job }`: `link` is `accept` or `update`, and `job` (`partnerDeliveryJobSchema`) has the booking code, day, the facility's name and LGA, the load, vehicle, distance, the partner's payout and `handover_attempts_left`. The farmer's address, the facility's address and the contact's name and phone are there only while the job is `accepted` or `picked_up`. Never the farmer's fee, ColdLink's margin, the handover code or the booking's money. Opening it does not use it.
+- **`POST /delivery-actions/:token`** answers `{ outcome, job }`. With the accept link: `{ "action": "accept" }`, or `{ "action": "decline" }`, which puts the job back to `requested`, alerts admins and answers `job: null`. Accepting texts the partner an update link, valid to the end of the day after the delivery's day. With the update link: `{ "action": "picked_up" }`, then `{ "action": "delivered", "handover_code": "0427" }`. The farmer is texted on acceptance, on pickup (with the handover code, which the farmer passes to whoever receives the load) and on delivery. A move the job's status does not allow is 409 with `details.status`.
+- **A wrong handover code** is 400 `handover_code_invalid` with `details.handover_attempts_left`. After 5 wrong codes the link takes no more, the right one included (409, `details.handover_attempts_left: 0`), and admins are alerted.
+- **A link that is unknown, used, expired, given to another partner, or used for the other link's step** is the same 404 as the provider's link. The token is never written to the request log.
 
 ## Payments
 
@@ -1588,7 +1599,8 @@ paths:
       operationId: cancelDelivery
       summary: Cancel one of the signed-in farmer's deliveries
       description: >-
-        Farmers only, before pickup. A paid fee is refunded in full, and admins are alerted. A
+        Farmers only, before pickup. A paid fee is refunded in full, admins are alerted, and a
+        partner who had the job is texted. A
         delivery asked for with a booking still awaiting payment goes with the booking (409).
       tags: [Deliveries]
       security:
@@ -1607,6 +1619,117 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '403':
           $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/Internal'
+  /admin/deliveries/{id}/assign:
+    parameters:
+      - $ref: '#/components/parameters/DeliveryId'
+    post:
+      operationId: assignDelivery
+      summary: Assign a delivery to a partner, or reassign it before acceptance
+      description: >-
+        Admins only. The delivery must be paid and `requested`, or still `assigned` (a
+        reassignment ends the old partner's link and texts them). The partner must be active and
+        have the delivery's vehicle (400 on partner_id). A partner whose coverage leaves out the
+        facility's LGA is still assigned, with `partner.covers_facility_lga` false. The partner is
+        texted `delivery_job` with an accept link.
+      tags: [Delivery partner links]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AssignDeliveryRequest'
+      responses:
+        '200':
+          description: The delivery in the admin's view.
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/NoStore'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminDelivery'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/Internal'
+  /delivery-actions/{token}:
+    parameters:
+      - name: token
+        in: path
+        required: true
+        description: The token from the partner's SMS link. Never logged.
+        schema:
+          type: string
+    get:
+      operationId: getDeliveryLink
+      summary: The job a delivery partner's SMS link is for
+      description: >-
+        Does not use the link. An unknown, used, expired or revoked link is the same 404.
+      tags: [Delivery partner links]
+      responses:
+        '200':
+          description: Which link this is, and the job as the partner may see it now.
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/NoStore'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PartnerDeliveryLink'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/Internal'
+    post:
+      operationId: actOnDeliveryLink
+      summary: Accept, decline, pick up or deliver from the partner's SMS link
+      description: >-
+        The accept link takes accept or decline; the update link takes picked_up, then delivered
+        with the handover code. The other link's step is the same 404 as an unknown link. A move
+        the job's status does not allow is 409 with `details.status`. A wrong code is 400
+        `handover_code_invalid` with `details.handover_attempts_left`; after 5 the link takes no
+        more codes (409, `details.handover_attempts_left` 0).
+      tags: [Delivery partner links]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PartnerDeliveryAction'
+      responses:
+        '200':
+          description: What happened, and the job after it (null once declined).
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/NoStore'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PartnerDeliveryActionResult'
+        '400':
+          $ref: '#/components/responses/BadRequest'
         '404':
           $ref: '#/components/responses/NotFound'
         '409':
@@ -3280,6 +3403,161 @@ components:
               type: integer
               description: The whole fee if it was paid, otherwise 0.
       unevaluatedProperties: false
+    AssignDeliveryRequest:
+      type: object
+      required: [partner_id]
+      properties:
+        partner_id:
+          type: string
+          format: uuid
+      additionalProperties: false
+    AdminDelivery:
+      type: object
+      description: >-
+        The admin's view of a delivery. The contact number is masked and the handover code is not
+        in it.
+      required:
+        - id
+        - booking_id
+        - booking_code
+        - direction
+        - status
+        - paid
+        - pickup_text
+        - dropoff_text
+        - contact_name
+        - contact_phone_masked
+        - load_description
+        - load_quantity
+        - load_unit
+        - vehicle_type
+        - distance_km
+        - fee_kobo
+        - partner_payout_kobo
+        - platform_margin_kobo
+        - scheduled_for
+        - assigned_at
+        - picked_up_at
+        - delivered_at
+        - handover_failed_attempts
+        - partner
+      properties:
+        id: { type: string, format: uuid }
+        booking_id: { type: string, format: uuid }
+        booking_code: { type: string, examples: [CL-7K3Q9] }
+        direction: { type: string, enum: [inbound, outbound] }
+        status:
+          type: string
+          enum: [requested, assigned, accepted, picked_up, delivered, cancelled, failed]
+        paid: { type: boolean }
+        pickup_text: { type: string }
+        dropoff_text: { type: string }
+        contact_name: { type: [string, 'null'] }
+        contact_phone_masked: { type: string, examples: ['+234803***4567'] }
+        load_description: { type: string }
+        load_quantity: { type: number }
+        load_unit: { type: string, enum: [crates, kg, sqm] }
+        vehicle_type: { type: string, enum: [bike, tricycle, van, truck] }
+        distance_km: { type: number }
+        fee_kobo: { type: integer }
+        partner_payout_kobo: { type: integer }
+        platform_margin_kobo: { type: integer }
+        scheduled_for: { type: string, format: date }
+        assigned_at: { type: [string, 'null'], format: date-time }
+        picked_up_at: { type: [string, 'null'], format: date-time }
+        delivered_at: { type: [string, 'null'], format: date-time }
+        handover_failed_attempts: { type: integer }
+        partner:
+          type: [object, 'null']
+          required: [id, company_name, covers_facility_lga]
+          properties:
+            id: { type: string, format: uuid }
+            company_name: { type: string }
+            covers_facility_lga:
+              type: boolean
+              description: False when the partner lists LGAs and the facility's is not one.
+      additionalProperties: false
+    PartnerDeliveryJob:
+      type: object
+      description: >-
+        What the partner sees. `facility.address`, `farmer_address` and `contact` are null unless
+        the job is accepted or picked up. Never the farmer's fee, ColdLink's margin or the handover
+        code.
+      required:
+        - booking_code
+        - direction
+        - status
+        - scheduled_for
+        - facility
+        - farmer_address
+        - contact
+        - load_description
+        - load_quantity
+        - load_unit
+        - vehicle_type
+        - distance_km
+        - payout_kobo
+        - handover_attempts_left
+      properties:
+        booking_code: { type: string, examples: [CL-7K3Q9] }
+        direction: { type: string, enum: [inbound, outbound] }
+        status:
+          type: string
+          enum: [requested, assigned, accepted, picked_up, delivered, cancelled, failed]
+        scheduled_for: { type: string, format: date }
+        facility:
+          type: object
+          required: [name, lga, address]
+          properties:
+            name: { type: string }
+            lga: { type: [string, 'null'] }
+            address: { type: [string, 'null'] }
+        farmer_address: { type: [string, 'null'] }
+        contact:
+          type: [object, 'null']
+          required: [name, phone]
+          properties:
+            name: { type: [string, 'null'] }
+            phone: { type: string, examples: ['+2348031234567'] }
+        load_description: { type: string }
+        load_quantity: { type: number }
+        load_unit: { type: string, enum: [crates, kg, sqm] }
+        vehicle_type: { type: string, enum: [bike, tricycle, van, truck] }
+        distance_km: { type: number }
+        payout_kobo: { type: integer }
+        handover_attempts_left: { type: integer, minimum: 0, maximum: 5 }
+      additionalProperties: false
+    PartnerDeliveryLink:
+      type: object
+      required: [link, job]
+      properties:
+        link: { type: string, enum: [accept, update] }
+        job:
+          $ref: '#/components/schemas/PartnerDeliveryJob'
+      additionalProperties: false
+    PartnerDeliveryAction:
+      oneOf:
+        - type: object
+          required: [action]
+          properties:
+            action: { type: string, enum: [accept, decline, picked_up] }
+          additionalProperties: false
+        - type: object
+          required: [action, handover_code]
+          properties:
+            action: { type: string, const: delivered }
+            handover_code: { type: string, pattern: '^[0-9]{4}$' }
+          additionalProperties: false
+    PartnerDeliveryActionResult:
+      type: object
+      required: [outcome, job]
+      properties:
+        outcome: { type: string, enum: [accepted, declined, picked_up, delivered] }
+        job:
+          oneOf:
+            - $ref: '#/components/schemas/PartnerDeliveryJob'
+            - type: 'null'
+      additionalProperties: false
     ErrorCode:
       type: string
       enum:
@@ -3295,6 +3573,7 @@ components:
         - otp_invalid
         - consent_required
         - account_disabled
+        - handover_code_invalid
     ValidationIssue:
       type: object
       required: [location, path, message]
