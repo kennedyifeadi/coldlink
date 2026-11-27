@@ -171,7 +171,18 @@ export async function requireFarmerDelivery(
 export function lockDelivery(trx: Transaction<DB>, deliveryId: string) {
   return trx
     .selectFrom('delivery_requests')
-    .select(['id', 'context_type', 'context_id', 'status', 'paid_at', 'fee_kobo', 'scheduled_for'])
+    .select([
+      'id',
+      'context_type',
+      'context_id',
+      'status',
+      'paid_at',
+      'fee_kobo',
+      'scheduled_for',
+      'partner_id',
+      'vehicle_type',
+      'handover_failed_attempts',
+    ])
     .where('id', '=', deliveryId)
     .forUpdate()
     .executeTakeFirstOrThrow();
@@ -211,7 +222,7 @@ export function cancelDeliveries(trx: Transaction<DB>, ids: readonly string[]) {
     .updateTable('delivery_requests')
     .set({ status: 'cancelled' })
     .where('id', 'in', ids)
-    .returning(['id', 'paid_at'])
+    .returning(['id', 'paid_at', 'partner_id'])
     .execute();
 }
 
@@ -230,7 +241,7 @@ export function cancelUnfinishedDeliveries(trx: Transaction<DB>, bookingId: stri
     .where('context_type', 'in', Object.values(contextTypeFor))
     .where('context_id', '=', bookingId)
     .where('status', 'in', unfinishedDeliveryStatuses)
-    .returning(['id', 'paid_at'])
+    .returning(['id', 'paid_at', 'partner_id'])
     .execute();
 }
 

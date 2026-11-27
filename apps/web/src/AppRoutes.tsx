@@ -1,6 +1,10 @@
 import React, { lazy, type ComponentType } from 'react';
 import { Routes, Route } from 'react-router-dom';
-import { BOOKING_RATING_ROUTE, PROVIDER_ACTION_ROUTE } from '@coldlink/shared';
+import {
+  BOOKING_RATING_ROUTE,
+  DELIVERY_ACTION_ROUTE,
+  PROVIDER_ACTION_ROUTE,
+} from '@coldlink/shared';
 import AppLayout from './components/AppLayout';
 import NotFound from './components/NotFound';
 import { RedirectIfSignedIn, RequireSession } from './session/guards';
@@ -30,6 +34,7 @@ const loadSearch = () => import('./features/search');
 const loadBooking = () => import('./features/booking');
 const loadProvider = () => import('./features/provider');
 const loadProviderLink = () => import('./features/providerLink');
+const loadDeliveryLink = () => import('./features/deliveryLink');
 const loadProviderDashboard = () => import('./features/providerDashboard');
 
 const Onboarding = lazyScreen(loadAuth, 'Onboarding');
@@ -58,6 +63,7 @@ const ProduceStep = lazyScreen(loadProvider, 'ProduceStep');
 const PhotosStep = lazyScreen(loadProvider, 'PhotosStep');
 const Outcome = lazyScreen(loadProvider, 'Outcome');
 const ActionLink = lazyScreen(loadProviderLink, 'ActionLink');
+const DeliveryLink = lazyScreen(loadDeliveryLink, 'DeliveryLink');
 const Dashboard = lazyScreen(loadProviderDashboard, 'Dashboard');
 const ProviderBookings = lazyScreen(loadProviderDashboard, 'ProviderBookings');
 const ProviderBookingDetail = lazyScreen(loadProviderDashboard, 'ProviderBookingDetail');
@@ -77,6 +83,8 @@ const AppRoutes = () => (
       <Route path="/privacy" element={<PrivacyNotice />} />
       {/* Opened from the provider's SMS without signing in (PRD 7.6, decision 104). */}
       <Route path={PROVIDER_ACTION_ROUTE} element={<ActionLink />} />
+      {/* Opened from the delivery partner's SMS without signing in (decision 149). */}
+      <Route path={DELIVERY_ACTION_ROUTE} element={<DeliveryLink />} />
       {/* Anyone can search; signing in waits until Book (PRD 7.3, decision 70). */}
       <Route path={SEARCH_STEPS.place} element={<Location />} />
       <Route path={SEARCH_STEPS.crop} element={<Produce />} />

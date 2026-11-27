@@ -6,6 +6,7 @@ import {
 } from '@coldlink/shared';
 import { Router } from 'express';
 import * as z from 'zod';
+import { linkNotFound } from '../actions/linkNotFound.js';
 import { findProviderToken, lockProviderToken, markTokenUsed } from '../actions/tokens.js';
 import type { TransitionHooks } from '../bookings/hooks.js';
 import { performProviderAction } from '../bookings/providerActions.js';
@@ -14,7 +15,6 @@ import { runAfterCommitHooks } from '../bookings/transition.js';
 import { toProviderBookingRequest } from '../bookings/views.js';
 import type { Database } from '../db/client.js';
 import { inTransaction } from '../db/transaction.js';
-import { AppError } from '../errors.js';
 import { rateLimit, type RateLimitOptions } from '../middleware/rateLimit.js';
 import { validate } from '../middleware/validate.js';
 
@@ -27,11 +27,6 @@ export interface ActionRouteDependencies {
   hooks: TransitionHooks;
   ipLimit: RateLimitOptions;
   now?: () => Date;
-}
-
-/** One answer for an unknown, used or expired link, so they cannot be told apart. */
-function linkNotFound(): AppError {
-  return new AppError('not_found', 'This link has expired or has already been used');
 }
 
 const statusOf = { accept: 'confirmed', reject: 'rejected' } as const;

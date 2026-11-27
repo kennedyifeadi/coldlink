@@ -16,6 +16,7 @@ import type { PhotoStorage } from '../storage/photoStorage.js';
 import type { RateLimitOptions } from '../middleware/rateLimit.js';
 import { version } from '../version.js';
 import { actionRoutes, defaultActionIpLimit } from './actions.js';
+import { adminDeliveryRoutes, defaultAdminIpLimit } from './adminDeliveries.js';
 import { authRoutes, defaultAuthIpLimits, type AuthIpLimits } from './auth.js';
 import { bookingRoutes, defaultQuoteIpLimit } from './bookings.js';
 import {
@@ -23,6 +24,7 @@ import {
   defaultDeliveryQuoteIpLimit,
   deliveryRoutes,
 } from './deliveries.js';
+import { defaultDeliveryActionIpLimit, deliveryActionRoutes } from './deliveryActions.js';
 import { meRoutes } from './me.js';
 import { paymentRoutes } from './payments.js';
 import { providerBookingRoutes } from './providerBookings.js';
@@ -46,6 +48,8 @@ export interface RouteDependencies {
   actionIpLimit?: RateLimitOptions;
   deliveryQuoteIpLimit?: RateLimitOptions;
   deliveryIpLimit?: RateLimitOptions;
+  deliveryActionIpLimit?: RateLimitOptions;
+  adminIpLimit?: RateLimitOptions;
   storage?: PhotoStorage;
   bookingHooks?: TransitionHooks;
   paymentGateway?: PaymentGateway;
@@ -70,6 +74,8 @@ export function apiRoutes({
   actionIpLimit = defaultActionIpLimit,
   deliveryQuoteIpLimit = defaultDeliveryQuoteIpLimit,
   deliveryIpLimit = defaultDeliveryIpLimit,
+  deliveryActionIpLimit = defaultDeliveryActionIpLimit,
+  adminIpLimit = defaultAdminIpLimit,
   storage = createPhotoStorage(config.storage),
   bookingHooks,
   paymentGateway,
@@ -85,7 +91,7 @@ export function apiRoutes({
   now,
   generateBookingCode,
 }: RouteDependencies): Router {
-  const { hooks, notifications, gateway } = services;
+  const { hooks, notifications, gateway, deliveryLinks } = services;
   const router = Router();
   router.get('/health', async (req, res) => {
     const database = await checkDatabase(db, req.log);
@@ -135,6 +141,7 @@ export function apiRoutes({
       tokens,
       appConfig,
       gateway,
+      notifications,
       quoteIpLimit: deliveryQuoteIpLimit,
       ipLimit: deliveryIpLimit,
       ...(now === undefined ? {} : { now }),
@@ -155,6 +162,12 @@ export function apiRoutes({
       ipLimit: actionIpLimit,
       ...(now === undefined ? {} : { now }),
     }),
+  );
+  router.use(
+    deliveryActionRoutes({ db, notifications, deliveryLinks, ipLimit: deliveryActionIpLimit }),
+  );
+  router.use(
+    adminDeliveryRoutes({ db, tokens, notifications, deliveryLinks, ipLimit: adminIpLimit }),
   );
   router.use(
     paymentRoutes({

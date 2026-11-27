@@ -15,6 +15,7 @@ export const errorCodes = [
   'otp_invalid',
   'consent_required',
   'account_disabled',
+  'handover_code_invalid',
 ] as const;
 export type ErrorCode = (typeof errorCodes)[number];
 export const errorCodeSchema = z.enum(errorCodes);
