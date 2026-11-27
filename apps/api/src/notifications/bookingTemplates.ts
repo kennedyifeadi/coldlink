@@ -38,7 +38,7 @@ function day(date: Date, withYear: boolean): string {
 }
 
 /** A 'YYYY-MM-DD' calendar date as "1 Dec 2026". */
-function formatDate(isoDate: string): string {
+export function formatDate(isoDate: string): string {
   return day(new Date(`${isoDate}T00:00:00Z`), true);
 }
 
@@ -66,7 +66,7 @@ const unitNames: Record<CapacityUnit, { one: string; many: string }> = {
 };
 
 /** "2 sqm", "1 crate", "250 kg". */
-function formatQuantity(quantity: number, unit: CapacityUnit): string {
+export function formatQuantity(quantity: number, unit: CapacityUnit): string {
   const name = unitNames[unit];
   return `${quantityFormat.format(quantity)} ${quantity === 1 ? name.one : name.many}`;
 }
