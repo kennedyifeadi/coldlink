@@ -18,6 +18,7 @@ import type { Database } from '../db/client.js';
 import { inTransaction } from '../db/transaction.js';
 import { generateHandoverCode } from '../deliveries/handoverCode.js';
 import { refundCancelledDeliveries } from '../deliveries/hooks.js';
+import { finishMove, queuePartnerCancellations } from '../deliveries/partnerMoves.js';
 import {
   checkScheduledFor,
   openWindow,
@@ -46,6 +47,8 @@ import {
 } from '../middleware/auth.js';
 import { rateLimit, type RateLimitOptions } from '../middleware/rateLimit.js';
 import { validate } from '../middleware/validate.js';
+import type { SmsTemplateRegistry } from '../notifications/registry.js';
+import type { NotificationDeps } from '../notifications/send.js';
 import type { PaymentGateway } from '../payments/gateway.js';
 import { findProvider } from '../providers/store.js';
 import { isBookable } from '../providers/visibility.js';
@@ -62,6 +65,7 @@ export const defaultDeliveryIpLimit: RateLimitOptions = { windowMs: 15 * 60 * 10
 export interface DeliveryRouteDependencies extends AuthDependencies {
   appConfig: AppConfigReader;
   gateway: PaymentGateway;
+  notifications: NotificationDeps<SmsTemplateRegistry>;
   quoteIpLimit: RateLimitOptions;
   ipLimit: RateLimitOptions;
   now?: () => Date;
@@ -139,7 +143,7 @@ async function quoteTarget(
 }
 
 export function deliveryRoutes(deps: DeliveryRouteDependencies): Router {
-  const { db, appConfig, gateway, now = () => new Date() } = deps;
+  const { db, appConfig, gateway, notifications, now = () => new Date() } = deps;
   const router = Router();
   const farmerOnly = [rateLimit(deps.ipLimit), requireAuth(deps), requireRole('farmer')];
   const noStore: RequestHandler = (_req, res, next) => {
@@ -228,8 +232,8 @@ export function deliveryRoutes(deps: DeliveryRouteDependencies): Router {
     },
   );
 
-  // Allowed until pickup; a paid fee is refunded in full after the commit, and admins are alerted
-  // (decision 144).
+  // Allowed until pickup, after the partner has accepted too; a paid fee is refunded in full after
+  // the commit, admins are alerted (decision 144), and the partner is texted (decision 148).
   router.post(
     '/deliveries/:id/cancel',
     ...farmerOnly,
@@ -241,7 +245,7 @@ export function deliveryRoutes(deps: DeliveryRouteDependencies): Router {
       const found = await findFarmerDelivery(db, farmerId, id);
       if (found === undefined) throw new AppError('not_found', 'Delivery not found');
 
-      const refundKobo = await inTransaction(db, async (trx) => {
+      const { refundKobo, partnerSms } = await inTransaction(db, async (trx) => {
         const booking = await farmerBooking(trx, farmerId, found.context_id, true);
         const delivery = await lockDelivery(trx, id);
         const details = { delivery_request_id: id, status: delivery.status };
@@ -257,9 +261,13 @@ export function deliveryRoutes(deps: DeliveryRouteDependencies): Router {
             details,
           );
         }
-        await cancelDeliveries(trx, [id]);
-        return delivery.paid_at === null ? 0 : delivery.fee_kobo;
+        const cancelled = await cancelDeliveries(trx, [id]);
+        return {
+          refundKobo: delivery.paid_at === null ? 0 : delivery.fee_kobo,
+          partnerSms: await queuePartnerCancellations(trx, notifications.templates, cancelled),
+        };
       });
+      await finishMove(notifications, req.log, { sms: partnerSms, alerts: [] });
 
       if (refundKobo > 0) {
         await refundCancelledDeliveries(

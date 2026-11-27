@@ -3,6 +3,7 @@ import { createTransitionHooks, type TransitionHooks } from './bookings/hooks.js
 import type { Config } from './config.js';
 import type { Database } from './db/client.js';
 import { registerDeliveryHooks } from './deliveries/hooks.js';
+import { createDeliveryLinks, type DeliveryLinks } from './deliveries/partnerLinks.js';
 import {
   createProviderActionLinks,
   registerBookingSmsHooks,
@@ -19,10 +20,12 @@ import type { SmsProvider } from './sms/provider.js';
 
 /** The booking side effects the routes and the scheduled jobs share. */
 export interface BookingServices {
-  /** Transition hooks with the payout, refund and SMS hooks registered. */
+  /** Transition hooks with the payout, refund, delivery and SMS hooks registered. */
   hooks: TransitionHooks;
   notifications: NotificationDeps<SmsTemplateRegistry>;
   gateway: PaymentGateway;
+  /** The delivery partner's links, which assignment and the partner's moves issue. */
+  deliveryLinks: DeliveryLinks;
 }
 
 export interface BookingServiceOptions {
@@ -48,16 +51,17 @@ export function createBookingServices({
   hooks = createTransitionHooks(),
   gateway = createPaymentGateway(config.paystack),
 }: BookingServiceOptions): BookingServices {
-  registerPayoutHooks(hooks);
-  registerRefundHooks(hooks, { db, gateway, logger });
-  registerDeliveryHooks(hooks, { db, gateway, logger });
   const links = createProviderActionLinks(db, config.webAppUrl);
+  const deliveryLinks = createDeliveryLinks(db, config.webAppUrl);
   const notifications = {
     store: notificationStore,
     sms,
     logger,
-    templates: createSmsTemplateRegistry(links),
+    templates: createSmsTemplateRegistry(links, deliveryLinks),
   };
+  registerPayoutHooks(hooks);
+  registerRefundHooks(hooks, { db, gateway, logger });
+  registerDeliveryHooks(hooks, { db, gateway, logger, templates: notifications.templates });
   registerBookingSmsHooks(hooks, { db, notifications, links, webAppUrl: config.webAppUrl });
-  return { hooks, notifications, gateway };
+  return { hooks, notifications, gateway, deliveryLinks };
 }

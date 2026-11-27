@@ -122,6 +122,10 @@ describe('redactUrl', () => {
     ['/api/v1/actions/abc?x=1', '/api/v1/actions/[Redacted]?x=1'],
     ['/api/v1/actions/abc/', '/api/v1/actions/[Redacted]/'],
     ['/api/v1/actions', '/api/v1/actions'],
+    [
+      '/api/v1/delivery-actions/Hk3_q-9ZxYv0LmN2pQrStUvWxYz0123456789abcDE',
+      '/api/v1/delivery-actions/[Redacted]',
+    ],
   ])('hides the action link token in %s', (url, expected) => {
     expect(redactUrl(url)).toBe(expected);
   });
