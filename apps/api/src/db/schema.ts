@@ -145,6 +145,7 @@ export interface DeliveryRequests {
   dropoff_text: string;
   fee_kobo: number;
   handover_code: string;
+  handover_failed_attempts: Generated<number>;
   id: Generated<string>;
   load_description: string;
   load_quantity: Numeric;
