@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  acceptsDelivery,
   calculateDeliveryFee,
   deliveryWindow,
   haversineKm,
@@ -10,6 +11,7 @@ import {
   type DeliveryRates,
   type VehicleBands,
 } from './deliveryPricing.js';
+import { bookingStatuses } from './enums.js';
 
 // The PRD 5.15 placeholders.
 const rates: DeliveryRates = {
@@ -276,5 +278,20 @@ describe('isInWindow', () => {
     expect(isInWindow(window, '2026-12-01')).toBe(true);
     expect(isInWindow(window, '2026-11-25')).toBe(false);
     expect(isInWindow(window, '2026-12-02')).toBe(false);
+  });
+});
+
+describe('acceptsDelivery', () => {
+  it('takes an inbound delivery only while confirmed', () => {
+    expect(bookingStatuses.filter((status) => acceptsDelivery('inbound', status))).toEqual([
+      'confirmed',
+    ]);
+  });
+
+  it('takes an outbound delivery while confirmed or in storage', () => {
+    expect(bookingStatuses.filter((status) => acceptsDelivery('outbound', status))).toEqual([
+      'confirmed',
+      'in_storage',
+    ]);
   });
 });

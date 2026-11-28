@@ -6,3 +6,4 @@ export { default as Confirmation } from './Confirmation';
 export { default as MyBookings } from './MyBookings';
 export { default as BookingDetail } from './BookingDetail';
 export { default as RateBooking } from './RateBooking';
+export { default as RequestDelivery } from './RequestDelivery';

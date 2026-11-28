@@ -14,6 +14,7 @@ import {
   type ProviderBookingDetail,
   type ProviderBookingRequest,
 } from '@coldlink/shared';
+import { toBookingDelivery } from '../deliveries/views.js';
 import type { ProviderBookingDetailRows, ProviderBookingRow } from './providerStore.js';
 import type { BookingRatingRow } from './ratings.js';
 import type { BookingStatusChangeRow, FarmerBookingDetail, FarmerBookingRow } from './store.js';
@@ -91,7 +92,7 @@ function toBookingRating(row: BookingRatingRow): BookingRating {
 }
 
 export function toFarmerBooking(
-  { booking: row, history, rating, deliveryRefundKobo }: FarmerBookingDetail,
+  { booking: row, history, rating, deliveries, deliveryRefundKobo }: FarmerBookingDetail,
   terms: CancellationTerms,
 ): FarmerBooking {
   const summary = toFarmerBookingSummary(row);
@@ -117,6 +118,7 @@ export function toFarmerBooking(
     status_history: toStatusHistory(history),
     cancellation: farmerCancellationPreview(row, deliveryRefundKobo, terms),
     rating: rating === undefined ? null : toBookingRating(rating),
+    deliveries: deliveries.map(toBookingDelivery),
   };
 }
 

@@ -1,6 +1,17 @@
 import * as z from 'zod';
-import { deliveryDirectionSchema } from './deliveryPricing.js';
-import { capacityUnitSchema, deliveryStatusSchema, vehicleTypeSchema } from './enums.js';
+import {
+  acceptsDelivery,
+  deliveryDirectionSchema,
+  deliveryWindow,
+  type BookingDates,
+  type DeliveryDirection,
+} from './deliveryPricing.js';
+import {
+  capacityUnitSchema,
+  deliveryStatusSchema,
+  vehicleTypeSchema,
+  type BookingStatus,
+} from './enums.js';
 import { koboSchema } from './money.js';
 import { phoneSchema } from './phone.js';
 import { pricingInputSchema } from './pricing.js';
@@ -152,6 +163,47 @@ export const farmerDeliverySchema = z.strictObject({
   cancellation: deliveryCancellationPreviewSchema,
 });
 export type FarmerDelivery = z.infer<typeof farmerDeliverySchema>;
+
+/**
+ * A delivery as the farmer's full booking lists it (decision 156): enough for its card, with the
+ * rest read from `GET /deliveries/:id`.
+ */
+export const bookingDeliverySchema = farmerDeliverySchema.pick({
+  id: true,
+  direction: true,
+  status: true,
+  paid: true,
+  scheduled_for: true,
+  fee_kobo: true,
+});
+export type BookingDelivery = z.infer<typeof bookingDeliverySchema>;
+
+/** The API's live rule (decision 142): paid, and neither cancelled nor failed. */
+export function isLiveDelivery(delivery: Pick<BookingDelivery, 'paid' | 'status'>): boolean {
+  return delivery.paid && delivery.status !== 'cancelled' && delivery.status !== 'failed';
+}
+
+/** Why a booking cannot take a delivery that way now, as `POST /deliveries` would refuse it. */
+export type DeliveryRefusal = 'already_live' | 'not_accepted' | 'window_closed';
+
+/**
+ * Whether the farmer can ask for a delivery that way now (decisions 140, 141): the booking takes
+ * it, its window is open, and it has no live delivery that way. An unpaid one does not count: a
+ * new request replaces it.
+ */
+export function deliveryRefusal(
+  direction: DeliveryDirection,
+  booking: BookingDates & { status: BookingStatus; deliveries: BookingDelivery[] },
+  now: Date,
+): DeliveryRefusal | undefined {
+  const live = booking.deliveries.some(
+    (delivery) => delivery.direction === direction && isLiveDelivery(delivery),
+  );
+  if (live) return 'already_live';
+  if (!acceptsDelivery(direction, booking.status)) return 'not_accepted';
+  if (deliveryWindow(direction, booking, now) === undefined) return 'window_closed';
+  return undefined;
+}
 
 export const cancelledDeliverySchema = z.strictObject({
   ...farmerDeliverySchema.shape,

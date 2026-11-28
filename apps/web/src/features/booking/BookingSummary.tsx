@@ -2,6 +2,7 @@ import React from 'react';
 import { useTranslation } from 'react-i18next';
 import type { BookingQuote } from '@coldlink/shared';
 import Card from '../../components/ui/Card';
+import Notice from '../../components/ui/Notice';
 import CardTitle from '../../components/ui/CardTitle';
 import SummaryRow from '../../components/ui/SummaryRow';
 import { formatDate, formatKobo } from '../../i18n/format';
@@ -76,8 +77,15 @@ export const PayNowNotice = ({ terms, facility }: { terms: BookingTerms; facilit
   );
 };
 
+interface PriceBreakdownProps {
+  terms: BookingTerms;
+  facility: string;
+  /** Said instead of the amount to pay while the figures are not yet the final ones. */
+  pending?: string;
+}
+
 // Every figure is the API's, as it worked it out; the screen adds nothing up (PRD 7.4).
-export const PriceBreakdown = ({ terms, facility }: { terms: BookingTerms; facility: string }) => {
+export const PriceBreakdown = ({ terms, facility, pending }: PriceBreakdownProps) => {
   const { t } = useTranslation();
 
   return (
@@ -113,7 +121,11 @@ export const PriceBreakdown = ({ terms, facility }: { terms: BookingTerms; facil
           />
         </div>
       </Card>
-      <PayNowNotice terms={terms} facility={facility} />
+      {pending === undefined ? (
+        <PayNowNotice terms={terms} facility={facility} />
+      ) : (
+        <Notice>{pending}</Notice>
+      )}
     </>
   );
 };

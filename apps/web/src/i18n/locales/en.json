@@ -371,7 +371,8 @@
       "backHome": "Back to home",
       "notFoundTitle": "We couldn't find this booking",
       "notFoundBody": "This booking isn't on your account. Your bookings are in My bookings.",
-      "failedTitle": "Couldn't load your booking"
+      "failedTitle": "Couldn't load your booking",
+      "includesDelivery": "Includes pickup"
     },
     "myBookings": {
       "navTitle": "Bookings",
@@ -512,6 +513,124 @@
       "askTitle": "How was your stay?",
       "askBody": "Rate {{facility}} to help other farmers choose a cold room.",
       "rateStay": "Rate your stay"
+    },
+    "delivery": {
+      "question": "Do you need pickup from your farm?",
+      "questionHint": "A driver collects your produce and brings it to {{facility}}. You pay for it now with the deposit.",
+      "noPickup": "No, I'll bring it myself",
+      "yesPickup": "Yes, pick it up from my farm",
+      "detailsLost": "Enter the pickup details again. They aren't kept when the page reloads.",
+      "priceAfterPin": "Set the pickup point and how much to carry to see the full price.",
+      "checkingPrice": "Checking the price...",
+      "inboundTitle": "Pickup from your farm",
+      "outboundTitle": "Delivery from the cold room",
+      "inboundIntro": "A driver collects your produce and brings it to {{facility}}.",
+      "outboundIntro": "A driver collects your produce from {{facility}} and brings it to you.",
+      "summaryTitle": "Pickup",
+      "day": "Day",
+      "address": "Address",
+      "fee": "Delivery fee",
+      "vehicle": {
+        "bike": "By motorbike",
+        "tricycle": "By tricycle",
+        "van": "By van",
+        "truck": "By truck"
+      },
+      "form": {
+        "inbound": {
+          "addressLabel": "Pickup address",
+          "pinTitle": "Pickup point",
+          "pinHint": "Tap the map where the driver should collect the load.",
+          "mapLabel": "Map. Tap where the driver should collect the load.",
+          "phoneLabel": "Phone of the person at pickup",
+          "nameLabel": "Name of the person at pickup",
+          "dayLabel": "Pickup day"
+        },
+        "outbound": {
+          "addressLabel": "Drop-off address",
+          "pinTitle": "Drop-off point",
+          "pinHint": "Tap the map where the driver should bring the load.",
+          "mapLabel": "Map. Tap where the driver should bring the load.",
+          "phoneLabel": "Phone of the person receiving it",
+          "nameLabel": "Name of the person receiving it",
+          "dayLabel": "Delivery day"
+        },
+        "addressHint": "Road, landmark or gate, so the driver can find it.",
+        "useLocation": "Use my current location",
+        "locationDenied": "Location is off for ColdLink. Tap the map instead.",
+        "locationUnavailable": "Couldn't find you. Try again in the open, or tap the map.",
+        "locationUnsupported": "This phone can't share its location. Tap the map instead.",
+        "pinSet": "Point set. Tap the map again to move it.",
+        "loadLabel": "What is being carried",
+        "quantityLabel": "How much",
+        "unit": {
+          "crates": "crates",
+          "kg": "kg",
+          "sqm": "m²"
+        },
+        "dayHint": "Any day from {{start}} to {{end}}.",
+        "phonePlaceholder": "0803 123 4567"
+      },
+      "errors": {
+        "address": "Describe where the driver should go.",
+        "pin": "Set the point on the map.",
+        "phone": "Enter a Nigerian mobile number, such as 0803 123 4567.",
+        "load": "Say what the driver will carry.",
+        "quantity": "Enter how much, as a number above 0.",
+        "crates": "Enter a whole number of crates.",
+        "day": "Choose a day from {{start}} to {{end}}.",
+        "dayUnknown": "Set the point and amount first, then choose a day.",
+        "tooLong": "Keep it to {{max}} characters.",
+        "checkPickup": "Check the pickup details",
+        "checkPickupBody": "Some pickup details can't be used any more, such as the day. Change them, then pay.",
+        "changePickup": "Change pickup details"
+      },
+      "refused": {
+        "already_live": {
+          "inbound": "This booking already has a pickup",
+          "outbound": "This booking already has a delivery",
+          "body": "You can follow it on the booking."
+        },
+        "not_accepted": {
+          "inbound": "This booking can't take a pickup now",
+          "outbound": "This booking can't take a delivery now",
+          "inboundBody": "Pickup can be asked for while the booking is confirmed.",
+          "outboundBody": "Delivery can be asked for while the booking is confirmed or in storage."
+        },
+        "window_closed": {
+          "inbound": "It's too late to arrange pickup",
+          "outbound": "It's too late to arrange delivery",
+          "inboundBody": "Pickup has to be on or before the drop-off day.",
+          "outboundBody": "Delivery has to be on or before the collection day."
+        },
+        "notPayable": "This delivery can no longer be paid for. Ask for a new one from your booking.",
+        "backToBooking": "Back to booking"
+      },
+      "sectionTitle": "Delivery",
+      "askInbound": "Ask for pickup from your farm",
+      "askOutbound": "Ask for delivery from the cold room",
+      "paidTitle": "Delivery paid",
+      "paidBody": "We'll text you when a driver takes the job.",
+      "status": {
+        "unpaid": "Not paid",
+        "waiting": "Waiting for a driver",
+        "onTheWay": "Driver on the way to collect",
+        "pickedUp": "Picked up",
+        "delivered": "Delivered",
+        "cancelled": "Cancelled",
+        "failed": "Failed"
+      },
+      "paidWithBooking": "It is paid with the booking.",
+      "contact": "Contact",
+      "driverFound": "Driver found",
+      "pickedUpAt": "Picked up",
+      "deliveredAt": "Delivered",
+      "codeTitle": "Handover code",
+      "codeHint": "Give it only to whoever receives the load. The driver needs it to finish the delivery.",
+      "loadFailed": "Couldn't load this delivery's details.",
+      "returnNotFinishedBody": "Paystack hasn't confirmed your payment for the delivery. If money left your account, check again in a few minutes. If not, pay again.",
+      "returnRefundBody": "Your {{amount}} for the delivery arrived after it could no longer go ahead, so we are refunding all of it. It can take a few days to reach you.",
+      "distance": "{{vehicle}}, about {{distance}} km by road."
     }
   },
   "provider": {

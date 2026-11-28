@@ -2,7 +2,11 @@ import type { AppConfig, BookingStatus, CapacityUnit, PricingBreakdown } from '@
 import { sql, type InferResult, type QueryCreator } from 'kysely';
 import type { Database } from '../db/client.js';
 import type { DB } from '../db/schema.js';
-import { unfinishedPaidDeliveryFees } from '../deliveries/store.js';
+import {
+  listBookingDeliveries,
+  unfinishedPaidDeliveryFees,
+  type BookingDeliveryRow,
+} from '../deliveries/store.js';
 import type { StoragePeriod } from '../storagePeriod.js';
 import { generateBookingCode } from './code.js';
 import { findBookingRating, type BookingRatingRow } from './ratings.js';
@@ -177,11 +181,15 @@ export interface FarmerBookingDetail {
   booking: FarmerBookingRow;
   history: BookingStatusChangeRow[];
   rating: BookingRatingRow | undefined;
+  deliveries: BookingDeliveryRow[];
   /** The fees of the paid deliveries cancelling the booking would cancel and refund. */
   deliveryRefundKobo: number;
 }
 
-/** The farmer's booking with its history and rating, or undefined as findFarmerBooking is. */
+/**
+ * The farmer's booking with its history, rating and deliveries, or undefined as findFarmerBooking
+ * is.
+ */
 export async function findFarmerBookingDetail(
   db: Database,
   farmerId: string,
@@ -193,6 +201,7 @@ export async function findFarmerBookingDetail(
     booking,
     history: await listBookingStatusHistory(db, bookingId),
     rating: await findBookingRating(db, bookingId),
+    deliveries: await listBookingDeliveries(db, bookingId),
     deliveryRefundKobo: await unfinishedPaidDeliveryFees(db, bookingId),
   };
 }

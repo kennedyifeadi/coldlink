@@ -1,6 +1,12 @@
 import * as z from 'zod';
 import { todayInLagos } from './dates.js';
-import { capacityUnits, vehicleTypeSchema, type CapacityUnit, type VehicleType } from './enums.js';
+import {
+  capacityUnits,
+  vehicleTypeSchema,
+  type BookingStatus,
+  type CapacityUnit,
+  type VehicleType,
+} from './enums.js';
 
 // Distance, vehicle, fee and scheduling window of a delivery (PRD 7.7). The rounding points are
 // decision 139; the windows are decision 140.
@@ -138,6 +144,13 @@ export function calculateDeliveryFee(distanceKm: number, rates: DeliveryRates): 
 export const deliveryDirections = ['inbound', 'outbound'] as const;
 export type DeliveryDirection = (typeof deliveryDirections)[number];
 export const deliveryDirectionSchema = z.enum(deliveryDirections);
+
+/** Which bookings a delivery can be requested for after booking (decision 141). */
+export function acceptsDelivery(direction: DeliveryDirection, status: BookingStatus): boolean {
+  return direction === 'inbound'
+    ? status === 'confirmed'
+    : status === 'confirmed' || status === 'in_storage';
+}
 
 /** The days a delivery can be scheduled on, both included, on the Lagos calendar. */
 export interface DeliveryWindow {

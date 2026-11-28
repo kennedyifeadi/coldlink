@@ -30,19 +30,30 @@ const statusIcons: Record<BookingStatus, LucideIcon> = {
   no_show: CircleSlash,
 };
 
-// The status in words and an icon as well as the colour, so it never relies on colour alone.
+interface StatusPillProps {
+  tone: StatusTone;
+  icon: LucideIcon;
+  children: string;
+}
+
+// A status in words and an icon as well as the colour, so it never relies on colour alone.
+export const StatusPill = ({ tone, icon: Icon, children }: StatusPillProps) => (
+  <span
+    data-tone={tone}
+    className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-label font-semibold ${toneClasses[tone]}`}
+  >
+    <Icon size={14} strokeWidth={2.5} aria-hidden="true" />
+    {children}
+  </span>
+);
+
 const StatusBadge = ({ status, viewer }: { status: BookingStatus; viewer?: StatusViewer }) => {
   const { t } = useTranslation();
-  const Icon = statusIcons[status];
 
   return (
-    <span
-      data-tone={STATUS_TONES[status]}
-      className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-label font-semibold ${toneClasses[STATUS_TONES[status]]}`}
-    >
-      <Icon size={14} strokeWidth={2.5} aria-hidden="true" />
+    <StatusPill tone={STATUS_TONES[status]} icon={statusIcons[status]}>
       {t(statusLabelKey(status, viewer))}
-    </span>
+    </StatusPill>
   );
 };
 

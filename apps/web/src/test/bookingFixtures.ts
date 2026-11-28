@@ -1,7 +1,10 @@
 import * as z from 'zod';
 import {
   farmerBookingSummarySchema,
+  type BookingDelivery,
   type BookingQuote,
+  type DeliveryQuote,
+  type FarmerDelivery,
   type FarmerBooking,
   type FarmerBookingSummary,
   type PaymentVerification,
@@ -67,6 +70,25 @@ export const dugbeQuote = (changes: Partial<BookingQuote> = {}): BookingQuote =>
   ...changes,
 });
 
+/** An inbound pickup 14.5 km from Dugbe, by bike: ₦1,000 + 14.5 km × ₦100 (decision 139). */
+export const pickupQuote = (changes: Partial<DeliveryQuote> = {}): DeliveryQuote => ({
+  direction: 'inbound',
+  distance_km: 14.5,
+  vehicle_type: 'bike',
+  fee_kobo: 245_000,
+  earliest_date: '2026-11-10',
+  latest_date: '2026-11-10',
+  ...changes,
+});
+
+/** `dugbeQuote` with the pickup priced in: ₦10,500 + ₦2,450. */
+export const dugbeQuoteWithPickup = (delivery = pickupQuote()): BookingQuote =>
+  dugbeQuote({
+    delivery_fee_kobo: delivery.fee_kobo,
+    total_charged_online_kobo: 1_050_000 + delivery.fee_kobo,
+    delivery,
+  });
+
 export const dugbePaymentPath = bookingStepPath('payment', dugbe.provider.id, tenCratesForAWeek);
 
 export const DUGBE_BOOKING_ID = '6b1f0c2e-8d4a-4e7b-9c3f-2a5d8e1b7f40';
@@ -111,6 +133,7 @@ export const dugbeBooking = (changes: Partial<FarmerBooking> = {}): FarmerBookin
   status_history: [{ status: 'payment_pending', at: '2026-11-10T09:00:00.000Z' }],
   cancellation: { allowed: false },
   rating: null,
+  deliveries: [],
   ...changes,
 });
 
@@ -146,5 +169,47 @@ export const verification = (changes: Partial<PaymentVerification> = {}): Paymen
   booking_id: DUGBE_BOOKING_ID,
   booking_status: 'pending_provider',
   delivery_request_id: null,
+  ...changes,
+});
+
+export const DELIVERY_ID = '8c7d6e5f-4a3b-4c2d-9e1f-0a9b8c7d6e5f';
+
+/** A delivery as the full booking lists it: Dugbe's pickup, paid with the booking. */
+export const bookingDelivery = (changes: Partial<BookingDelivery> = {}): BookingDelivery => ({
+  id: DELIVERY_ID,
+  direction: 'inbound',
+  status: 'requested',
+  paid: true,
+  scheduled_for: '2026-11-10',
+  fee_kobo: 245_000,
+  ...changes,
+});
+
+/** The same delivery as GET /deliveries/:id gives it. */
+export const farmerDelivery = (changes: Partial<FarmerDelivery> = {}): FarmerDelivery => ({
+  id: DELIVERY_ID,
+  booking_id: DUGBE_BOOKING_ID,
+  direction: 'inbound',
+  status: 'requested',
+  paid: true,
+  pickup_text: 'Akinyele farm road, by the blue gate',
+  pickup_location: { lat: 7.5, lng: 3.9 },
+  dropoff_text: `${dugbeProvider.display_name}, ${dugbeProvider.address_text}`,
+  dropoff_location: { lat: 7.4, lng: 3.9 },
+  contact_name: 'Bola',
+  contact_phone_masked: '+234800***3456',
+  load_description: 'Tomatoes',
+  load_quantity: 10,
+  load_unit: 'crates',
+  distance_km: 14.5,
+  vehicle_type: 'bike',
+  fee_kobo: 245_000,
+  scheduled_for: '2026-11-10',
+  handover_code: '0427',
+  assigned_at: null,
+  picked_up_at: null,
+  delivered_at: null,
+  created_at: '2026-11-10T09:00:00.000Z',
+  cancellation: { allowed: true, refund_kobo: 245_000 },
   ...changes,
 });

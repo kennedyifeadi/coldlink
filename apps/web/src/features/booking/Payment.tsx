@@ -1,9 +1,15 @@
-import React, { type ReactNode } from 'react';
+import React, { useEffect, type ReactNode } from 'react';
 import { TimerOff } from 'lucide-react';
 import { Navigate, useLocation, useNavigate, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import type { CreateBookingBody } from '@coldlink/shared';
+import {
+  validationIssueSchema,
+  type CreateBookingBody,
+  type DeliveryDetailsBody,
+  type DeliveryQuote,
+} from '@coldlink/shared';
+import * as z from 'zod';
 import { bookingKey, bookingQuery, createBooking, initializePayment } from '../../api/bookings';
 import { isApiError } from '../../api/client';
 import { describeApiError } from '../../api/describeError';
@@ -13,8 +19,11 @@ import BottomNav from '../../components/BottomNav';
 import ErrorMessage from '../../components/ui/ErrorMessage';
 import Notice from '../../components/ui/Notice';
 import PageHeader from '../../components/ui/PageHeader';
+import Card from '../../components/ui/Card';
+import CardTitle from '../../components/ui/CardTitle';
 import PrimaryButton from '../../components/ui/PrimaryButton';
-import { formatKobo, formatLagosTime } from '../../i18n/format';
+import SummaryRow from '../../components/ui/SummaryRow';
+import { formatDate, formatKobo, formatLagosTime } from '../../i18n/format';
 import { useSessionStore } from '../../session/sessionContext';
 import {
   BookingProgress,
@@ -26,7 +35,9 @@ import {
 } from './BookingStates';
 import { bookingStepPath, readBookingRoute, type BookingRoute } from './bookingIntent';
 import { BookingSummary, PayNowNotice, type BookingTerms } from './BookingSummary';
+import { deliveryFieldOf } from './deliveryFields';
 import { confirmationPath, heldBookingPath, holdIsRunning, readHeldBookingId } from './paymentFlow';
+import { hasPickupFlag, usePickupDraft, usePickupDraftFlow, withPickupFlag } from './pickupDraft';
 import { readBookingProblem, useBooking } from './useBooking';
 import {
   isStepError,
@@ -121,6 +132,41 @@ const PriceChangedNotice = () => {
   );
 };
 
+const validationDetailsSchema = z.array(validationIssueSchema);
+
+/** Whether `POST /bookings` refused a pickup detail, which only review can change. */
+const isPickupProblem = (error: unknown) =>
+  isApiError(error, 'validation_failed') &&
+  (validationDetailsSchema.safeParse(error.details).data ?? []).some(
+    ({ path }) => path.startsWith('delivery.') && deliveryFieldOf(path) !== undefined,
+  );
+
+/** What the driver is told and what it costs, as the farmer gave it at review. */
+const PickupSummary = ({
+  details,
+  quote,
+}: {
+  details: DeliveryDetailsBody;
+  quote: DeliveryQuote;
+}) => {
+  const { t } = useTranslation();
+
+  return (
+    <Card className="p-5">
+      <CardTitle>{t('booking.delivery.summaryTitle')}</CardTitle>
+      <div className="flex flex-col gap-3">
+        <SummaryRow label={t('booking.delivery.day')} value={formatDate(details.scheduled_for)} />
+        <SummaryRow label={t('booking.delivery.address')} value={details.address_text} />
+        <SummaryRow
+          label={t('booking.delivery.fee')}
+          value={formatKobo(quote.fee_kobo)}
+          variant="highlight"
+        />
+      </div>
+    </Card>
+  );
+};
+
 /** Back to review of the same terms, which asks for the latest space and price. */
 const useStartAgain = (route: BookingRoute | undefined) => {
   const navigate = useNavigate();
@@ -149,13 +195,26 @@ const HoldExpired = ({ route }: { route: BookingRoute }) => {
   );
 };
 
-const PayNewBooking = ({ attempt }: { attempt: Attempt }) => {
-  const booking = useBooking();
+const PayNewBooking = ({ route, attempt }: { route: BookingRoute; attempt: Attempt }) => {
+  const navigate = useNavigate();
+  const flagged = hasPickupFlag(new URLSearchParams(useLocation().search));
+  const details = usePickupDraft(route).draft?.details;
+  const pickup =
+    details &&
+    ({
+      location: details.location,
+      load_quantity: details.load_quantity,
+      load_unit: details.load_unit,
+    } as const);
+  const booking = useBooking(flagged ? pickup : undefined);
   const crops = useQuery(cropsQuery);
   const { t } = useTranslation();
   const navTitle = t('booking.payment.navTitle');
   const bookFailure = causeIn(attempt.error, 'book');
+  const reviewPath = withPickupFlag(bookingStepPath('review', route.providerId, route.intent));
 
+  // A reload lost the pickup: ask for it again rather than show a total without its fee.
+  if (flagged && !details) return <Navigate to={reviewPath} replace />;
   if (booking.status === 'invalidLink') return <BrokenBookingLink />;
   if (booking.status === 'gone' || isApiError(bookFailure, 'not_found')) {
     return <FacilityGone navTitle={navTitle} />;
@@ -178,15 +237,29 @@ const PayNewBooking = ({ attempt }: { attempt: Attempt }) => {
   if (crops.isSuccess && booking.status === 'ready' && !crop) return <BrokenBookingLink />;
   if (booking.status !== 'ready' || !crop) return <PaymentSkeleton />;
 
-  const { route, provider, quote } = booking;
+  const { provider, quote } = booking;
   const problem = booking.problem ?? readBookingProblem(bookFailure);
   const asked = { quantity: route.intent.quantity, unit: route.intent.capacity_unit };
+  const delivery = flagged ? details : undefined;
 
   return (
     <PaymentScreen>
       <BookingSummary facility={provider} cropName={crop.name} terms={quote} />
       {problem && <QuoteProblemNotice problem={problem} asked={asked} />}
-      {quote && !problem && (
+      {quote && delivery && quote.delivery && (
+        <PickupSummary details={delivery} quote={quote.delivery} />
+      )}
+      {quote && !problem && isPickupProblem(bookFailure) && (
+        <>
+          <Notice tone="error" role="alert" title={t('booking.delivery.errors.checkPickup')}>
+            {t('booking.delivery.errors.checkPickupBody')}
+          </Notice>
+          <PrimaryButton onClick={() => void navigate(reviewPath)}>
+            {t('booking.delivery.errors.changePickup')}
+          </PrimaryButton>
+        </>
+      )}
+      {quote && !problem && !isPickupProblem(bookFailure) && (
         <>
           <PayNowNotice terms={quote} facility={provider.display_name} />
           <PayButton
@@ -195,7 +268,12 @@ const PayNewBooking = ({ attempt }: { attempt: Attempt }) => {
             onPay={() =>
               attempt.start({
                 kind: 'new',
-                body: { ...route.intent, provider_id: route.providerId },
+                body: {
+                  ...route.intent,
+                  provider_id: route.providerId,
+                  ...(delivery && { delivery }),
+                },
+                // Includes the pickup's fee, so a changed fee is a changed price too.
                 quotedTotalKobo: quote.total_charged_online_kobo,
               })
             }
@@ -218,6 +296,12 @@ const PayHeldBooking = ({ route, bookingId, attempt }: PayHeldBookingProps) => {
   const state = useLocation().state as HeldBookingState | null;
   const held = useQuery(bookingQuery(store.authorizedRequest, bookingId));
   const navTitle = t('booking.payment.navTitle');
+  const { clear: clearPickup } = usePickupDraftFlow();
+
+  // The booking holds its pickup now, so the details typed at review leave memory. Not when the
+  // booking is made: the URL names it only after that render, and until then a missing draft
+  // reads as one a reload lost.
+  useEffect(() => clearPickup(), [clearPickup]);
 
   if (isApiError(held.error, 'not_found')) return <BrokenBookingLink />;
   if (held.isError) {
@@ -305,7 +389,7 @@ const Payment = () => {
   // The hold ran out before Paystack was asked (decision 92).
   if (isApiError(causeIn(attempt.error, 'pay'), 'conflict')) return <HoldExpired route={route} />;
   return heldId === null ? (
-    <PayNewBooking attempt={attempt} />
+    <PayNewBooking route={route} attempt={attempt} />
   ) : (
     <PayHeldBooking route={route} bookingId={heldId} attempt={attempt} />
   );
