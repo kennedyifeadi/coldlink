@@ -1,4 +1,5 @@
 import {
+  acceptsDelivery,
   deliveryWindow,
   isInWindow,
   todayInLagos,
@@ -6,13 +7,6 @@ import {
   type BookingStatus,
   type DeliveryDirection,
 } from '@coldlink/shared';
-
-/** Which bookings a delivery can be requested for after booking (decision 141). */
-export function acceptsDelivery(direction: DeliveryDirection, status: BookingStatus): boolean {
-  return direction === 'inbound'
-    ? status === 'confirmed'
-    : status === 'confirmed' || status === 'in_storage';
-}
 
 /**
  * Whether a delivery requested after booking can still be paid for, and so become live: its

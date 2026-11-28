@@ -1,4 +1,5 @@
 import {
+  acceptsDelivery,
   bookingStatusSchema,
   createDeliveryBodySchema,
   deliveryQuoteBodySchema,
@@ -25,7 +26,6 @@ import {
   priceDelivery,
   toDeliveryQuote,
 } from '../deliveries/pricing.js';
-import { acceptsDelivery } from '../deliveries/rules.js';
 import {
   cancelDeliveries,
   findFarmerDelivery,

@@ -1,21 +1,6 @@
-import { bookingStatuses, startOfDayInLagos } from '@coldlink/shared';
+import { startOfDayInLagos } from '@coldlink/shared';
 import { describe, expect, it } from 'vitest';
-import { acceptsDelivery, isStillPayable } from './rules.js';
-
-describe('acceptsDelivery', () => {
-  it('takes an inbound delivery only while confirmed', () => {
-    expect(bookingStatuses.filter((status) => acceptsDelivery('inbound', status))).toEqual([
-      'confirmed',
-    ]);
-  });
-
-  it('takes an outbound delivery while confirmed or in storage', () => {
-    expect(bookingStatuses.filter((status) => acceptsDelivery('outbound', status))).toEqual([
-      'confirmed',
-      'in_storage',
-    ]);
-  });
-});
+import { isStillPayable } from './rules.js';
 
 describe('isStillPayable', () => {
   const booking = {
