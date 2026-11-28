@@ -85,6 +85,7 @@ The farmer's own bookings (PRD 5.5, 6.3, 6.6, 6.7, 7.4, 7.8; decisions 82 to 86,
 - **The full booking** (from `GET /bookings/:id`, `POST /bookings` and the cancellation) also has `status_history`, each status the booking has entered and when, oldest first, never who moved it; `provider.phone`, the facility's phone in full once it has accepted (`confirmed`, `in_storage` or `completed`) and null before or otherwise; and `cancellation`, what cancelling now would do: `{ allowed: false }`, or `{ allowed: true, refund_kobo, deposit_refund_ends_at }` with the refund the cancellation would make at that moment and, once confirmed, the last moment it still refunds the deposit.
 - **`POST /bookings/:id/cancel`**, with an optional `reason` (the body may be left out), cancels a booking awaiting the provider (`pending_provider`) or confirmed. The response adds `refund_kobo`, what the policy refunds of the online payment: all of it before the provider accepts; after that, the deposit (not the service fee) if it is at least `farmer_free_cancel_hours` before 00:00 in Lagos on `start_date`; nothing later. Any other status is 409 `conflict`, including `payment_pending`: an unpaid booking is not cancelled, it expires. `refund_kobo` and the preview's `refund_kobo` also count the fee of each paid delivery the cancellation cancels, which is refunded in full (decision 144). The refund itself is made separately.
 - **The full booking** also has `rating`: null, or the farmer's `{ stars, comment, created_at }` once they have rated it. A booking can be rated when it is `completed` and its `rating` is null (`canRateBooking` in `packages/shared`).
+- **The full booking** also has `deliveries`, the booking's deliveries newest first, each `{ id, direction, status, paid, scheduled_for, fee_kobo }` (decision 156). An unpaid request that was cancelled or replaced is left out; a paid one that was cancelled stays. The rest of a delivery is in `GET /deliveries/:id`.
 - **`POST /bookings/:id/rating`**, with `stars` (a whole number from 1 to 5) and an optional `comment` (trimmed, at most 500 characters; a blank one is stored as null), rates the facility for a `completed` booking, once. It answers 201 with the full booking, `rating` included, and the facility's `avg_rating` and `rating_count` are recomputed from all its ratings. A booking that is not `completed` is 409 `conflict` with `details.status`; one already rated is 409, including when two ratings arrive at once. Another farmer's booking is the same 404 as an unknown id. Ratings cannot be changed or deleted.
 - The farmer's view never has the commission, its rate or the provider's payout.
 
@@ -2699,6 +2700,7 @@ components:
         - status_history
         - cancellation
         - rating
+        - deliveries
       properties:
         unit_price_kobo:
           type: integer
@@ -2711,7 +2713,7 @@ components:
           description: Paid online.
         delivery_fee_kobo:
           type: integer
-          description: Always 0 until delivery can be added to a booking.
+          description: The fee of a delivery requested with the booking, or 0.
         payment_expires_at:
           type: [string, 'null']
           format: date-time
@@ -2789,6 +2791,29 @@ components:
                 created_at:
                   type: string
                   format: date-time
+        deliveries:
+          type: array
+          description: >-
+            The booking's deliveries, newest first, without unpaid requests that were cancelled or
+            replaced. GET /deliveries/{id} has the rest of each.
+          items:
+            type: object
+            additionalProperties: false
+            required: [id, direction, status, paid, scheduled_for, fee_kobo]
+            properties:
+              id:
+                type: string
+                format: uuid
+              direction:
+                $ref: '#/components/schemas/FarmerDelivery/properties/direction'
+              status:
+                $ref: '#/components/schemas/FarmerDelivery/properties/status'
+              paid:
+                $ref: '#/components/schemas/FarmerDelivery/properties/paid'
+              scheduled_for:
+                $ref: '#/components/schemas/FarmerDelivery/properties/scheduled_for'
+              fee_kobo:
+                $ref: '#/components/schemas/FarmerDelivery/properties/fee_kobo'
         provider:
           type: object
           required: [address_text, landmark, phone]
