@@ -57,6 +57,22 @@ export const readReturnOutcome = (
   return holdIsRunning(booking, now) ? 'notFinished' : 'holdExpired';
 };
 
+export type DeliveryReturnOutcome = 'paid' | 'notFinished' | 'lateRefund';
+
+/** What a return from paying for a delivery means, from the charge and the delivery (decision 143). */
+export const readDeliveryReturnOutcome = (
+  paymentStatus: PaymentStatus,
+  delivery: { paid: boolean },
+): DeliveryReturnOutcome => {
+  if (delivery.paid) return 'paid';
+  // Paid, but the delivery could no longer take it: refunded in full against its charge.
+  return PAID_STATUSES.has(paymentStatus) ? 'lateRefund' : 'notFinished';
+};
+
+/** Router state the delivery's return leaves for the booking detail. */
+export const deliveryPaidStateSchema = z.object({ deliveryPaid: z.literal(true) });
+export type DeliveryPaidState = z.infer<typeof deliveryPaidStateSchema>;
+
 /** Statuses in which the booking has been paid for and still stands. */
 export const isPaidAndStanding = (status: BookingStatus) =>
   status === 'pending_provider' ||

@@ -12,6 +12,12 @@ export type ReturnToState = z.infer<typeof returnToStateSchema>;
 export const bookingDetailPath = (bookingId: string) =>
   `${MY_BOOKINGS_PATH}/${encodeURIComponent(bookingId)}`;
 
+/** Asking for a delivery after booking: `inbound` or `outbound`. */
+export const BOOKING_DELIVERY_PATH = `${MY_BOOKINGS_PATH}/:bookingId/delivery/:direction`;
+
+export const bookingDeliveryPath = (bookingId: string, direction: 'inbound' | 'outbound') =>
+  `${bookingDetailPath(bookingId)}/delivery/${direction}`;
+
 /** A facility's dashboard, its bookings and one booking, under its id. */
 export const PROVIDER_FACILITY_PATH = '/provider/facilities/:providerId';
 export const PROVIDER_BOOKINGS_PATH = `${PROVIDER_FACILITY_PATH}/bookings`;

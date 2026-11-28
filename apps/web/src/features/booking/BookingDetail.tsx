@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import type { TFunction } from 'i18next';
 import { useTranslation } from 'react-i18next';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -7,6 +7,8 @@ import * as z from 'zod';
 import {
   bookingRatingPath,
   canRateBooking,
+  deliveryDirections,
+  deliveryRefusal,
   type CancelledBooking,
   type FarmerBooking,
 } from '@coldlink/shared';
@@ -20,15 +22,19 @@ import DangerButton from '../../components/ui/DangerButton';
 import ErrorMessage from '../../components/ui/ErrorMessage';
 import Notice from '../../components/ui/Notice';
 import PrimaryButton from '../../components/ui/PrimaryButton';
+import SecondaryButton from '../../components/ui/SecondaryButton';
 import SummaryRow from '../../components/ui/SummaryRow';
 import TextButton from '../../components/ui/TextButton';
 import { formatKobo, formatLagosTime } from '../../i18n/format';
 import { useSessionStore } from '../../session/sessionContext';
+import { bookingDeliveryPath } from '../../session/routes';
 import BookAgainButton from './BookAgainButton';
 import { canBookAgain } from './bookingStatus';
 import BookingCountdown from './BookingCountdown';
 import { BookingCode, BookingDetails } from './BookingFacts';
 import { BookingNotFound, BookingSkeleton, LoadFailed } from './BookingStates';
+import DeliveryCard from './DeliveryCard';
+import { deliveryPaidStateSchema } from './paymentFlow';
 import { RatingSummary } from './RatingStars';
 import StatusBadge from './StatusBadge';
 import StatusHistory from './StatusHistory';
@@ -239,6 +245,45 @@ const CancelSection = ({ booking, refresh, onCancelled }: CancelSectionProps) =>
   );
 };
 
+const DELIVERY_HEADING_ID = 'deliveries-title';
+
+/**
+ * The booking's deliveries, and the way to ask for one each way the booking takes now (PRD 7.7,
+ * decisions 140, 141). Cancelling a delivery is not offered here yet.
+ */
+const DeliverySection = ({ booking, readAt }: { booking: FarmerBooking; readAt: number }) => {
+  const { t } = useTranslation();
+  const navigate = useNavigate();
+  // Judged when the booking was read; a window that closes after that is the API's 409.
+  const askable = deliveryDirections.filter(
+    (direction) => deliveryRefusal(direction, booking, new Date(readAt)) === undefined,
+  );
+  if (booking.deliveries.length === 0 && askable.length === 0) return null;
+
+  return (
+    <section aria-labelledby={DELIVERY_HEADING_ID} className="flex flex-col gap-3 mb-4">
+      <h2 id={DELIVERY_HEADING_ID} className="font-semibold text-ink text-subtitle">
+        {t('booking.delivery.sectionTitle')}
+      </h2>
+      {booking.deliveries.map((delivery) => (
+        <DeliveryCard key={delivery.id} booking={booking} delivery={delivery} />
+      ))}
+      {askable.map((direction) => (
+        <SecondaryButton
+          key={direction}
+          onClick={() => void navigate(bookingDeliveryPath(booking.id, direction))}
+        >
+          {t(
+            direction === 'inbound'
+              ? 'booking.delivery.askInbound'
+              : 'booking.delivery.askOutbound',
+          )}
+        </SecondaryButton>
+      ))}
+    </section>
+  );
+};
+
 const RATING_HEADING_ID = 'your-rating-title';
 
 /** A completed booking's rating, or the way to give one (PRD 7.8). */
@@ -279,6 +324,7 @@ const BookingDetail = () => {
     enabled: bookingId !== undefined,
   });
   const [cancelled, setCancelled] = useState<CancelledBooking>();
+  const deliveryPaid = deliveryPaidStateSchema.safeParse(useLocation().state).success;
 
   if (bookingId === undefined || isApiError(query.error, 'not_found')) {
     return <BookingNotFound navTitle={t('booking.detail.navTitle')} />;
@@ -317,8 +363,16 @@ const BookingDetail = () => {
           </div>
           <div className="flex flex-col px-5 pt-5">
             {cancelled && <CancelledNotice result={cancelled} />}
+            {deliveryPaid && (
+              <div className="mb-4">
+                <Notice tone="done" title={t('booking.delivery.paidTitle')}>
+                  {t('booking.delivery.paidBody')}
+                </Notice>
+              </div>
+            )}
             <BookingCode code={booking.code} />
             <BookingDetails booking={booking} />
+            <DeliverySection booking={booking} readAt={query.dataUpdatedAt} />
             <RatingCard booking={booking} />
             <PriceCard booking={booking} />
             <TimesCard booking={booking} />

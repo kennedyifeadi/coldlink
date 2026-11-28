@@ -9,6 +9,7 @@ import AppLayout from './components/AppLayout';
 import NotFound from './components/NotFound';
 import { RedirectIfSignedIn, RequireSession } from './session/guards';
 import {
+  BOOKING_DELIVERY_PATH,
   MY_BOOKINGS_PATH,
   PROVIDER_BOOKING_PATH,
   PROVIDER_BOOKINGS_PATH,
@@ -55,6 +56,7 @@ const Confirmation = lazyScreen(loadBooking, 'Confirmation');
 const MyBookings = lazyScreen(loadBooking, 'MyBookings');
 const BookingDetail = lazyScreen(loadBooking, 'BookingDetail');
 const RateBooking = lazyScreen(loadBooking, 'RateBooking');
+const RequestDelivery = lazyScreen(loadBooking, 'RequestDelivery');
 const Facilities = lazyScreen(loadProvider, 'Facilities');
 const ContactStep = lazyScreen(loadProvider, 'ContactStep');
 const LocationStep = lazyScreen(loadProvider, 'LocationStep');
@@ -100,6 +102,7 @@ const AppRoutes = () => (
         <Route path="/userid" element={<UserId />} />
         <Route path={MY_BOOKINGS_PATH} element={<MyBookings />} />
         <Route path={`${MY_BOOKINGS_PATH}/:bookingId`} element={<BookingDetail />} />
+        <Route path={BOOKING_DELIVERY_PATH} element={<RequestDelivery />} />
         {/* The rating_request SMS links here; a signed-out farmer signs in and comes back. */}
         <Route path={BOOKING_RATING_ROUTE} element={<RateBooking />} />
         {/* Paystack's callback (decision 92); matched before /payment/:providerId. */}

@@ -3,16 +3,23 @@ import { CircleAlert, RotateCcw, SearchX, TimerOff, WalletCards } from 'lucide-r
 import { Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
-import type { FarmerBooking } from '@coldlink/shared';
+import type { FarmerBooking, FarmerDelivery } from '@coldlink/shared';
 import { bookingQuery, initializePayment, verifyPayment } from '../../api/bookings';
+import { deliveryQuery, initializeDeliveryPayment } from '../../api/deliveries';
 import { isApiError } from '../../api/client';
 import { describeApiError } from '../../api/describeError';
 import { formatKobo, formatLagosTime } from '../../i18n/format';
 import { useSessionStore } from '../../session/sessionContext';
-import { MY_BOOKINGS_PATH } from '../../session/routes';
+import { bookingDetailPath, MY_BOOKINGS_PATH } from '../../session/routes';
 import { SEARCH_STEPS } from '../search/searchFlow';
 import { LoadFailed, ProblemScreen } from './BookingStates';
-import { confirmationPath, readPaymentReference, readReturnOutcome } from './paymentFlow';
+import {
+  confirmationPath,
+  readDeliveryReturnOutcome,
+  readPaymentReference,
+  readReturnOutcome,
+  type DeliveryPaidState,
+} from './paymentFlow';
 import { usePaymentAttempt } from './usePaymentAttempt';
 
 const Checking = () => {
@@ -108,6 +115,73 @@ const NotFinished = ({ booking, checkAgain, checking }: NotFinishedProps) => {
   );
 };
 
+interface DeliveryNotPaidProps {
+  delivery: FarmerDelivery;
+  checkAgain: () => void;
+  checking: boolean;
+  refunded: boolean;
+}
+
+/** A delivery's own charge that has not gone through, or came too late (decision 143). */
+const DeliveryNotPaid = ({ delivery, checkAgain, checking, refunded }: DeliveryNotPaidProps) => {
+  const navigate = useNavigate();
+  const store = useSessionStore();
+  const { t } = useTranslation();
+  // The open charge is reused (decision 143), so paying again never charges twice.
+  const attempt = usePaymentAttempt(async () => {
+    const charge = await initializeDeliveryPayment(store.authorizedRequest, delivery.id);
+    return charge.authorization_url;
+  });
+  const navTitle = t(`booking.delivery.${delivery.direction}Title`);
+  const backToBooking = {
+    action: t('booking.delivery.refused.backToBooking'),
+    onAction: () => void navigate(bookingDetailPath(delivery.booking_id), { replace: true }),
+  };
+
+  if (refunded) {
+    return (
+      <ProblemScreen
+        navTitle={navTitle}
+        icon={WalletCards}
+        title={t('booking.paymentReturn.refundTitle')}
+        body={t('booking.delivery.returnRefundBody', { amount: formatKobo(delivery.fee_kobo) })}
+        {...backToBooking}
+      />
+    );
+  }
+  if (isApiError(attempt.error, 'conflict')) {
+    return (
+      <ProblemScreen
+        navTitle={navTitle}
+        icon={TimerOff}
+        title={t('booking.paymentReturn.notFinishedTitle')}
+        body={t('booking.delivery.refused.notPayable')}
+        {...backToBooking}
+      />
+    );
+  }
+  const failure = attempt.error === null ? undefined : describeApiError(attempt.error, t);
+
+  return (
+    <ProblemScreen
+      navTitle={navTitle}
+      icon={failure ? CircleAlert : RotateCcw}
+      title={t('booking.paymentReturn.notFinishedTitle')}
+      body={failure ?? t('booking.delivery.returnNotFinishedBody')}
+      action={
+        attempt.redirecting
+          ? t('booking.payment.opening')
+          : isApiError(attempt.error, 'network')
+            ? t('common.tryAgain')
+            : t('booking.payAmount', { amount: formatKobo(delivery.fee_kobo) })
+      }
+      onAction={() => attempt.start(undefined)}
+      busy={attempt.redirecting || checking}
+      secondary={{ label: t('booking.paymentReturn.checkAgain'), onClick: checkAgain }}
+    />
+  );
+};
+
 /** Where Paystack sends the farmer back to, with the charge's reference (decision 92). */
 const PaymentReturn = () => {
   const store = useSessionStore();
@@ -119,31 +193,59 @@ const PaymentReturn = () => {
     enabled: reference !== undefined,
   });
   const bookingId = verification.data?.booking_id;
+  // A delivery asked for after booking has its own charge (decision 143); null for a booking's.
+  const deliveryId = verification.data?.delivery_request_id ?? null;
   const booking = useQuery({
     ...bookingQuery(store.authorizedRequest, bookingId ?? ''),
-    enabled: bookingId !== undefined,
+    enabled: bookingId !== undefined && deliveryId === null,
   });
+  const delivery = useQuery({
+    ...deliveryQuery(store.authorizedRequest, deliveryId ?? ''),
+    enabled: deliveryId !== null,
+  });
+  const paidFor = deliveryId === null ? booking : delivery;
 
   if (reference === undefined || isApiError(verification.error, 'not_found')) {
     return <UnknownPayment />;
   }
-  const failure = verification.error ?? booking.error;
+  const failure = verification.error ?? paidFor.error;
   if (failure) {
     return (
       <LoadFailed
         navTitle={t('booking.payment.navTitle')}
         title={t('booking.paymentReturn.failedTitle')}
         error={failure}
-        retry={() => void (verification.isError ? verification.refetch() : booking.refetch())}
-        retrying={verification.isFetching || booking.isFetching}
+        retry={() => void (verification.isError ? verification.refetch() : paidFor.refetch())}
+        retrying={verification.isFetching || paidFor.isFetching}
       />
     );
   }
-  if (!verification.data || !booking.data) return <Checking />;
+  if (!verification.data || !paidFor.data) return <Checking />;
 
   const checkAgain = () => {
-    void verification.refetch().then(() => booking.refetch());
+    void verification.refetch().then(async () => {
+      await paidFor.refetch();
+    });
   };
+  const checking = verification.isFetching || paidFor.isFetching;
+  if (delivery.data) {
+    const outcome = readDeliveryReturnOutcome(verification.data.payment_status, delivery.data);
+    return outcome === 'paid' ? (
+      <Navigate
+        to={bookingDetailPath(delivery.data.booking_id)}
+        replace
+        state={{ deliveryPaid: true } satisfies DeliveryPaidState}
+      />
+    ) : (
+      <DeliveryNotPaid
+        delivery={delivery.data}
+        checkAgain={checkAgain}
+        checking={checking}
+        refunded={outcome === 'lateRefund'}
+      />
+    );
+  }
+  if (!booking.data) return <Checking />;
   switch (
     readReturnOutcome(verification.data.payment_status, booking.data, booking.dataUpdatedAt)
   ) {
@@ -154,13 +256,7 @@ const PaymentReturn = () => {
     case 'holdExpired':
       return <SpaceReleased booking={booking.data} refunded={false} />;
     case 'notFinished':
-      return (
-        <NotFinished
-          booking={booking.data}
-          checkAgain={checkAgain}
-          checking={verification.isFetching || booking.isFetching}
-        />
-      );
+      return <NotFinished booking={booking.data} checkAgain={checkAgain} checking={checking} />;
   }
 };
 
