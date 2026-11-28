@@ -938,6 +938,103 @@ describe.skipIf(noTestDatabase)('deliveries against Postgres', () => {
     });
   });
 
+  describe("the full booking's deliveries", () => {
+    async function readBooking(target: Target, bookingId: string) {
+      const response = await request(target.app)
+        .get(`/api/v1/bookings/${bookingId}`)
+        .set('Authorization', await bearer(farmerId));
+      expect(response.status).toBe(200);
+      expectNoPartnerMoney(response.body);
+      return farmerBookingSchema.parse(response.body);
+    }
+
+    // A test's rows share one transaction, so its created_at; this puts one row a minute earlier.
+    async function makeOlder(deliveryId: string) {
+      await db()
+        .updateTable('delivery_requests')
+        .set({ created_at: sql<Date>`created_at - interval '1 minute'` })
+        .where('id', '=', deliveryId)
+        .execute();
+    }
+
+    it('is empty for a booking without one', async () => {
+      const target = build();
+      const { booking } = await confirmedBooking(target);
+      expect((await readBooking(target, booking.id)).deliveries).toEqual([]);
+    });
+
+    it('lists the one asked for with the booking, unpaid and then paid', async () => {
+      const target = build();
+      const booking = await book(target, deliveryDetails);
+      const [row] = await deliveriesOf(booking.id);
+      const expected = {
+        id: row?.id,
+        direction: 'inbound',
+        status: 'requested',
+        scheduled_for: '2026-11-18',
+        fee_kobo: FEE,
+      };
+      expect(booking.deliveries).toEqual([{ ...expected, paid: false }]);
+
+      const started = await initialize(target, { booking_id: booking.id });
+      const { reference } = initializedPaymentSchema.parse(started.body);
+      await postWebhook(target, reference, booking.total_charged_online_kobo);
+
+      expect((await readBooking(target, booking.id)).deliveries).toEqual([
+        { ...expected, paid: true },
+      ]);
+    });
+
+    it('leaves out an unpaid request that was replaced or cancelled', async () => {
+      const target = build();
+      const { booking } = await confirmedBooking(target);
+      const replaced = farmerDeliverySchema.parse((await requestLater(target, booking.id)).body);
+      const replacement = farmerDeliverySchema.parse((await requestLater(target, booking.id)).body);
+      expect((await readBooking(target, booking.id)).deliveries.map(({ id }) => id)).toEqual([
+        replacement.id,
+      ]);
+      expect(replaced.id).not.toBe(replacement.id);
+
+      const cancelled = await request(target.app)
+        .post(`/api/v1/deliveries/${replacement.id}/cancel`)
+        .set('Authorization', await bearer(farmerId));
+      expect(cancelled.status).toBe(200);
+      expect((await readBooking(target, booking.id)).deliveries).toEqual([]);
+    });
+
+    it('keeps a paid delivery that was cancelled, newest first', async () => {
+      const target = build();
+      const { booking } = await confirmedBooking(target, deliveryDetails);
+      const [inbound] = await deliveriesOf(booking.id);
+      await makeOlder(inbound?.id ?? '');
+      const outbound = farmerDeliverySchema.parse((await requestLater(target, booking.id)).body);
+      await postWebhook(target, await payLater(target, outbound.id), FEE);
+      const cancelled = await request(target.app)
+        .post(`/api/v1/deliveries/${outbound.id}/cancel`)
+        .set('Authorization', await bearer(farmerId));
+      expect(cancelled.status).toBe(200);
+
+      expect((await readBooking(target, booking.id)).deliveries).toEqual([
+        {
+          id: outbound.id,
+          direction: 'outbound',
+          status: 'cancelled',
+          paid: true,
+          scheduled_for: '2026-11-25',
+          fee_kobo: FEE,
+        },
+        {
+          id: inbound?.id,
+          direction: 'inbound',
+          status: 'requested',
+          paid: true,
+          scheduled_for: '2026-11-18',
+          fee_kobo: FEE,
+        },
+      ]);
+    });
+  });
+
   describe('GET /deliveries/:id', () => {
     it("shows the farmer the handover code and never the partner's money", async () => {
       const target = build();

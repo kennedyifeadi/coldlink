@@ -4,10 +4,16 @@ import {
   maskPhone,
   todayInLagos,
   vehicleTypeSchema,
+  type BookingDelivery,
   type DeliveryCancellationPreview,
   type FarmerDelivery,
 } from '@coldlink/shared';
-import { directionOf, isOpenDeliveryStatus, type FarmerDeliveryRow } from './store.js';
+import {
+  directionOf,
+  isOpenDeliveryStatus,
+  type BookingDeliveryRow,
+  type FarmerDeliveryRow,
+} from './store.js';
 
 function isoOrNull(date: Date | null): string | null {
   return date?.toISOString() ?? null;
@@ -26,9 +32,13 @@ export function deliveryCancellationPreview(
   return { allowed: true, refund_kobo: row.paid_at === null ? 0 : row.fee_kobo };
 }
 
+function scheduledDay(row: { id: string; scheduled_for: Date | null }): string {
+  if (row.scheduled_for === null) throw new Error(`Delivery ${row.id} has no scheduled day`);
+  return todayInLagos(row.scheduled_for);
+}
+
 // The database checks hold the text columns to these values; parsing narrows their types.
 export function toFarmerDelivery(row: FarmerDeliveryRow): FarmerDelivery {
-  if (row.scheduled_for === null) throw new Error(`Delivery ${row.id} has no scheduled day`);
   return {
     id: row.id,
     booking_id: row.context_id,
@@ -47,12 +57,23 @@ export function toFarmerDelivery(row: FarmerDeliveryRow): FarmerDelivery {
     distance_km: row.distance_km,
     vehicle_type: vehicleTypeSchema.parse(row.vehicle_type),
     fee_kobo: row.fee_kobo,
-    scheduled_for: todayInLagos(row.scheduled_for),
+    scheduled_for: scheduledDay(row),
     handover_code: row.handover_code,
     assigned_at: isoOrNull(row.assigned_at),
     picked_up_at: isoOrNull(row.picked_up_at),
     delivered_at: isoOrNull(row.delivered_at),
     created_at: row.created_at.toISOString(),
     cancellation: deliveryCancellationPreview(row),
+  };
+}
+
+export function toBookingDelivery(row: BookingDeliveryRow): BookingDelivery {
+  return {
+    id: row.id,
+    direction: directionOf(row.context_type),
+    status: deliveryStatusSchema.parse(row.status),
+    paid: row.paid_at !== null,
+    scheduled_for: scheduledDay(row),
+    fee_kobo: row.fee_kobo,
   };
 }

@@ -153,6 +153,20 @@ export const farmerDeliverySchema = z.strictObject({
 });
 export type FarmerDelivery = z.infer<typeof farmerDeliverySchema>;
 
+/**
+ * A delivery as the farmer's full booking lists it (decision 156): enough for its card, with the
+ * rest read from `GET /deliveries/:id`.
+ */
+export const bookingDeliverySchema = farmerDeliverySchema.pick({
+  id: true,
+  direction: true,
+  status: true,
+  paid: true,
+  scheduled_for: true,
+  fee_kobo: true,
+});
+export type BookingDelivery = z.infer<typeof bookingDeliverySchema>;
+
 export const cancelledDeliverySchema = z.strictObject({
   ...farmerDeliverySchema.shape,
   /** What the cancellation refunds: the whole fee if it was paid, otherwise 0. */

@@ -106,7 +106,10 @@ describe('toFarmerBooking', () => {
 
   it('gives each status change as a status and a time only', () => {
     const booking = farmerBookingSchema.parse(
-      toFarmerBooking({ booking: row, history, rating: undefined, deliveryRefundKobo: 0 }, terms),
+      toFarmerBooking(
+        { booking: row, history, rating: undefined, deliveries: [], deliveryRefundKobo: 0 },
+        terms,
+      ),
     );
     expect(booking.status_history).toEqual([
       { status: 'payment_pending', at: '2026-11-10T08:00:00.000Z' },
@@ -117,7 +120,7 @@ describe('toFarmerBooking', () => {
 
   it('passes on the facility phone the query read, or null', () => {
     const shown = toFarmerBooking(
-      { booking: row, history, rating: undefined, deliveryRefundKobo: 0 },
+      { booking: row, history, rating: undefined, deliveries: [], deliveryRefundKobo: 0 },
       terms,
     );
     const hidden = toFarmerBooking(
@@ -125,6 +128,7 @@ describe('toFarmerBooking', () => {
         booking: { ...row, provider_phone: null },
         history,
         rating: undefined,
+        deliveries: [],
         deliveryRefundKobo: 0,
       },
       terms,
@@ -135,7 +139,7 @@ describe('toFarmerBooking', () => {
 
   it('has a null rating until the farmer rates it', () => {
     const booking = toFarmerBooking(
-      { booking: row, history, rating: undefined, deliveryRefundKobo: 0 },
+      { booking: row, history, rating: undefined, deliveries: [], deliveryRefundKobo: 0 },
       terms,
     );
     expect(booking.rating).toBeNull();
@@ -145,7 +149,13 @@ describe('toFarmerBooking', () => {
     const rating = { stars: 4, comment: null, created_at: new Date('2026-11-23T10:00:00Z') };
     const booking = farmerBookingSchema.parse(
       toFarmerBooking(
-        { booking: { ...row, status: 'completed' }, history, rating, deliveryRefundKobo: 0 },
+        {
+          booking: { ...row, status: 'completed' },
+          history,
+          rating,
+          deliveries: [],
+          deliveryRefundKobo: 0,
+        },
         terms,
       ),
     );
@@ -154,6 +164,52 @@ describe('toFarmerBooking', () => {
       comment: null,
       created_at: '2026-11-23T10:00:00.000Z',
     });
+  });
+
+  it('lists each delivery as its direction, status, payment, day and fee only', () => {
+    const deliveries = [
+      {
+        id: '5e2d1c0b-9a8f-4e7d-8c6b-5a4f3e2d1c0b',
+        context_type: 'booking_outbound',
+        status: 'requested',
+        paid_at: null,
+        // 00:00 in Lagos on 20 November.
+        scheduled_for: new Date('2026-11-19T23:00:00Z'),
+        fee_kobo: 245_000,
+      },
+      {
+        id: '7a6b5c4d-3e2f-4a1b-9c8d-7e6f5a4b3c2d',
+        context_type: 'booking_inbound',
+        status: 'delivered',
+        paid_at: new Date('2026-11-10T08:05:00Z'),
+        scheduled_for: new Date('2026-11-11T23:00:00Z'),
+        fee_kobo: 223_000,
+      },
+    ];
+    const booking = farmerBookingSchema.parse(
+      toFarmerBooking(
+        { booking: row, history, rating: undefined, deliveries, deliveryRefundKobo: 0 },
+        terms,
+      ),
+    );
+    expect(booking.deliveries).toEqual([
+      {
+        id: '5e2d1c0b-9a8f-4e7d-8c6b-5a4f3e2d1c0b',
+        direction: 'outbound',
+        status: 'requested',
+        paid: false,
+        scheduled_for: '2026-11-20',
+        fee_kobo: 245_000,
+      },
+      {
+        id: '7a6b5c4d-3e2f-4a1b-9c8d-7e6f5a4b3c2d',
+        direction: 'inbound',
+        status: 'delivered',
+        paid: true,
+        scheduled_for: '2026-11-12',
+        fee_kobo: 223_000,
+      },
+    ]);
   });
 });
 

@@ -1,6 +1,6 @@
 import * as z from 'zod';
 import { bookingQuoteBodySchema } from './bookingQuote.js';
-import { deliveryDetailsSchema } from './deliveries.js';
+import { bookingDeliverySchema, deliveryDetailsSchema } from './deliveries.js';
 import { bookingStatusSchema, cancelledBySchema, capacityUnitSchema } from './enums.js';
 import { koboSchema } from './money.js';
 import { e164PhoneSchema } from './phone.js';
@@ -105,6 +105,8 @@ export const farmerBookingSchema = z.strictObject({
   cancellation: farmerCancellationPreviewSchema,
   /** The farmer's rating of the facility for this booking; null until they rate it. */
   rating: bookingRatingSchema.nullable(),
+  /** Its deliveries, newest first, without unpaid requests that were cancelled or replaced. */
+  deliveries: z.array(bookingDeliverySchema),
 });
 export type FarmerBooking = z.infer<typeof farmerBookingSchema>;
 

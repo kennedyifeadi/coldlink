@@ -233,6 +233,34 @@ function bookingDeliveries(db: Database, bookingId: string) {
     .where('context_id', '=', bookingId);
 }
 
+/**
+ * The booking's deliveries for the farmer's full booking, newest first (decision 156). An unpaid
+ * request that was cancelled, by the farmer, with its booking or by a replacement, never ran and
+ * is left out. Like the farmer's delivery view, it never reads the partner's money or notes.
+ */
+export function listBookingDeliveries(db: Database, bookingId: string) {
+  return bookingDeliveries(db, bookingId)
+    .select([
+      'delivery_requests.id',
+      'delivery_requests.context_type',
+      'delivery_requests.status',
+      'delivery_requests.paid_at',
+      'delivery_requests.scheduled_for',
+      'delivery_requests.fee_kobo',
+    ])
+    .where((eb) =>
+      eb.or([
+        eb('delivery_requests.paid_at', 'is not', null),
+        eb('delivery_requests.status', '!=', 'cancelled'),
+      ]),
+    )
+    .orderBy('delivery_requests.created_at', 'desc')
+    .orderBy('delivery_requests.id', 'desc')
+    .execute();
+}
+
+export type BookingDeliveryRow = Awaited<ReturnType<typeof listBookingDeliveries>>[number];
+
 /** Cancels every delivery of a booking that has not been delivered, failed or been cancelled. */
 export function cancelUnfinishedDeliveries(trx: Transaction<DB>, bookingId: string) {
   return trx
