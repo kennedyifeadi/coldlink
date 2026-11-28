@@ -1,5 +1,5 @@
-import React from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState } from 'react';
+import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
 import { cropsQuery } from '../../api/referenceData';
@@ -16,8 +16,23 @@ import {
   LoadFailed,
   QuoteProblemNotice,
 } from './BookingStates';
-import { bookingStepPath } from './bookingIntent';
+import { bookingStepPath, readBookingRoute } from './bookingIntent';
 import { BookingSummary, PriceBreakdown } from './BookingSummary';
+import {
+  deliveryLoadOf,
+  emptyDeliveryForm,
+  readDeliveryForm,
+  type DeliveryFormErrors,
+  type DeliveryFormValues,
+} from './deliveryFields';
+import PickupSection from './PickupSection';
+import {
+  hasPickupFlag,
+  pickupDraftKey,
+  usePickupDraft,
+  withPickupFlag,
+  type PickupDraft,
+} from './pickupDraft';
 import { useBooking, useChangeAmountPath } from './useBooking';
 
 const ReviewSkeleton = () => {
@@ -37,13 +52,37 @@ const ReviewSkeleton = () => {
   );
 };
 
+const withoutFields = (errors: DeliveryFormErrors, changed: Partial<DeliveryFormValues>) =>
+  Object.fromEntries(
+    Object.entries(errors).filter(([field]) => !(field in changed)),
+  ) as DeliveryFormErrors;
+
 const Review = () => {
   const navigate = useNavigate();
   const { t } = useTranslation();
-  const booking = useBooking();
+  const { providerId } = useParams();
+  const query = new URLSearchParams(useLocation().search);
+  const route = readBookingRoute(providerId, query);
   const crops = useQuery(cropsQuery);
+  const crop = crops.data?.data.find(({ id }) => id === route?.intent.crop_id);
+
+  // The pickup lives in the draft as it is typed, so it survives signing in before payment.
+  const pickup = usePickupDraft(route);
+  const flagged = hasPickupFlag(query);
+  const wanted = pickup.draft?.wanted ?? flagged;
+  const unit = route?.intent.capacity_unit ?? 'crates';
+  const values =
+    pickup.draft?.values ??
+    emptyDeliveryForm({ crop: crop?.name ?? '', quantity: route?.intent.quantity ?? 1 });
+  const [errors, setErrors] = useState<DeliveryFormErrors>({});
+
+  const booking = useBooking(wanted ? deliveryLoadOf(values, unit) : undefined);
   const changeAmountPath = useChangeAmountPath();
   const navTitle = t('booking.review.navTitle');
+
+  const saveDraft = (changes: Partial<Omit<PickupDraft, 'key'>>) => {
+    if (route) pickup.save({ key: pickupDraftKey(route), wanted, values, ...changes });
+  };
 
   if (booking.status === 'invalidLink') return <BrokenBookingLink />;
   if (booking.status === 'gone') return <FacilityGone navTitle={navTitle} />;
@@ -58,12 +97,36 @@ const Review = () => {
       />
     );
   }
-  const crop =
-    booking.status === 'ready'
-      ? crops.data?.data.find(({ id }) => id === booking.route.intent.crop_id)
-      : undefined;
   // The crop id is only ever checked here: the quote does not take it.
   if (crops.isSuccess && booking.status === 'ready' && !crop) return <BrokenBookingLink />;
+
+  const quote = booking.status === 'ready' ? booking.quote : undefined;
+  const refreshing = booking.status === 'ready' && booking.refreshing;
+  // A total without the pickup's fee is never shown once a pickup is asked for.
+  const pricePending = refreshing || (wanted && !quote?.delivery);
+  const pendingNote = refreshing
+    ? t('booking.delivery.checkingPrice')
+    : pricePending
+      ? t('booking.delivery.priceAfterPin')
+      : undefined;
+
+  const goToPayment = () => {
+    if (booking.status !== 'ready' || !route) return;
+    const paymentPath = bookingStepPath('payment', route.providerId, route.intent);
+    if (!wanted) {
+      pickup.clear();
+      void navigate(paymentPath);
+      return;
+    }
+    const result = readDeliveryForm(values, unit, quote?.delivery ?? undefined, t);
+    if ('errors' in result) {
+      setErrors(result.errors);
+      return;
+    }
+    if (pricePending) return;
+    saveDraft({ details: result.details });
+    void navigate(withPickupFlag(paymentPath));
+  };
 
   return (
     <div className="flex flex-col min-h-screen bg-background pb-24">
@@ -89,22 +152,43 @@ const Review = () => {
               />
             )}
             {booking.quote && (
-              <PriceBreakdown terms={booking.quote} facility={booking.provider.display_name} />
+              <>
+                <PickupSection
+                  facility={booking.provider.display_name}
+                  unit={unit}
+                  wanted={wanted}
+                  onChoose={(choice) => {
+                    saveDraft({ wanted: choice });
+                    setErrors({});
+                  }}
+                  values={values}
+                  onChange={(changes) => {
+                    saveDraft({ values: { ...values, ...changes } });
+                    setErrors((current) => withoutFields(current, changes));
+                  }}
+                  errors={errors}
+                  quote={refreshing ? undefined : booking.quote.delivery}
+                  detailsLost={flagged && pickup.draft === undefined}
+                />
+                <PriceBreakdown
+                  terms={booking.quote}
+                  facility={booking.provider.display_name}
+                  pending={pendingNote}
+                />
+              </>
             )}
 
             <div className="flex flex-col gap-3 mt-2">
               {booking.quote ? (
                 <>
-                  <PrimaryButton
-                    onClick={() =>
-                      void navigate(
-                        bookingStepPath('payment', booking.route.providerId, booking.route.intent),
-                      )
-                    }
-                  >
-                    {t('booking.payAmount', {
-                      amount: formatKobo(booking.quote.total_charged_online_kobo),
-                    })}
+                  <PrimaryButton onClick={goToPayment} disabled={refreshing}>
+                    {pricePending
+                      ? refreshing
+                        ? t('booking.delivery.checkingPrice')
+                        : t('common.continue')
+                      : t('booking.payAmount', {
+                          amount: formatKobo(booking.quote.total_charged_online_kobo),
+                        })}
                   </PrimaryButton>
                   <TextButton onClick={() => void navigate(changeAmountPath)}>
                     {t('booking.changeAmount')}

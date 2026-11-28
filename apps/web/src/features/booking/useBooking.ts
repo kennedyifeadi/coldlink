@@ -1,7 +1,12 @@
 import { useLocation, useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import * as z from 'zod';
-import { validationIssueSchema, type BookingQuote, type PublicProvider } from '@coldlink/shared';
+import {
+  validationIssueSchema,
+  type BookingQuote,
+  type DeliveryLoad,
+  type PublicProvider,
+} from '@coldlink/shared';
 import { fetchProvider, quoteBooking } from '../../api/bookings';
 import { isApiError } from '../../api/client';
 import { SEARCH_STEPS, useSearchFlow } from '../search/searchFlow';
@@ -49,6 +54,8 @@ export interface ReadyBooking {
   /** Undefined exactly when there is a problem. */
   quote: BookingQuote | undefined;
   problem: QuoteProblem | undefined;
+  /** The quote shown is for the terms before the last change, while the new one is read. */
+  refreshing: boolean;
 }
 
 export type BookingData =
@@ -58,8 +65,11 @@ export type BookingData =
   | { status: 'failed'; error: unknown; retry: () => void; retrying: boolean }
   | ReadyBooking;
 
-/** The facility and the API's quote for the booking in the current URL. */
-export const useBooking = (): BookingData => {
+/**
+ * The facility and the API's quote for the booking in the current URL, with the inbound delivery
+ * `delivery` describes priced in (decision 146).
+ */
+export const useBooking = (delivery?: DeliveryLoad): BookingData => {
   const { providerId } = useParams();
   const { search } = useLocation();
   const route = readBookingRoute(providerId, new URLSearchParams(search));
@@ -72,10 +82,15 @@ export const useBooking = (): BookingData => {
   });
   // Never cached as fresh: space and prices can change between screens, and every screen shows
   // the API's latest figures.
+  const routeKey = JSON.stringify(route);
   const quote = useQuery({
-    queryKey: ['quote', route],
-    queryFn: ({ signal }) => quoteBooking(quoteBodyFor(route!), signal),
+    queryKey: ['quote', route, delivery ?? null],
+    queryFn: ({ signal }) =>
+      quoteBooking({ ...quoteBodyFor(route!), ...(delivery && { delivery }) }, signal),
     enabled: route !== undefined,
+    // Moving the pickup pin keeps the screen, and its form, while the new price is read.
+    placeholderData: (previous, previousQuery) =>
+      JSON.stringify(previousQuery?.queryKey[1]) === routeKey ? previous : undefined,
   });
 
   if (!route) return { status: 'invalidLink' };
@@ -103,6 +118,7 @@ export const useBooking = (): BookingData => {
     provider: provider.data,
     quote: problem ? undefined : quote.data,
     problem,
+    refreshing: quote.isPlaceholderData,
   };
 };
 

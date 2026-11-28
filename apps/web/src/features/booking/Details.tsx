@@ -105,7 +105,11 @@ const FacilityCard = ({ provider }: { provider: PublicProvider }) => {
   );
 };
 
-const SpaceCard = ({ provider, quote, problem }: Omit<ReadyBooking, 'status' | 'route'>) => {
+const SpaceCard = ({
+  provider,
+  quote,
+  problem,
+}: Pick<ReadyBooking, 'provider' | 'quote' | 'problem'>) => {
   const { t } = useTranslation();
   const unit = provider.capacity_unit;
   const available =

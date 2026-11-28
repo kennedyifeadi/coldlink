@@ -86,6 +86,14 @@ const PaymentDetails = ({ booking }: { booking: FarmerBooking }) => {
           value={formatKobo(booking.total_charged_online_kobo)}
           variant="highlight"
         />
+        {booking.delivery_fee_kobo > 0 && (
+          <div className="mt-1.5">
+            <SummaryRow
+              label={t('booking.confirmation.includesDelivery')}
+              value={formatKobo(booking.delivery_fee_kobo)}
+            />
+          </div>
+        )}
       </div>
       <div className="h-px bg-line mb-3 w-full" />
       <div className="mb-1.5">

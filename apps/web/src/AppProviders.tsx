@@ -5,6 +5,7 @@ import SessionProvider from './session/SessionProvider';
 import { createSessionStore } from './session/sessionStore';
 import SignInFlowProvider from './features/auth/SignInFlowProvider';
 import SearchFlowProvider from './features/search/SearchFlowProvider';
+import PickupDraftProvider from './features/booking/PickupDraftProvider';
 import ProviderOnboardingFlowProvider from './features/provider/ProviderOnboardingFlowProvider';
 
 // One quiet retry for a dropped connection. Any other failure shows at once, with Try again, so a
@@ -23,7 +24,9 @@ const AppProviders = ({ children }: { children: ReactNode }) => {
       <SessionProvider store={sessionStore}>
         <SignInFlowProvider>
           <SearchFlowProvider>
-            <ProviderOnboardingFlowProvider>{children}</ProviderOnboardingFlowProvider>
+            <PickupDraftProvider>
+              <ProviderOnboardingFlowProvider>{children}</ProviderOnboardingFlowProvider>
+            </PickupDraftProvider>
           </SearchFlowProvider>
         </SignInFlowProvider>
       </SessionProvider>
